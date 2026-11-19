@@ -216,7 +216,7 @@ def bigegg():
     ev = HERE.parent / 'event_bigegg'
     if not ev.exists():
         return ''
-    mods = ''.join(scr('ModuleScript', n, ev / 'roblox' / f'{n}.lua') for n in ('FX', 'BigEggVFX', 'WeaponFX'))
+    mods = ''.join(scr('ModuleScript', f.stem, f) for f in sorted((ev / 'roblox').glob('*.lua')))   # FX, BigEggVFX, WeaponFX, GoldenPortalVFX...
     clips = ''
     for f in sorted((ev / 'animations').glob('*.rbxmx')):
         s = f.read_text(encoding='utf-8')

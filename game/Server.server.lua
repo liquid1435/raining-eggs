@@ -321,6 +321,12 @@ local function sync(plr)
 	plr:SetAttribute("PetList", petList(d.pets)) -- for the inventory menu
 	plr:SetAttribute("CarryList", petList(d.carry))
 	plr:SetAttribute("Caught", d.caught)
+	local al = {}
+	for z in pairs(d.altar or {}) do
+		table.insert(al, z)
+	end
+	table.sort(al)
+	plr:SetAttribute("Altar", table.concat(al, ",")) -- Golden Nest altars this player has filled
 	plr:SetAttribute("BestOdds", d.bestOdds)
 	local owned = {}
 	for k in pairs(d.passes) do
@@ -1083,7 +1089,13 @@ local function load(plr)
 		passes = {},
 		dailyDay = tonumber(saved.dailyDay) or 0, -- last claimed day of the streak (1..7)
 		dailyLast = tonumber(saved.dailyLast) or 0, -- os.time() of the last claim
+		altar = {}, -- zones whose egg is on its altar in the Golden Nest (all 10 = the golden egg sinks, the portal opens)
 	}
+	for _, z in ipairs(type(saved.altar) == "table" and saved.altar or {}) do
+		if C.ZONES[tonumber(z) or 0] then
+			d.altar[tonumber(z)] = true
+		end
+	end
 	-- zones bought with cash. Old saves (from when gates needed speed) keep the zones their speed had opened.
 	local unlocked = tonumber(saved.unlocked)
 	if not unlocked then
@@ -1101,6 +1113,15 @@ local function load(plr)
 	return d
 end
 
+local function altarList(d)
+	local t = {}
+	for z in pairs(d.altar or {}) do
+		table.insert(t, z)
+	end
+	table.sort(t)
+	return t
+end
+
 local function save(plr)
 	local d = data[plr]
 	if not d or not store then
@@ -1114,7 +1135,7 @@ local function save(plr)
 		store:SetAsync("u" .. plr.UserId, {
 			cash = d.cash, speed = d.speed, train = d.train, basket = d.basket, luck = d.luck, rebirth = d.rebirth,
 			caught = d.caught, bestOdds = d.bestOdds, bestName = d.bestName, pets = d.pets, index = keys,
-			unlocked = d.unlocked, dailyDay = d.dailyDay, dailyLast = d.dailyLast, eggs = d.bag,
+			unlocked = d.unlocked, dailyDay = d.dailyDay, dailyLast = d.dailyLast, eggs = d.bag, altar = altarList(d),
 		})
 	end)
 end
@@ -1855,5 +1876,77 @@ task.spawn(function()
 		end
 		task.spawn(startBigEgg)
 		task.wait(math.random(C.BIGEGG_EVERY[1], C.BIGEGG_EVERY[2]))
+	end
+end)
+
+
+-- ============================================================ GOLDEN NEST ALTARS (v111)
+-- 10 altars in the last zone, one per zone. Hold E at altar n with an unhatched egg of zone n in your EGGS:
+-- the egg goes on the altar (saved). All 10 filled = for that player the giant golden egg sinks into the ground and
+-- a portal opens (client: GoldenPortalVFX by Codex). Progress is per player.
+local GoldenAltar = remote("GoldenAltar") -- server -> one client: "place", zone | "sink"
+local altars = {}
+for _, d0 in ipairs(Map:GetDescendants()) do
+	local n = d0:IsA("BasePart") and tonumber(string.match(d0.Name, "^EggAltar(%d+)$"))
+	if n and C.ZONES[n] then
+		altars[n] = d0
+		local pp = Instance.new("ProximityPrompt")
+		pp.ActionText = "PLACE EGG"
+		pp.ObjectText = C.ZONES[n].name:upper() .. " EGG"
+		pp.HoldDuration = 0.6
+		pp.MaxActivationDistance = 12
+		pp.RequiresLineOfSight = false
+		pp.Parent = d0
+		pp.Triggered:Connect(function(plr)
+			local d = data[plr]
+			if not d then
+				return
+			end
+			if d.altar[n] then
+				say(plr, "This altar already has your " .. C.ZONES[n].name .. " egg", "info")
+				return
+			end
+			local pick
+			for k, egg in ipairs(d.bag) do
+				if egg.z == n and (not pick or egg.kind == "normal") then
+					pick = k
+				end
+			end
+			if not pick then
+				say(plr, "Bring an egg from " .. C.ZONES[n].name .. " (catch one, do not hatch it)", "bad")
+				return
+			end
+			table.remove(d.bag, pick)
+			d.altar[n] = true
+			renderCarry(plr)
+			sync(plr)
+			GoldenAltar:FireClient(plr, "place", n)
+			local count = #altarList(d)
+			if count >= #C.ZONES then
+				task.delay(0.8, function()
+					GoldenAltar:FireClient(plr, "sink")
+				end)
+				Notice:FireAllClients(plr.DisplayName .. " opened the GOLDEN PORTAL!", "legend")
+			else
+				say(plr, C.ZONES[n].name .. " egg placed! " .. count .. " / " .. #C.ZONES .. " altars", "good")
+			end
+			save(plr)
+		end)
+	end
+end
+
+-- Studio test (F7): altars 1-9 filled + one zone-10 egg in your EGGS, so the 10th altar opens the portal
+Action.OnServerEvent:Connect(function(plr, what)
+	local d = data[plr]
+	if what == "altartest" and d and RunService:IsStudio() then
+		for z = 1, #C.ZONES - 1 do
+			if not d.altar[z] then
+				d.altar[z] = true
+				GoldenAltar:FireClient(plr, "place", z)
+			end
+		end
+		table.insert(d.bag, { z = #C.ZONES, kind = "normal", luck = 1 })
+		sync(plr)
+		say(plr, "Studio test: altars 1-9 filled, a Golden Nest egg is in your EGGS", "info")
 	end
 end)

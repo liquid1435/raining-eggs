@@ -1390,9 +1390,9 @@ def golden_mesh(z0, nx, nz, G):
             rng.uniform(-10, 10)
             rng.choice((BROWN, DBROWN, (150, 104, 60)))
             part((ln, 3.6, 3.6), C(nx + r * math.cos(math.radians(a)), y, nz + r * math.sin(math.radians(a))) * R(0, yaw, 0), BROWN, **INV)
-    mpart('Map_GoldenEgg', nx, 33.5, nz, 0, 6.6, reflectance=0.3)
-    blk(nx, 0, nz, 40, 64, 40, GOLD, **INV)
-    b = vcyl(nx, 70, nz, 400, 12, (255, 240, 150), 'Neon', transparency=0.7, **NC)
+    mpart('Map_GoldenEgg', nx, 33.5, nz, 0, 6.6, reflectance=0.3, pname='GoldenEgg')
+    blk(nx, 0, nz, 40, 64, 40, GOLD, name='GoldenEggBlock', **INV)
+    b = vcyl(nx, 70, nz, 400, 12, (255, 240, 150), 'Neon', transparency=0.7, name='GoldenBeam', **NC)
     light(b, (255, 230, 120), 60, 3)
     for _ in range(20):                                   # golden trees
         x, z, s = side_x(60, 160), rng.uniform(z0 + 8, z0 + ZL - 8), rng.uniform(0.9, 1.6)
@@ -1411,12 +1411,13 @@ def golden_mesh(z0, nx, nz, G):
         c = rng.choice(GEMS)
         mpart(f'Map_Treasure{GEMS.index(c) + 1}', x, 0, z, (x * 9) % 360, 1.1)
         blk(x, 0, z, 5, 2.4, 5, GOLD, **INV)
-    for sx in (-1, 1):                                    # 3 pedestals each side with secret eggs
-        for k in range(3):
-            x, z = sx * (70 + k * 26), z0 + 58
-            mpart('Map_Pedestal', x, 0, z)
-            blk(x, 0, z, 9, 7, 9, WHITE, **INV)
-            egg(x, 9.4, z, 1.9, RAINBOW[(k + (3 if sx > 0 else 0)) % 6], WHITE, beam=True)
+    # v111: 10 altars, one per zone (5 each side, zone 1 nearest the middle on the left). Players put one egg of each
+    # zone on its altar; with all 10 the giant golden egg sinks into the ground and a portal opens (game script).
+    for n in range(1, 11):
+        sx, k = (-1 if n <= 5 else 1), (n - 1) % 5
+        x, z = sx * (62 + k * 22), z0 + 58
+        mpart('Map_Pedestal', x, 0, z, pname=f'AltarMesh{n}')
+        blk(x, 0, z, 9, 7, 9, WHITE, name=f'EggAltar{n}', **INV)
     ez = z0 + ZL + 12                                     # end wall with a rising sun
     for x in range(-HALF - 24, HALF + 25, 24):
         h = rng.choice((40, 52, 64, 76))

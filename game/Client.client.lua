@@ -3917,10 +3917,180 @@ task.spawn(function()
 	-- STUDIO ONLY: F8 = start a BIG EGG drop now
 	if RunService:IsStudio() then
 		game:GetService("UserInputService").InputBegan:Connect(function(input, typing)
+			if input.KeyCode == Enum.KeyCode.F7 and not typing then
+				Action:FireServer("altartest")
+			end
 			if input.KeyCode == Enum.KeyCode.F8 and not typing then
 				cinema = true
 				Action:FireServer("bigegg")
 			end
 		end)
+	end
+end)
+
+-- ============================================================ GOLDEN NEST ALTARS (client, v111)
+task.spawn(function()
+	local LP = Players.LocalPlayer
+	local GoldenAltar = Remotes:WaitForChild("GoldenAltar", 30)
+	local Map = workspace:WaitForChild("Map", 30)
+	if not GoldenAltar or not Map then
+		return
+	end
+	local altars, egg, beam, block = {}, nil, nil, nil
+	for _, d0 in ipairs(Map:GetDescendants()) do
+		local n = d0:IsA("BasePart") and tonumber(string.match(d0.Name, "^EggAltar(%d+)$"))
+		if n then
+			altars[n] = d0
+		elseif d0.Name == "GoldenEgg" and d0:IsA("BasePart") then
+			egg = d0
+		elseif d0.Name == "GoldenBeam" and d0:IsA("BasePart") then
+			beam = d0
+		elseif d0.Name == "GoldenEggBlock" and d0:IsA("BasePart") then
+			block = d0
+		end
+	end
+	-- Codex's effects when they are there (ReplicatedStorage.BigEggFX.GoldenPortalVFX), else a simple fallback
+	local fxFolder = RS:FindFirstChild("BigEggFX")
+	local mod = fxFolder and fxFolder:FindFirstChild("GoldenPortalVFX")
+	local V = nil
+	if mod then
+		local ok, m = pcall(require, mod)
+		if ok then
+			V = m
+		end
+	end
+	local TS = game:GetService("TweenService")
+	local function zoneCol(n)
+		local c = C.ZONES[n].eggCol
+		return Color3.fromRGB(c[1], c[2], c[3])
+	end
+	local function eggModel(n)
+		local A = RS:FindFirstChild("Assets")
+		local src = A and A:FindFirstChild("Egg_" .. n)
+		local e
+		if src then
+			e = src:Clone()
+			e.Size = e.Size * (3.6 / math.max(e.Size.X, e.Size.Y, e.Size.Z))
+		else
+			e = Instance.new("Part")
+			e.Shape = Enum.PartType.Ball
+			e.Size = Vector3.new(2.8, 3.6, 2.8)
+			e.Color = zoneCol(n)
+		end
+		e.Anchored, e.CanCollide, e.CanQuery, e.CanTouch = true, false, false, false
+		e.Name = "AltarEgg" .. n
+		return e
+	end
+	local placed = {}
+	local function putEgg(n, animate)
+		local a = altars[n]
+		if not a or placed[n] then
+			return
+		end
+		local e = eggModel(n)
+		local top = a.Position + Vector3.new(0, a.Size.Y / 2 + 1.9, 0)
+		e.CFrame = CFrame.new(top)
+		e.Parent = workspace
+		placed[n] = e
+		local pp = a:FindFirstChildOfClass("ProximityPrompt")
+		if pp then
+			pp.Enabled = false -- this player already filled it
+		end
+		if V then
+			pcall(animate and V.PlayPlace or V.ShowPlaced, a, e, zoneCol(n))
+		elseif animate then
+			e.CFrame = CFrame.new(top + Vector3.new(0, 14, 0))
+			TS:Create(e, TweenInfo.new(0.6, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), { CFrame = CFrame.new(top) }):Play()
+		end
+	end
+	local portal
+	local function openPortal(animate)
+		if not egg or portal then
+			return
+		end
+		local at = egg.Position
+		local ground = (block and block.Position.Y - block.Size.Y / 2) or (at.Y - egg.Size.Y / 2)
+		if block then
+			block.CanCollide = false
+		end
+		local function show()
+			if V then
+				local ok, p = pcall(V.ShowPortal, Vector3.new(at.X, ground + 16, at.Z), 30)
+				portal = ok and p or true
+			else
+				local p = Instance.new("Part")
+				p.Shape, p.Anchored, p.CanCollide, p.Material = Enum.PartType.Cylinder, true, false, Enum.Material.Neon
+				p.Size, p.Color, p.Transparency = Vector3.new(1.5, 28, 28), Color3.fromRGB(190, 120, 255), 0.25
+				p.CFrame = CFrame.new(at.X, ground + 16, at.Z) * CFrame.Angles(0, math.pi / 2, 0)
+				p.Name = "GoldenPortal"
+				p.Parent = workspace
+				portal = p
+			end
+		end
+		if animate then
+			if V then
+				pcall(V.PlaySink, egg, beam, ground, show)
+			else
+				egg.CanCollide = false
+				TS:Create(egg, TweenInfo.new(5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { CFrame = egg.CFrame - Vector3.new(0, egg.Size.Y + 4, 0) }):Play()
+				if beam then
+					beam.LocalTransparencyModifier = 1
+				end
+				task.delay(5.2, function()
+					egg.LocalTransparencyModifier = 1
+					show()
+				end)
+			end
+		else
+			egg.CanCollide = false
+			if V then
+				pcall(V.ShowSunk, egg, beam)
+			else
+				egg.LocalTransparencyModifier = 1
+				if beam then
+					beam.LocalTransparencyModifier = 1
+				end
+			end
+			show()
+		end
+	end
+	-- what this player already did (join)
+	local function fromSave()
+		local n = 0
+		for _, z in ipairs(string.split(LP:GetAttribute("Altar") or "", ",")) do
+			z = tonumber(z)
+			if z then
+				putEgg(z, false)
+				n = n + 1
+			end
+		end
+		if n >= #C.ZONES then
+			openPortal(false)
+		end
+	end
+	if LP:GetAttribute("Altar") ~= nil then
+		fromSave()
+	else
+		LP:GetAttributeChangedSignal("Altar"):Once(fromSave)
+	end
+	GoldenAltar.OnClientEvent:Connect(function(cue, n)
+		if cue == "place" then
+			putEgg(n, true)
+		elseif cue == "sink" then
+			openPortal(true)
+		end
+	end)
+	-- small name tag over every altar (zone name in its colour), only when you are close
+	for n, a in pairs(altars) do
+		local bb = Instance.new("BillboardGui")
+		bb.Size, bb.StudsOffset, bb.MaxDistance, bb.AlwaysOnTop = UDim2.fromOffset(180, 34), Vector3.new(0, 7.5, 0), 60, true
+		bb.Parent = a
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency, t.Size, t.Font, t.TextScaled = 1, UDim2.fromScale(1, 1), Enum.Font.FredokaOne, true
+		t.Text, t.TextColor3 = n .. ". " .. C.ZONES[n].name, zoneCol(n)
+		t.Parent = bb
+		local st = Instance.new("UIStroke")
+		st.Thickness, st.Color = 2.5, Color3.fromRGB(30, 20, 40)
+		st.Parent = t
 	end
 end)
