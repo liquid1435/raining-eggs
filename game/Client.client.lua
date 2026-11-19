@@ -4015,7 +4015,7 @@ task.spawn(function()
 		end
 		local function show()
 			if V then
-				local ok, p = pcall(V.ShowPortal, Vector3.new(at.X, ground + 16, at.Z), 30)
+				local ok, p = pcall(V.ShowPortal, Vector3.new(at.X, ground, at.Z), 30) -- Codex: position = ground point under the opening
 				portal = ok and p or true
 			else
 				local p = Instance.new("Part")
