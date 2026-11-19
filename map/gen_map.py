@@ -179,7 +179,8 @@ SOFT_MESH = ('Water', 'ChocoRiver', 'PondWater', 'TidePoolWater', 'DuckTubWater'
              # v102: irregular shapes collide as one big box in Roblox (players stood in the air next to tree crowns),
              # so they are soft and keep their own fitted helper box (trunk / base) instead
              'Tree', 'Palm', 'Lolli', 'Crystal', 'IceCream', 'CandyCane', 'Teddy', 'Lighthouse', 'Tower', 'Windmill',
-             'Tesla', 'Peak', 'Mush', 'HoverCar', 'Throne', 'StackRings', 'LightningRod', 'Ghost', 'SkyCastle', 'Arcade', 'Cake')
+             'Tesla', 'Peak', 'Mush', 'HoverCar', 'Throne', 'StackRings', 'LightningRod', 'Ghost', 'SkyCastle', 'Arcade', 'Cake',
+             'Haunted', 'Barn', 'Shop')   # v113: houses / shops have pointed roofs; their stepped helper boxes collide instead
 
 
 def soft_mesh(name):
