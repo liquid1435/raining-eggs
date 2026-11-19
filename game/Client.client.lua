@@ -539,7 +539,7 @@ local bottom = make("Frame", {
 }, gui)
 make("UIAspectRatioConstraint", { AspectRatio = 3.4 }, bottom)
 local lockGui -- set further down (treadmill)
-local hintPill = make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, stormBanner.Visible and 0.6 or 0.02), Size = UDim2.fromScale(1.02, 0.4), Visible = false }, top)
+local hintPill = make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, stormBanner.Visible and 0.6 or 0.02), Size = UDim2.fromScale(0.84, 0.4), Visible = false }, top) -- v108: same width as the EGG STORM banner, centred under it
 stormBanner:GetPropertyChangedSignal("Visible"):Connect(function()
 	TweenService:Create(hintPill, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0.5, stormBanner.Visible and 0.6 or 0.02) }):Play()
 end)
