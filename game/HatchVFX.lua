@@ -9,7 +9,7 @@ local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 
 local M = {}
-M.VOLUME = 0.5 -- master volume of every hatch sound
+M.VOLUME = 0.25 -- master volume of every hatch sound (user 19 Nov: still too loud at 0.5)
 
 local RCOL = { Color3.fromRGB(235, 240, 255), Color3.fromRGB(80, 255, 120), Color3.fromRGB(40, 190, 255), Color3.fromRGB(200, 70, 255), Color3.fromRGB(255, 190, 30), Color3.fromRGB(255, 60, 90) }
 local RNAME = { "COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "???" }
