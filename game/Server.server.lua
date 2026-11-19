@@ -625,7 +625,7 @@ local function sellCarry(plr)
 	d.cash = d.cash + sum
 	renderCarry(plr)
 	sync(plr)
-	say(plr, "Sold for $" .. C.fmt(sum), "cash")
+	say(plr, "Sold for $" .. C.fmt(sum), "sold")
 end
 
 -- ------------------------------------------------------------ upgrades (ProximityPrompts; the client writes the price on them)
@@ -884,7 +884,7 @@ Action.OnServerEvent:Connect(function(plr, what, kind)
 		renderPen(plr)
 		renderCarry(plr)
 		sync(plr)
-		say(plr, (n == 1 and ("Sold " .. C.petName(last)) or ("Sold " .. n .. " pets")) .. " for $" .. C.fmt(sum), "cash")
+		say(plr, (n == 1 and ("Sold " .. C.petName(last)) or ("Sold " .. n .. " pets")) .. " for $" .. C.fmt(sum), "sold")
 		return
 	end
 	if what == "sellpet" then
@@ -914,7 +914,7 @@ Action.OnServerEvent:Connect(function(plr, what, kind)
 			renderCarry(plr)
 		end
 		sync(plr)
-		say(plr, "Sold " .. C.petName(pet) .. " for $" .. C.fmt(price), "cash")
+		say(plr, "Sold " .. C.petName(pet) .. " for $" .. C.fmt(price), "sold")
 		return
 	end
 	if what == "shop" then

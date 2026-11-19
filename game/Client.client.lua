@@ -658,14 +658,23 @@ local function showNote(msg, kind)
 	noteId = noteId + 1
 	local id = noteId
 	note.Text = msg
-	note.TextColor3 = NOTE_COL[kind] or WHITE
+	note.TextColor3 = NOTE_COL[kind] or NOTE_COL.cash or WHITE
 	note.TextTransparency = 0
 	noteStroke.Transparency = 0
 	noteScale.Scale = 1.25
 	TweenService:Create(noteScale, TweenInfo.new(0.2, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 	if kind == "legend" then
 		sfx("reveal_legend", 0.6)
-	elseif kind == "buy" or kind == "cash" then
+	elseif kind == "sold" and C.SELL_SOUND and C.SELL_SOUND ~= "" then
+		-- selling pets has its own sound (v110, user); uploaded id in Config C.SELL_SOUND
+		local snd = Instance.new("Sound")
+		snd.SoundId, snd.Volume = C.SELL_SOUND, 0.55
+		snd.Parent = SoundService
+		snd:Play()
+		snd.Ended:Once(function()
+			snd:Destroy()
+		end)
+	elseif kind == "buy" or kind == "cash" or kind == "sold" then
 		sfx("coin", 0.6)
 	end
 	task.delay((kind == "legend" or kind == "storm") and 4.5 or 2.4, function()
