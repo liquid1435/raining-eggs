@@ -7,9 +7,9 @@ OUT = HERE / "sell"
 OUT.mkdir(exist_ok=True)
 N = ", mobile game UI sound effect, polished, satisfying, clean, no music, no voice"
 S = [
-    ("sell_1", 1.2, "Cash register ka-ching with a shower of gold coins falling into a pile" + N),
-    ("sell_2", 1.1, "Bright cheerful coin burst, many small coins jingling and sparkling, reward collected" + N),
-    ("sell_3", 1.4, "Big satisfying money pickup: paper bills swoosh then a deep coin stack clink and a happy chime" + N),
+    ("sell_4", 0.8, "Short crisp magical coin pickup, two bright rising notes with a sparkle, like collecting gems in a mobile game" + N),
+    ("sell_5", 1.0, "Cartoon pop then a soft bouncy coin jingle and a cute success ding, kid friendly" + N),
+    ("sell_6", 1.2, "Arcade style money gain: fast rising coin counter ticks ending in a bright bell, retro and punchy" + N),
 ]
 for name, dur, text in S:
     req = urllib.request.Request("https://api.elevenlabs.io/v1/sound-generation?output_format=mp3_44100_128",

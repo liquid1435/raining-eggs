@@ -490,6 +490,7 @@ def base(i):
             for z in (zb, zf):                                  # corners = plain fence posts (no stone, no lamps)
                 post(bx + sx * 17, z)
             # (v109: user removed the gate at the pen entrance: no pillars / beam, just the opening in the fence)
+            post(bx + sx * 6.0, zf)                             # v110: end post where the front rail stops (no cut-off fence)
         rail(bx, zb, 34, True)
         blk(bx, 0.02, zf, 10.4, 0.12, 5, lt, **NC)              # door mat
         blk(bx, 0.03, zf, 8.6, 0.12, 3.4, col, **NC)
