@@ -1109,6 +1109,9 @@ local function load(plr)
 		end
 	end
 	d.unlocked = math.clamp(math.floor(unlocked), 1, #C.ZONES)
+	if C.TEST_ALL_ZONES_FREE and game:GetService("RunService"):IsStudio() then
+		d.unlocked = #C.ZONES -- Studio test: every zone open for free (Config C.TEST_ALL_ZONES_FREE)
+	end
 	d.zonesDone = zonesDone(d)
 	return d
 end

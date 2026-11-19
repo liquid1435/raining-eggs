@@ -23,6 +23,7 @@ C.STORM_EVERY = { 900, 2400 }  -- random time between storms (15-40 min)
 -- BIG EGG DROP: a giant egg falls in the plaza, players fight with weapons, holding E for 5 s claims it
 C.BIGEGG_FIRST = { 300, 300 }   -- seconds after the server starts (user: every 5 minutes)
 C.BIGEGG_EVERY = { 300, 300 }   -- between drops: every 5 minutes
+C.TEST_ALL_ZONES_FREE = true    -- Studio only: all 10 zones open for free (to test the Golden Nest portal); the real game is not affected
 C.SELL_SOUND = ""              -- sound when you sell pets (rbxassetid://...), empty = the coin sound
 C.HATCH_STYLE = "vfx"         -- "vfx" = new world-space hatch show (HatchVFX), "old" = the v85 show
 C.BIGEGG_SIZE = 26              -- studs tall; it lands on the white road in the middle of a random zone

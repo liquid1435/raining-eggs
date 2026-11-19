@@ -1851,7 +1851,10 @@ def scenery():
             egg(fx, fy + 10, fz, 4, WHITE, c2, name='Decor')
             for sx in (-1, 1):
                 for k in range(5):
-                    street_lamp(sx * 12, z0 + 14 + k * 28, -sx, c1)
+                    lz = z0 + 14 + k * 28
+                    if j == len(cols) - 1 and abs(lz - (z0 + 92)) < 58:
+                        continue    # v114: no lamps inside the Golden Nest (they stood in the nest / the giant egg)
+                    street_lamp(sx * 12, lz, -sx, c1)
 
 
 def build():
