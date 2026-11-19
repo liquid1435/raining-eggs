@@ -180,7 +180,7 @@ SOFT_MESH = ('Water', 'ChocoRiver', 'PondWater', 'TidePoolWater', 'DuckTubWater'
              # so they are soft and keep their own fitted helper box (trunk / base) instead
              'Tree', 'Palm', 'Lolli', 'Crystal', 'IceCream', 'CandyCane', 'Teddy', 'Lighthouse', 'Tower', 'Windmill',
              'Tesla', 'Peak', 'Mush', 'HoverCar', 'Throne', 'StackRings', 'LightningRod', 'Ghost', 'SkyCastle', 'Arcade', 'Cake',
-             'Haunted', 'Barn', 'Shop')   # v113: houses / shops have pointed roofs; their stepped helper boxes collide instead
+             'Haunted', 'Barn', 'Shop', 'Pond', 'TidePool', 'DuckTub')   # v115: ponds have tall reeds -> a box over the water   # v113: houses / shops have pointed roofs; their stepped helper boxes collide instead
 
 
 def soft_mesh(name):
@@ -1798,6 +1798,7 @@ ZONES = [
 ]
 
 
+LAMPS = []
 LAMP_METAL = (46, 50, 60)
 LAMP_WARM = (255, 214, 150)
 
@@ -1807,6 +1808,20 @@ def street_lamp(x, z, toward, accent):
     an arm over the road with a brace, and a lantern (cap, warm glass, bulb, zone-colour band) giving warm light.
     toward = +1 / -1: the side of the road the arm points to."""
     M = LAMP_METAL
+    # v115 (user: lamps stood in the egg / on bridges / through fences): skip a lamp whose post or lantern would sit
+    # inside something already built there (anything taller than the floor, near the post or under the lantern)
+    hx0 = x + toward * 3.3
+    for p in PARTS:
+        s, (px, py, pz) = p['size'], p['p']
+        if p.get('transparency', 0) > 0.9 and not p.get('mesh'):
+            continue
+        top, bottom = py + s[1] / 2, py - s[1] / 2
+        if top < 0.9 or bottom > 12 or max(s) > 300:             # floors, sky things, the long side walls
+            continue
+        r = max(s[0], s[2]) / 2
+        for qx, qy0 in ((x, 0), (hx0, 8)):
+            if abs(px - qx) < r + 1.2 and abs(pz - z) < r + 1.2 and top > qy0:
+                return
     blk(x, 0, z, 2.4, 0.5, 2.4, shade(M, 0.85), 'Metal')                      # base plate
     blk(x, 0.5, z, 1.7, 1.4, 1.7, M, 'Metal')                                 # plinth
     blk(x, 1.9, z, 2.0, 0.3, 2.0, shade(M, 1.2), 'Metal', **NC)              # plinth lip
@@ -1854,7 +1869,7 @@ def scenery():
                     lz = z0 + 14 + k * 28
                     if j == len(cols) - 1 and abs(lz - (z0 + 92)) < 58:
                         continue    # v114: no lamps inside the Golden Nest (they stood in the nest / the giant egg)
-                    street_lamp(sx * 12, lz, -sx, c1)
+                    LAMPS.append((sx * 12, lz, -sx, c1))   # built after the zones (to skip spots already taken)
 
 
 def build():
@@ -1939,6 +1954,9 @@ def solidify():
 
 if __name__ == '__main__':
     build()
+    with group('Scenery', unique=False):
+        for args in LAMPS:
+            street_lamp(*args)
     clear_circles()
     solidify()
     spawn = [p for p in PARTS if p.get('spawn')]
