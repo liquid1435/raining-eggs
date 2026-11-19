@@ -1,0 +1,38 @@
+# Raining Eggs repo: only the source of the game (scripts, map generator, Blender/audio scripts, small data).
+# Everything big (renders, videos, .blend, logs, Codex work folders) stays on the PC.
+*
+!*/
+!.gitignore
+!README.md
+!CLAUDE.md
+
+# game scripts
+!game/*.lua
+!game/*.luau
+!game/*.json
+!game/*.py
+!game/treadmills/**
+game/*.bak*
+game/patch_*.py
+
+# map generator
+!map/*.py
+!map/map.json
+map/patch_*.py
+
+# BIG EGG DROP event (Codex): modules, animations, models, small textures, sound
+!event_bigegg/roblox/*.lua
+!event_bigegg/animations/*.rbxmx
+!event_bigegg/models/*.fbx
+!event_bigegg/models/*.png
+!event_bigegg/audio/*.wav
+!event_bigegg/README.md
+!event_bigegg/TASK_CODEX*.md
+
+# Blender / audio / pets scripts and their data
+!blender/*.py
+!audio/*.py
+!audio/*.lua
+!audio/rainingeggs_hatch2.ogg
+!pets/*.py
+!pets/*.json

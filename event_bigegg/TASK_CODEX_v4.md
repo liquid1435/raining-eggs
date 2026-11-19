@@ -1,0 +1,8 @@
+﻿# Change v4 (user): much better quality and animations
+
+The user likes the event, but wants clearly HIGHER QUALITY and BETTER ANIMATIONS. Keep all v2/v3 behaviour (crater hole, egg sits in it, 5 s claim, hit = knockback stumble, no stars). Improve:
+
+1. Preview video quality: render at 1920x1080, 30 fps (or 60), Eevee with bloom, soft shadows, ambient occlusion, motion blur, depth of field on close shots, proper colour management (Filmic/AgX), good lighting (sun + rim lights), higher-poly smooth egg, nicer ground material. Cinematic camera work: establishing shot, slow-motion on impact, close-up of the egg settling in the crater, tracking shot during the fight, hero shot of the winner.
+2. Animations: smoother, more professional characters (anticipation, follow-through, overlap, easing; no linear robotic moves). Weapon swings with wind-up, smear/trail and hit-stop; victim knockback with a convincing stumble + recovery; claim pose (kneel/hold) while the ring fills; winner celebration animation. Egg: fall with squash/stretch on impact, wobble when settling, idle glow pulse and slight bob.
+3. VFX: richer layered particles (sparks, embers, dust clouds that billow and fade, debris with gravity and bounce), shockwave ring with distortion feel, light flash, god-ray beam from the egg, golden explosion + confetti for the win. Apply the same improvements to the Roblox Luau modules (more emitters/layers, better timing curves via TweenService easing, Beams, Attachments) and to the animation .rbxmx files.
+4. Re-render preview/big_egg_event.mp4 (~25 s) and keep a copy of the previous one as preview/big_egg_event_v3.mp4. Check Luau with luau-compile. Update README.md.

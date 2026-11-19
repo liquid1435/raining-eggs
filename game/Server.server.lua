@@ -1,0 +1,1859 @@
+-- Raining Eggs: server
+-- egg rain, catch check, hatch RNG, combo, rotten/golden/storm eggs, basket, pen + fusion, income,
+-- treadmill, gates, upgrades, index, rebirth, storm event, leaderboards, save
+local Players = game:GetService("Players")
+local RS = game:GetService("ReplicatedStorage")
+local CS = game:GetService("CollectionService")
+local DSS = game:GetService("DataStoreService")
+local C = require(RS:WaitForChild("Config"))
+
+local Map = workspace:WaitForChild("Map")
+
+local Remotes = Instance.new("Folder")
+Remotes.Name = "Remotes"
+local function remote(name)
+	local r = Instance.new("RemoteEvent")
+	r.Name = name
+	r.Parent = Remotes
+	return r
+end
+local EggSpawn = remote("EggSpawn") -- server -> all: id, x, z, y0, groundY, fall, zone, kind, linger
+local EggGone = remote("EggGone") -- server -> all: id, userId of the catcher, kind
+local Catch = remote("Catch") -- client -> server: id
+local Hatch = remote("Hatch") -- server -> catcher: pet, egg kind, new in index, combo
+local Notice = remote("Notice") -- server -> client: text, kind
+local Action = remote("Action") -- client -> server: "rebirth"
+Remotes.Parent = RS
+
+-- ------------------------------------------------------------ Blender models
+-- File > Import 3D puts "RainingEggsAssets" in Workspace; the game keeps it in ReplicatedStorage.Assets (see Config.meshOf)
+if not RS:FindFirstChild("Assets") then
+	for _, m in ipairs(workspace:GetChildren()) do
+		if m.Name:find("RainingEggsAssets") or (m:IsA("Model") and m:FindFirstChild("Pet_1_1", true)) then
+			m.Name = "Assets"
+			m.Parent = RS
+			break
+		end
+	end
+end
+
+-- ------------------------------------------------------------ map clean-up
+for _, d in ipairs(Map:GetDescendants()) do
+	if d.Name == "DemoPet" then
+		d:Destroy()
+	elseif d.Name == "DemoEgg" and d:GetFullName():find("Zone") then
+		d:Destroy()
+	end
+end
+
+-- ------------------------------------------------------------ bases
+local bases = {}
+for i = 1, 8 do
+	local m = Map:FindFirstChild("Base" .. i)
+	if m then
+		local folder = Instance.new("Folder")
+		folder.Name = "Pets"
+		folder.Parent = m
+		bases[i] = {
+			pen = m:FindFirstChild("PenFloor", true),
+			tread = m:FindFirstChild("Treadmill", true),
+			sign = m:FindFirstChild("OwnerSign", true),
+			treadSign = m:FindFirstChild("TreadSign", true),
+			folder = folder,
+			model = m,
+			owner = nil,
+		}
+	end
+end
+
+-- treadmills from TreadmillPack (ReplicatedStorage.Shared): 20 models, a better one every 3 training levels
+local Shared = RS:FindFirstChild("Shared")
+local TBuilder = Shared and Shared:FindFirstChild("TreadmillBuilder") and require(Shared.TreadmillBuilder)
+local TList = TBuilder and TBuilder.list()
+local function treadTier(lv)
+	return math.clamp(math.floor(lv / 3) + 1, 1, TList and #TList or 20)
+end
+-- the sign on the fence next to the treadmill: TREADMILL / LEVEL n / next upgrade price (lv = nil: empty base)
+local function setTreadSign(base, lv)
+	local part = base.treadSign
+	if true or not part then -- the board is private now: each player's client shows only its own (Client: treadmill upgrade panel)
+		return
+	end
+	local g = base.treadGui
+	if not g then
+		g = Instance.new("SurfaceGui")
+		g.Face = Enum.NormalId.Back
+		g.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		g.PixelsPerStud = 50
+		g.LightInfluence = 0
+		g.Parent = part
+		local bg = Instance.new("Frame")
+		bg.Size = UDim2.fromScale(1, 1)
+		bg.BackgroundColor3 = Color3.fromRGB(255, 196, 60)
+		bg.BorderSizePixel = 0
+		bg.Parent = g
+		local gr = Instance.new("UIGradient")
+		gr.Rotation = 90
+		gr.Color = ColorSequence.new(Color3.fromRGB(255, 226, 120), Color3.fromRGB(240, 150, 30))
+		gr.Parent = bg
+		local st = Instance.new("UIStroke")
+		st.Thickness = 10
+		st.Color = Color3.fromRGB(40, 26, 20)
+		st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		st.Parent = bg
+		local function line(name, y, h, col)
+			local t = Instance.new("TextLabel")
+			t.Name = name
+			t.BackgroundTransparency = 1
+			t.Position = UDim2.fromScale(0.05, y)
+			t.Size = UDim2.fromScale(0.9, h)
+			t.Font = Enum.Font.LuckiestGuy
+			t.TextScaled = true
+			t.TextColor3 = col
+			t.Text = ""
+			t.Parent = bg
+			local s2 = Instance.new("UIStroke")
+			s2.Thickness = 5
+			s2.Color = Color3.fromRGB(30, 20, 40)
+			s2.Parent = t
+			return t
+		end
+		line("Title", 0.06, 0.26, Color3.fromRGB(255, 255, 255))
+		line("Level", 0.36, 0.28, Color3.fromRGB(130, 220, 255))
+		line("Price", 0.68, 0.26, Color3.fromRGB(140, 255, 120))
+		base.treadGui = g
+	end
+	local bg = g:FindFirstChildOfClass("Frame")
+	bg.Title.Text = "TREADMILL"
+	if lv == nil then
+		bg.Level.Text = ""
+		bg.Price.Text = ""
+	elseif lv >= C.MAX_LV.train then
+		bg.Level.Text = "LEVEL " .. lv
+		bg.Price.Text = "MAX"
+	else
+		bg.Level.Text = "LEVEL " .. lv
+		bg.Price.Text = "UPGRADE $" .. C.fmt(C.cost("train", lv))
+	end
+end
+
+local function setTreadmill(base, lv)
+	if not (TList and base.tread) then
+		return
+	end
+	local tier = treadTier(lv)
+	if base.treadTier == tier then
+		return
+	end
+	base.treadTier = tier
+	if base.treadModel then
+		base.treadModel:Destroy()
+	end
+	local model = TBuilder.build(TList[tier])
+	local prim = model.PrimaryPart
+	model.PrimaryPart = nil -- pivot on the ground under the model, not in the middle of its base plate
+	model.WorldPivot = CFrame.new()
+	local c = base.tread.Position
+	local pivot = CFrame.new(c.X, c.Y - base.tread.Size.Y / 2, c.Z) * CFrame.Angles(0, math.pi / 2, 0)
+	model:PivotTo(pivot)
+	model.PrimaryPart = prim
+	-- the client animates a light show around it (spinning ring, orbiting cubes, moving belt stripes, sparkles)
+	model:SetAttribute("Neon", Color3.fromHex(TList[tier].Neon or "#FFFFFF"))
+	model:SetAttribute("PivotCF", pivot)
+	CS:AddTag(model, "TreadShow")
+	-- Blender version of the same treadmill (when imported): show the meshes, keep the block parts only for collisions
+	local id = TList[tier].Id
+	local meta = RS:FindFirstChild("PropsMeta") and require(RS.PropsMeta)
+	local function addMesh(name, neon)
+		local src, m = C.meshOf(name), meta and meta[name]
+		if not (src and m) then
+			return false
+		end
+		local p = src:Clone()
+		p.Name = neon and "NeonMesh" or "BodyMesh"
+		p.Size = Vector3.new(m.size[1], m.size[2], m.size[3])
+		p.CFrame = pivot * CFrame.new(m.centre[1], m.centre[2], m.centre[3]) * CFrame.Angles(0, C.PROP_YAW, 0)
+		p.Color = Color3.new(1, 1, 1)
+		p.Material = neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+		p.CastShadow = not neon
+		p.Parent = model
+		return true
+	end
+	if addMesh("Tread_" .. id, false) then
+		addMesh("TreadNeon_" .. id, true)
+		for _, p in ipairs(model:GetChildren()) do
+			if p:IsA("Part") then
+				p.Transparency = 1
+				p.CastShadow = false
+			end
+		end
+	end
+	model.Parent = base.model
+	base.treadModel = model
+end
+for _, base in pairs(bases) do
+	setTreadmill(base, 0)
+end
+
+-- the owner's name floats in the air above the pen ("EMPTY" when nobody owns it)
+local function setSign(base, text, sub)
+	if not base.sign then
+		return
+	end
+	local bb = base.sign:FindFirstChild("OwnerTag")
+	if not bb then
+		bb = Instance.new("BillboardGui")
+		bb.Name = "OwnerTag"
+		bb.Size = UDim2.fromScale(30, 9)
+		bb.MaxDistance = 400
+		bb.AlwaysOnTop = false
+		bb.LightInfluence = 0
+		local function line(name, y, h, col)
+			local t = Instance.new("TextLabel")
+			t.Name = name
+			t.BackgroundTransparency = 1
+			t.Size = UDim2.fromScale(1, h)
+			t.Position = UDim2.fromScale(0, y)
+			t.Font = Enum.Font.FredokaOne
+			t.Text = ""
+			t.TextColor3 = col
+			t.TextScaled = true
+			local st = Instance.new("UIStroke")
+			st.Thickness = 4
+			st.Color = Color3.fromRGB(14, 20, 48)
+			st.Parent = t
+			t.Parent = bb
+		end
+		line("NameLabel", 0, 0.62, Color3.new(1, 1, 1))
+		line("SubLabel", 0.62, 0.38, Color3.fromRGB(255, 222, 60))
+		bb.Parent = base.sign
+	end
+	bb.NameLabel.Text = text
+	bb.NameLabel.TextColor3 = base.owner and Color3.new(1, 1, 1) or Color3.fromRGB(200, 206, 224)
+	bb.SubLabel.Text = sub or ""
+end
+for _, base in pairs(bases) do
+	setSign(base, "EMPTY")
+end
+
+-- ------------------------------------------------------------ player data
+local data = {}
+local store
+pcall(function()
+	store = DSS:GetDataStore("RainingEggs_v1")
+end)
+
+local function zonesDone(d)
+	local n = 0
+	for z = 1, #C.ZONES do
+		local all = true
+		for i = 1, #C.RARITY do
+			if not d.index[z .. "_" .. i] then
+				all = false
+				break
+			end
+		end
+		if all then
+			n = n + 1
+		end
+	end
+	return n
+end
+
+local function cashMult(d)
+	return C.rebirthMult(d.rebirth) * (1 + C.INDEX_BONUS * d.zonesDone) * (d.passes.cash2 and 2 or 1)
+end
+
+-- basket size: upgrades + the VIP Basket game pass
+local function carryMax(d)
+	return C.basketMax(d.basket) + (d.passes.vip and C.VIP_BASKET or 0)
+end
+
+local function petList(list)
+	local t = {}
+	for _, pet in ipairs(list) do
+		table.insert(t, pet.z .. "_" .. pet.i .. "_" .. (pet.t or 1))
+	end
+	return table.concat(t, ",")
+end
+
+local function income(d)
+	local sum = 0
+	for _, pet in ipairs(d.pets) do
+		sum = sum + C.petIncome(pet)
+	end
+	return sum * cashMult(d)
+end
+
+local function sync(plr)
+	local d = data[plr]
+	if not d then
+		return
+	end
+	plr:SetAttribute("Cash", d.cash)
+	plr:SetAttribute("Speed", d.speed)
+	plr:SetAttribute("Carry", #d.carry + #d.bag)
+	plr:SetAttribute("Eggs", #d.bag) -- unhatched eggs (EGGS menu on the left)
+	local el = {}
+	for _, egg in ipairs(d.bag) do
+		table.insert(el, egg.z .. "_" .. egg.kind)
+	end
+	plr:SetAttribute("EggList", table.concat(el, ","))
+	plr:SetAttribute("CarryMax", carryMax(d))
+	plr:SetAttribute("Radius", C.basketRadius(d.basket))
+	plr:SetAttribute("TrainLv", d.train)
+	if bases[d.base] then
+		setTreadmill(bases[d.base], d.train)
+		setTreadSign(bases[d.base], d.train)
+	end
+	plr:SetAttribute("BasketLv", d.basket)
+	plr:SetAttribute("LuckLv", d.luck)
+	plr:SetAttribute("Rebirth", d.rebirth)
+	plr:SetAttribute("Income", income(d))
+	plr:SetAttribute("Pets", #d.pets)
+	plr:SetAttribute("Combo", d.combo)
+	plr:SetAttribute("ZonesDone", d.zonesDone)
+	plr:SetAttribute("Unlocked", d.unlocked) -- highest zone this player has bought (the client hides those gates)
+	plr:SetAttribute("PetList", petList(d.pets)) -- for the inventory menu
+	plr:SetAttribute("CarryList", petList(d.carry))
+	plr:SetAttribute("Caught", d.caught)
+	plr:SetAttribute("BestOdds", d.bestOdds)
+	local owned = {}
+	for k in pairs(d.passes) do
+		table.insert(owned, k)
+	end
+	plr:SetAttribute("Passes", table.concat(owned, ","))
+	plr:SetAttribute("DailyDay", d.dailyDay)
+	plr:SetAttribute("DailyLast", d.dailyLast)
+	local base = bases[d.base]
+	local inc = math.floor(income(d))
+	if base and base.shownInc ~= inc then
+		base.shownInc = inc
+		setSign(base, plr.DisplayName, "$" .. C.fmt(inc) .. " / s")
+	end
+	local ls = plr:FindFirstChild("leaderstats")
+	if ls then
+		ls.Cash.Value = math.floor(d.cash)
+		ls.Speed.Value = math.floor(d.speed)
+		ls.Rebirths.Value = d.rebirth
+	end
+end
+
+local function syncIndex(plr)
+	local d = data[plr]
+	local keys = {}
+	for key in pairs(d.index) do
+		table.insert(keys, key)
+	end
+	plr:SetAttribute("Index", table.concat(keys, ","))
+end
+
+local function say(plr, text, kind)
+	Notice:FireClient(plr, text, kind or "info")
+end
+
+-- ------------------------------------------------------------ pets in the pen / on the head
+local TIER_COLOR = { nil, Color3.fromRGB(255, 204, 40), Color3.fromRGB(255, 120, 220) }
+local function label(model, pet, mult)
+	local bb = Instance.new("BillboardGui")
+	bb.Name = "Tag"
+	bb.Size = UDim2.fromScale(8, 2.4)
+	bb.StudsOffsetWorldSpace = Vector3.new(0, 5, 0)
+	bb.MaxDistance = 70
+	bb.AlwaysOnTop = false
+	bb.Adornee = model.PrimaryPart
+	local function line(text, y, h, col)
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.Size = UDim2.fromScale(1, h)
+		t.Position = UDim2.fromScale(0, y)
+		t.Font = Enum.Font.FredokaOne
+		t.Text = text
+		t.TextColor3 = col
+		t.TextScaled = true
+		local st = Instance.new("UIStroke")
+		st.Thickness = 2.5
+		st.Color = Color3.new(0, 0, 0)
+		st.Parent = t
+		t.Parent = bb
+	end
+	line(C.petName(pet), 0, 0.55, TIER_COLOR[pet.t] or C.RARITY[pet.i].color)
+	line("$" .. C.fmt(C.petIncome(pet) * mult) .. "/s", 0.55, 0.45, Color3.fromRGB(255, 222, 60))
+	bb.Parent = model.PrimaryPart
+end
+
+local SLOT_X = { -10, 0, 10 }
+local SLOT_Z = { 7, -1.5, -10, -18.5 } -- front row first (the pen opens towards the plaza, +Z); behind the treadmill
+local function renderPen(plr)
+	local d = data[plr]
+	local base = d and bases[d.base]
+	if not base or not base.pen then
+		return
+	end
+	base.folder:ClearAllChildren()
+	table.sort(d.pets, function(a, b)
+		return C.petIncome(a) > C.petIncome(b)
+	end)
+	local c = base.pen.Position
+	local mult = cashMult(d)
+	for k, pet in ipairs(d.pets) do
+		local col = (k - 1) % 3 + 1
+		local row = math.floor((k - 1) / 3) + 1
+		local s = 1.3 + 0.1 * pet.i + 0.15 * (pet.t - 1)
+		local m = C.buildPet(pet, s, true)
+		m:PivotTo(CFrame.new(c.X + SLOT_X[col], c.Y + 0.05 + 1.75 * s, c.Z + SLOT_Z[row]) * CFrame.Angles(0, math.pi, 0))
+		label(m, pet, mult)
+		m:SetAttribute("Phase", k * 0.7)
+		m:SetAttribute("Kind", C.ZONES[pet.z].pets[pet.i].kind)
+		m.Parent = base.folder
+		CS:AddTag(m, "PenPet")
+	end
+end
+
+local function torsoOf(char)
+	return char and (char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso"))
+end
+
+local function renderCarry(plr)
+	local d = data[plr]
+	local char = plr.Character
+	local head = char and char:FindFirstChild("Head")
+	if not d or not head then
+		return
+	end
+	local old = char:FindFirstChild("CarryPets")
+	if old then
+		old:Destroy()
+	end
+	if true then
+		return -- user: nothing on the back any more (pets and eggs live in the PETS / EGGS menus)
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = "CarryPets"
+	-- pets pile up out of the basket on your back (or on your head with the old block basket)
+	local torso = torsoOf(char)
+	local back = char:FindFirstChild("BackBasket")
+	local anchor, base = head, head.CFrame * CFrame.new(0, 2.9, 0)
+	if back and torso then
+		anchor, base = torso, torso.CFrame * CFrame.new(C.basketRim(d.basket + 1)) * CFrame.new(0, 0.8, 0)
+	end
+	for k, pet in ipairs(d.carry) do
+		local m = C.buildPet(pet, 0.45, false)
+		m:PivotTo(base * CFrame.new(0, (k - 1) * 1.25, 0))
+		local w = Instance.new("WeldConstraint")
+		w.Part0 = anchor
+		w.Part1 = m.PrimaryPart
+		w.Parent = m.PrimaryPart
+		m.Parent = folder
+	end
+	folder.Parent = char
+end
+
+-- the basket you own hangs on your back: Blender mesh Basket_k (+ BasketNeon_k), welded to the torso
+local function addBasket(plr, char)
+	-- wait until the avatar has loaded: Roblox swaps the body parts then, and anything welded to the old ones disappears
+	for _ = 1, 60 do
+		local ok, loaded = pcall(function()
+			return plr:HasAppearanceLoaded()
+		end)
+		if not ok or loaded or plr.Character ~= char then
+			break
+		end
+		task.wait(0.1)
+	end
+	if plr.Character ~= char then
+		return
+	end
+	task.wait(0.2)
+	local head = char:WaitForChild("Head", 10)
+	if not head then
+		return
+	end
+	local torso = torsoOf(char)
+	for _, p in ipairs(char:GetChildren()) do
+		if p.Name == "Basket" or p.Name == "BackBasket" then
+			p:Destroy()
+		end
+	end
+	local d = data[plr]
+	local k = d and (d.basket + 1) or 1
+	local meta = RS:FindFirstChild("PropsMeta") and require(RS.PropsMeta)
+	local function mesh(name, neon)
+		local src, m = C.meshOf(name), meta and meta[name]
+		if not (src and m and torso) then
+			return nil
+		end
+		local p = src:Clone()
+		p.Name = neon and "Neon" or "Body"
+		p.Size = Vector3.new(m.size[1], m.size[2], m.size[3])
+		p.CFrame = torso.CFrame * CFrame.new(m.centre[1], m.centre[2], m.centre[3]) * CFrame.Angles(0, C.PROP_YAW, 0)
+		p.Color = Color3.new(1, 1, 1)
+		p.Material = neon and Enum.Material.Neon or Enum.Material.SmoothPlastic
+		p.Anchored = false
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+		p.Massless = true
+		p.CastShadow = not neon
+		local w = Instance.new("WeldConstraint")
+		w.Part0 = torso
+		w.Part1 = p
+		w.Parent = p
+		return p
+	end
+	local body = mesh("Basket_" .. k, false)
+	if not body then
+		warn("[RainingEggs] back basket: no mesh Basket_" .. k, C.meshOf("Basket_" .. k) ~= nil, meta ~= nil and meta["Basket_" .. k] ~= nil, torso)
+	end
+	if body then
+		local model = Instance.new("Model")
+		model.Name = "BackBasket"
+		body.Parent = model
+		local neon = mesh("BasketNeon_" .. k, true)
+		if neon then
+			neon.Parent = model
+		end
+		model.Parent = char
+		renderCarry(plr)
+		return
+	end
+	-- the Blender baskets are not imported yet: the old block basket on the head
+	local function piece(sx, sy, sz, y, col)
+		local p = Instance.new("Part")
+		p.Name = "Basket"
+		p.Size = Vector3.new(sx, sy, sz)
+		p.Color = col
+		p.Material = Enum.Material.SmoothPlastic
+		p.TopSurface = Enum.SurfaceType.Smooth
+		p.BottomSurface = Enum.SurfaceType.Smooth
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+		p.Massless = true
+		p.CFrame = head.CFrame * CFrame.new(0, y, 0)
+		local w = Instance.new("WeldConstraint")
+		w.Part0 = head
+		w.Part1 = p
+		w.Parent = p
+		p.Parent = char
+	end
+	piece(2.6, 0.9, 2.6, 1.35, Color3.fromRGB(190, 126, 60))
+	piece(3.2, 0.35, 3.2, 1.95, Color3.fromRGB(222, 150, 66))
+	piece(3.2, 0.2, 0.5, 2.2, Color3.fromRGB(240, 66, 66))
+	renderCarry(plr)
+end
+
+-- 3 same pets of one tier become 1 pet of the next tier
+local function fuse(d)
+	local made = {}
+	local again = true
+	while again do
+		again = false
+		local groups = {}
+		for k, pet in ipairs(d.pets) do
+			if pet.t < #C.TIER then
+				local key = pet.z .. "_" .. pet.i .. "_" .. pet.t
+				groups[key] = groups[key] or {}
+				table.insert(groups[key], k)
+				if #groups[key] == C.FUSE then
+					local idxs = groups[key]
+					table.sort(idxs, function(a, b)
+						return a > b
+					end)
+					for _, k2 in ipairs(idxs) do
+						table.remove(d.pets, k2)
+					end
+					local new = { z = pet.z, i = pet.i, t = pet.t + 1 }
+					table.insert(d.pets, new)
+					table.insert(made, new)
+					again = true
+					break
+				end
+			end
+		end
+	end
+	return made
+end
+
+-- carried pets go into the pen; same pets fuse; a full pen keeps the best ones and sells the rest
+local function deposit(plr)
+	local d = data[plr]
+	local n = #d.carry
+	for _, pet in ipairs(d.carry) do
+		table.insert(d.pets, pet)
+	end
+	d.carry = {}
+	local made = fuse(d)
+	local sold = 0
+	while #d.pets > C.PEN_MAX do
+		local worst, worstInc = 1, math.huge
+		for k, q in ipairs(d.pets) do
+			local inc = C.petIncome(q)
+			if inc < worstInc then
+				worst, worstInc = k, inc
+			end
+		end
+		table.remove(d.pets, worst)
+		sold = sold + worstInc * C.SELL_MULT
+	end
+	d.cash = d.cash + sold
+	renderPen(plr)
+	renderCarry(plr)
+	sync(plr)
+	if #made > 0 then
+		say(plr, C.FUSE .. " pets fused into " .. C.petName(made[#made]) .. "!", "legend")
+	elseif sold > 0 then
+		say(plr, "Pen is full! Weakest pets sold for $" .. C.fmt(sold), "cash")
+	end
+end
+
+local function sellCarry(plr)
+	local d = data[plr]
+	if #d.carry == 0 then
+		say(plr, "Catch eggs first, then sell the pets here", "info")
+		return
+	end
+	local sum = 0
+	for _, pet in ipairs(d.carry) do
+		sum = sum + C.petIncome(pet) * C.SELL_MULT
+	end
+	d.carry = {}
+	d.cash = d.cash + sum
+	renderCarry(plr)
+	sync(plr)
+	say(plr, "Sold for $" .. C.fmt(sum), "cash")
+end
+
+-- ------------------------------------------------------------ upgrades (ProximityPrompts; the client writes the price on them)
+local UP_NAME = { train = "Training", basket = "Basket", luck = "Luck" }
+local function buy(plr, kind, part)
+	local d = data[plr]
+	if not d then
+		return
+	end
+	if kind == "sell" then
+		sellCarry(plr)
+		return
+	elseif kind == "index" then
+		say(plr, "Open the INDEX button on the right side", "info")
+		return
+	end
+	if kind == "train" and (not bases[d.base] or bases[d.base].tread ~= part) then
+		say(plr, "This is not your base", "bad")
+		return
+	end
+	local lv = d[kind]
+	if lv >= C.MAX_LV[kind] then
+		say(plr, UP_NAME[kind] .. " is MAX", "info")
+		return
+	end
+	local cost = C.cost(kind, lv)
+	if d.cash < cost then
+		say(plr, "You need $" .. C.fmt(cost), "bad")
+		return
+	end
+	d.cash = d.cash - cost
+	d[kind] = lv + 1
+	sync(plr)
+	if kind == "basket" then
+		if plr.Character then
+			task.spawn(addBasket, plr, plr.Character)
+		end
+		say(plr, C.BASKETS[lv + 2].name .. "! Holds " .. C.basketMax(lv + 1) .. " pets", "buy")
+		return
+	end
+	if kind == "train" and TList and treadTier(lv + 1) ~= treadTier(lv) then
+		say(plr, "Training level " .. (lv + 1) .. " - new treadmill: " .. TList[treadTier(lv + 1)].Id .. "!", "buy")
+		return
+	end
+	say(plr, UP_NAME[kind] .. " level " .. (lv + 1) .. "!", "buy")
+end
+
+local function prompt(part, kind, action)
+	local pp = Instance.new("ProximityPrompt")
+	pp.Name = "Upg"
+	pp.ActionText = action
+	pp.ObjectText = ""
+	pp.HoldDuration = 0.25
+	pp.MaxActivationDistance = 22
+	pp.RequiresLineOfSight = false
+	pp:SetAttribute("Kind", kind)
+	pp.Parent = part
+	CS:AddTag(pp, "UpgPrompt")
+	pp.Triggered:Connect(function(plr)
+		buy(plr, kind, part)
+	end)
+end
+
+-- (no E prompt on the treadmill any more: the user removed it 19 Nov; training is upgraded from the UPGRADE menu)
+local boards = {}
+local shopPads = {} -- kind -> ShopPad part
+for _, d in ipairs(Map:GetDescendants()) do
+	if d.Name == "ShopPad" and d:IsA("BasePart") then
+		-- shop zone: the client opens the shop menu while you stand on it (no prompt)
+		local x = d.Position.X
+		local kind = (x < -74 and "sell") or (x < 0 and "basket") or (x < 74 and "luck") or "index"
+		d:SetAttribute("Shop", kind)
+		shopPads[kind] = d
+	elseif d.Name == "Leaderboard" and d:IsA("BasePart") then
+		table.insert(boards, d)
+	end
+end
+
+-- ------------------------------------------------------------ ZONE GATES
+-- Every zone after the first has a see-through gate at its entrance with the price on it.
+-- Walk into the gate with enough cash -> the cash is taken, the zone is yours forever (saved).
+-- The gate parts are made here, so nothing has to be placed by hand in Studio:
+--   Workspace > ZoneGates > Gate2 .. Gate10 > Gate (with PriceGui on both sides), WallLeft, WallRight, Blocker
+-- Prices and looks: Config > C.ZONE_PRICE and C.GATE.
+-- The gate is the same part for everybody; each player's own client hides the gates that player owns
+-- (see "zone gates" in the client). The server still checks every step in the main loop below,
+-- so a cheater who deletes the gate on their screen is sent back.
+local G = C.GATE
+local GateFolder = Instance.new("Folder")
+GateFolder.Name = "ZoneGates"
+
+local function gatePart(name, size, pos, col, transparency, parent)
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Anchored = true
+	p.CanCollide = true
+	p.CanQuery = false -- the camera and the egg raycasts ignore it
+	p.CastShadow = false
+	p.Material = Enum.Material.SmoothPlastic
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Size = size
+	p.CFrame = CFrame.new(pos)
+	p.Color = col
+	p.Transparency = transparency
+	p.Parent = parent
+	return p
+end
+
+-- the price text on one side of the gate
+local function gateSign(part, face, zoneIndex)
+	local zone = C.ZONES[zoneIndex]
+	local sg = Instance.new("SurfaceGui")
+	sg.Name = "PriceGui"
+	sg.Face = face
+	sg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	sg.PixelsPerStud = 20
+	sg.LightInfluence = 0
+	-- one text line: name, top edge (0..1), height (0..1), text, colour
+	local function line(name, y, h, str, col)
+		local t = Instance.new("TextLabel")
+		t.Name = name
+		t.BackgroundTransparency = 1
+		t.Size = UDim2.fromScale(0.9, h)
+		t.Position = UDim2.fromScale(0.05, y)
+		t.Font = Enum.Font.FredokaOne
+		t.Text = str
+		t.TextColor3 = col
+		t.TextScaled = true
+		local st = Instance.new("UIStroke")
+		st.Thickness = 5
+		st.Color = Color3.fromRGB(14, 20, 48)
+		st.Parent = t
+		t.Parent = sg
+	end
+	line("Top", 0.07, 0.15, G.textTop, Color3.fromRGB(255, 120, 120))
+	line("ZoneName", 0.24, 0.2, zone.name, Color3.new(1, 1, 1))
+	line("Price", 0.45, 0.32, "$" .. C.fmt(zone.price), Color3.fromRGB(255, 222, 60))
+	line("Hint", 0.8, 0.12, G.textHint, Color3.fromRGB(225, 230, 250))
+	sg.Parent = part
+end
+
+-- buy the zone behind a gate (called when a player touches the gate)
+local function tryUnlock(plr, zoneIndex)
+	local d = data[plr]
+	if not d or zoneIndex <= d.unlocked then
+		return -- already owned
+	end
+	local now = os.clock()
+	if now - d.lastTouch < G.touchCooldown then
+		return -- touching fires many times a second; answer only now and then
+	end
+	d.lastTouch = now
+	if zoneIndex > d.unlocked + 1 then
+		return -- an earlier zone must be bought first (no message)
+	end
+	local zone = C.ZONES[zoneIndex]
+	if d.cash < zone.price then
+		return -- not enough cash yet (no message; the gate itself shows cash / price)
+	end
+	d.cash = d.cash - zone.price -- take the money
+	d.unlocked = zoneIndex -- open forever (saved with the rest of the data)
+	sync(plr) -- the "Unlocked" attribute tells the client to fade the gate away
+end
+
+for zoneIndex = 2, #C.ZONES do
+	local z = (zoneIndex - 1) * C.ZONE_LEN -- the arch of zone n stands at z = (n - 1) * 140
+	local col = Color3.fromRGB(C.ZONES[zoneIndex].eggCol[1], C.ZONES[zoneIndex].eggCol[2], C.ZONES[zoneIndex].eggCol[3])
+	local model = Instance.new("Model")
+	model.Name = "Gate" .. zoneIndex
+	model:SetAttribute("Zone", zoneIndex)
+
+	-- the glowing gate in the arch, with the price on both sides
+	local gate = gatePart("Gate", Vector3.new(G.width, G.height, G.thick), Vector3.new(0, G.height / 2, z), col, G.transparency, model)
+	gate.Material = Enum.Material.Neon
+	gateSign(gate, Enum.NormalId.Front, zoneIndex)
+	gateSign(gate, Enum.NormalId.Back, zoneIndex)
+	gate.Touched:Connect(function(hit)
+		local plr = Players:GetPlayerFromCharacter(hit.Parent)
+		if plr then
+			tryUnlock(plr, zoneIndex)
+		end
+	end)
+
+	-- glass walls left and right of the arch, and an invisible wall above everything
+	local side = (G.wallWidth - G.width) / 2
+	for _, sx in ipairs({ -1, 1 }) do
+		local wall = gatePart(sx < 0 and "WallLeft" or "WallRight", Vector3.new(side, G.height, G.thick),
+			Vector3.new(sx * (G.width / 2 + side / 2), G.height / 2, z), col, G.wallTransparency, model)
+		wall.CanTouch = false
+		wall.Material = Enum.Material.Neon -- glows like the gate, so you see where the locked zone starts
+	end
+	gatePart("Blocker", Vector3.new(G.wallWidth, G.blockHeight, G.thick), Vector3.new(0, G.height + G.blockHeight / 2, z), col, 1, model).CanTouch = false
+	model.Parent = GateFolder
+end
+GateFolder.Parent = workspace
+
+-- the big arch signs of the map still say "SPEED 500+": write the cash price there instead
+do
+	local newText = {}
+	for i = 2, #C.ZONES do
+		newText["SPEED " .. C.fmt(C.ZONES[i].req) .. "+"] = "COSTS $" .. C.fmt(C.ZONES[i].price)
+	end
+	for _, o in ipairs(Map:GetDescendants()) do
+		if o:IsA("TextLabel") and newText[o.Text] then
+			o.Text = newText[o.Text]
+		end
+	end
+end
+
+Action.OnServerEvent:Connect(function(plr, what, kind)
+	local d = data[plr]
+	if not d then
+		return
+	end
+	if what == "sellpets" then
+		-- the SELL PETS menu: "c3,c1,p2" = pets 3 and 1 of the basket and pet 2 of the pen; only near the SELL shop
+		local pad = shopPads.sell
+		local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+		if not pad or not hrp or typeof(kind) ~= "string" or #kind > 2000 then
+			return
+		end
+		local off = hrp.Position - pad.Position
+		if Vector3.new(off.X, 0, off.Z).Magnitude > math.max(pad.Size.Y, pad.Size.Z) / 2 + 10 then
+			return
+		end
+		local pick = { c = {}, p = {} }
+		for _, k in ipairs(string.split(kind, ",")) do
+			local where, i = string.match(k, "^([cp])(%d+)$")
+			if where then
+				pick[where][tonumber(i)] = true
+			end
+		end
+		local sum, n, last = 0, 0, nil
+		for where, set in pairs(pick) do
+			local list = where == "c" and d.carry or d.pets
+			local idx = {}
+			for i in pairs(set) do
+				if list[i] then
+					table.insert(idx, i)
+				end
+			end
+			table.sort(idx, function(a, b)
+				return a > b
+			end)
+			for _, i in ipairs(idx) do
+				local pet = table.remove(list, i)
+				sum = sum + C.petIncome(pet) * C.SELL_MULT
+				n, last = n + 1, pet
+			end
+		end
+		if n == 0 then
+			return
+		end
+		d.cash = d.cash + sum
+		renderPen(plr)
+		renderCarry(plr)
+		sync(plr)
+		say(plr, (n == 1 and ("Sold " .. C.petName(last)) or ("Sold " .. n .. " pets")) .. " for $" .. C.fmt(sum), "cash")
+		return
+	end
+	if what == "sellpet" then
+		-- the SELL shop list: "c<i>" = pet i in the basket, "p<i>" = pet i in the pen; only near the SELL shop
+		local pad = shopPads.sell
+		local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+		if not pad or not hrp or typeof(kind) ~= "string" then
+			return
+		end
+		local off = hrp.Position - pad.Position
+		if Vector3.new(off.X, 0, off.Z).Magnitude > math.max(pad.Size.Y, pad.Size.Z) / 2 + 8 then
+			return
+		end
+		local where, i = string.match(kind, "^([cp])(%d+)$")
+		i = tonumber(i)
+		local list = where == "c" and d.carry or where == "p" and d.pets or nil
+		local pet = list and list[i]
+		if not pet then
+			return
+		end
+		table.remove(list, i)
+		local price = C.petIncome(pet) * C.SELL_MULT
+		d.cash = d.cash + price
+		if where == "p" then
+			renderPen(plr)
+		else
+			renderCarry(plr)
+		end
+		sync(plr)
+		say(plr, "Sold " .. C.petName(pet) .. " for $" .. C.fmt(price), "cash")
+		return
+	end
+	if what == "shop" then
+		-- buy from the shop menu: only while standing near that shop's zone
+		local pad = typeof(kind) == "string" and shopPads[kind]
+		local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+		if pad and hrp and (kind == "basket" or kind == "luck" or kind == "sell") then
+			local d = hrp.Position - pad.Position
+			if Vector3.new(d.X, 0, d.Z).Magnitude < math.max(pad.Size.Y, pad.Size.Z) / 2 + 8 then
+				buy(plr, kind, pad)
+			end
+		end
+		return
+	end
+	if what ~= "rebirth" then
+		return
+	end
+	local need = C.rebirthNeed(d.rebirth)
+	if d.speed < need then
+		say(plr, "Rebirth needs SPEED " .. C.fmt(need), "bad")
+		return
+	end
+	d.rebirth = d.rebirth + 1
+	d.cash, d.speed, d.train = 0, 0, 0
+	sync(plr)
+	renderPen(plr)
+	Notice:FireAllClients(plr.DisplayName .. " reached REBIRTH " .. d.rebirth .. "!", "legend")
+end)
+
+-- ------------------------------------------------------------ leaderboards on the plaza (players on this server)
+local boardRows = {}
+local function buildBoard(part, title, col)
+	for _, ch in ipairs(part:GetChildren()) do
+		if ch:IsA("SurfaceGui") then
+			ch:Destroy()
+		end
+	end
+	local sg = Instance.new("SurfaceGui")
+	sg.Name = "Board"
+	sg.Face = Enum.NormalId.Front
+	sg.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	sg.PixelsPerStud = 20
+	sg.LightInfluence = 0
+	local bg = Instance.new("Frame")
+	bg.Size = UDim2.fromScale(1, 1)
+	bg.BackgroundColor3 = col
+	bg.BorderSizePixel = 0
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(120, 120, 140))
+	g.Parent = bg
+	bg.Parent = sg
+	local rows = {}
+	local function line(y, h, text, color)
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.Size = UDim2.fromScale(0.92, h)
+		t.Position = UDim2.fromScale(0.04, y)
+		t.Font = Enum.Font.FredokaOne
+		t.Text = text
+		t.TextColor3 = color
+		t.TextScaled = true
+		t.TextXAlignment = Enum.TextXAlignment.Left
+		local st = Instance.new("UIStroke")
+		st.Thickness = 3
+		st.Color = Color3.fromRGB(14, 20, 48)
+		st.Parent = t
+		t.Parent = bg
+		return t
+	end
+	local head = line(0.03, 0.2, title, Color3.new(1, 1, 1))
+	head.TextXAlignment = Enum.TextXAlignment.Center
+	for i = 1, 5 do
+		rows[i] = line(0.25 + (i - 1) * 0.145, 0.125, "", i == 1 and Color3.fromRGB(255, 222, 60) or Color3.new(1, 1, 1))
+	end
+	sg.Parent = part
+	return rows
+end
+for _, b in ipairs(boards) do
+	if b.Position.X < 0 then
+		boardRows.luck = buildBoard(b, "TOP LUCK", Color3.fromRGB(160, 100, 250))
+	else
+		boardRows.catch = buildBoard(b, "TOP CATCHERS", Color3.fromRGB(60, 190, 230))
+	end
+end
+
+task.spawn(function()
+	while true do
+		task.wait(5)
+		local list = {}
+		for plr, d in pairs(data) do
+			table.insert(list, { name = plr.DisplayName, caught = d.caught, odds = d.bestOdds, pet = d.bestName })
+		end
+		if boardRows.catch then
+			table.sort(list, function(a, b)
+				return a.caught > b.caught
+			end)
+			for i = 1, 5 do
+				local r = list[i]
+				boardRows.catch[i].Text = r and (i .. ". " .. r.name .. "  -  " .. C.fmt(r.caught) .. " eggs") or ""
+			end
+		end
+		if boardRows.luck then
+			table.sort(list, function(a, b)
+				return a.odds > b.odds
+			end)
+			for i = 1, 5 do
+				local r = list[i]
+				boardRows.luck[i].Text = (r and r.odds > 0) and (i .. ". " .. r.name .. "  -  " .. r.pet .. " (1 in " .. C.comma(r.odds) .. ")") or ""
+			end
+		end
+	end
+end)
+
+-- ------------------------------------------------------------ join / leave / save
+local function load(plr)
+	local saved
+	if store then
+		pcall(function()
+			saved = store:GetAsync("u" .. plr.UserId)
+		end)
+	end
+	saved = type(saved) == "table" and saved or {}
+	local pets = {}
+	for _, pet in ipairs(type(saved.pets) == "table" and saved.pets or {}) do
+		local t = tonumber(pet.t) or 1
+		if C.ZONES[pet.z] and C.ZONES[pet.z].pets[pet.i] and C.TIER[t] and #pets < C.PEN_MAX then
+			table.insert(pets, { z = pet.z, i = pet.i, t = t })
+		end
+	end
+	local index = {}
+	for _, key in ipairs(type(saved.index) == "table" and saved.index or {}) do
+		index[tostring(key)] = true
+	end
+	for _, pet in ipairs(pets) do
+		index[C.petKey(pet)] = true
+	end
+	local bag = {}
+	for _, egg in ipairs(type(saved.eggs) == "table" and saved.eggs or {}) do
+		if type(egg) == "table" and C.ZONES[tonumber(egg.z) or 0] then
+			table.insert(bag, { z = tonumber(egg.z), kind = tostring(egg.kind or "normal"), luck = tonumber(egg.luck) or 1 })
+		end
+	end
+	local d = {
+		cash = tonumber(saved.cash) or 0,
+		speed = tonumber(saved.speed) or 0,
+		train = tonumber(saved.train) or 0,
+		basket = tonumber(saved.basket) or 0,
+		luck = tonumber(saved.luck) or 0,
+		rebirth = tonumber(saved.rebirth) or 0,
+		caught = tonumber(saved.caught) or 0,
+		bestOdds = tonumber(saved.bestOdds) or 0,
+		bestName = tostring(saved.bestName or ""),
+		pets = pets,
+		index = index,
+		carry = {},
+		bag = bag, -- caught eggs not hatched yet: { z, kind, luck } (luck = rolled with the luck of the moment it was caught)
+		combo = 0,
+		comboT = 0,
+		slowUntil = 0,
+		zone = 0,
+		lastGate = 0,
+		lastTouch = 0,
+		zonesDone = 0,
+		unlocked = 1,
+		passes = {},
+		dailyDay = tonumber(saved.dailyDay) or 0, -- last claimed day of the streak (1..7)
+		dailyLast = tonumber(saved.dailyLast) or 0, -- os.time() of the last claim
+	}
+	-- zones bought with cash. Old saves (from when gates needed speed) keep the zones their speed had opened.
+	local unlocked = tonumber(saved.unlocked)
+	if not unlocked then
+		unlocked = 1
+		for i = 2, #C.ZONES do
+			if d.speed >= C.ZONES[i].req then
+				unlocked = i
+			else
+				break
+			end
+		end
+	end
+	d.unlocked = math.clamp(math.floor(unlocked), 1, #C.ZONES)
+	d.zonesDone = zonesDone(d)
+	return d
+end
+
+local function save(plr)
+	local d = data[plr]
+	if not d or not store then
+		return
+	end
+	local keys = {}
+	for key in pairs(d.index) do
+		table.insert(keys, key)
+	end
+	pcall(function()
+		store:SetAsync("u" .. plr.UserId, {
+			cash = d.cash, speed = d.speed, train = d.train, basket = d.basket, luck = d.luck, rebirth = d.rebirth,
+			caught = d.caught, bestOdds = d.bestOdds, bestName = d.bestName, pets = d.pets, index = keys,
+			unlocked = d.unlocked, dailyDay = d.dailyDay, dailyLast = d.dailyLast, eggs = d.bag,
+		})
+	end)
+end
+
+local function onPlayer(plr)
+	local ls = Instance.new("Folder")
+	ls.Name = "leaderstats"
+	for _, n in ipairs({ "Cash", "Speed", "Rebirths" }) do
+		local v = Instance.new("NumberValue")
+		v.Name = n
+		v.Parent = ls
+	end
+	ls.Parent = plr
+
+	local d = load(plr)
+	if not plr.Parent then
+		return
+	end
+	for i = 1, 8 do
+		if bases[i] and not bases[i].owner then
+			bases[i].owner = plr
+			bases[i].shownInc = nil
+			d.base = i
+			break
+		end
+	end
+	data[plr] = d
+	plr:SetAttribute("Base", d.base or 0)
+	sync(plr)
+	syncIndex(plr)
+	renderPen(plr)
+
+	plr.CharacterAdded:Connect(function(char)
+		task.spawn(addBasket, plr, char)
+	end)
+	pcall(function()
+		plr.CharacterAppearanceLoaded:Connect(function(char)
+			task.spawn(addBasket, plr, char) -- again once the avatar is in (body parts were replaced)
+		end)
+	end)
+	if plr.Character then
+		task.spawn(addBasket, plr, plr.Character)
+	end
+end
+
+Players.PlayerAdded:Connect(onPlayer)
+for _, plr in ipairs(Players:GetPlayers()) do
+	task.spawn(onPlayer, plr)
+end
+
+Players.PlayerRemoving:Connect(function(plr)
+	save(plr)
+	local d = data[plr]
+	if d and bases[d.base] then
+		bases[d.base].owner = nil
+		setTreadmill(bases[d.base], 0)
+		setTreadSign(bases[d.base], nil)
+		bases[d.base].folder:ClearAllChildren()
+		setSign(bases[d.base], "EMPTY")
+	end
+	data[plr] = nil
+end)
+
+game:BindToClose(function()
+	for _, plr in ipairs(Players:GetPlayers()) do
+		save(plr)
+	end
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(90)
+		for plr in pairs(data) do
+			save(plr)
+		end
+	end
+end)
+
+-- ------------------------------------------------------------ eggs
+local eggs = {}
+local nextId = 0
+local storm = false
+local rayParams = RaycastParams.new()
+rayParams.RespectCanCollide = true
+
+local function spawnEgg(zoneIndex, near, forced)
+	local z0 = (zoneIndex - 1) * C.ZONE_LEN
+	for _ = 1, 5 do
+		local x, z
+		if near and (forced or math.random() < 0.65) then
+			local a, r = math.random() * math.pi * 2, 12 + math.random() * 45
+			x, z = near.X + math.cos(a) * r, near.Z + math.sin(a) * r
+		else
+			x, z = (math.random() * 2 - 1) * C.EGG_X, z0 + 10 + math.random() * (C.ZONE_LEN - 20)
+		end
+		x = math.clamp(x, -C.EGG_X, C.EGG_X)
+		z = math.clamp(z, z0 + 10, z0 + C.ZONE_LEN - 10)
+		local hit = workspace:Raycast(Vector3.new(x, C.EGG_Y, z), Vector3.new(0, -C.EGG_Y - 30, 0), rayParams)
+		if hit and hit.Position.Y < 8 then
+			nextId = nextId + 1
+			local id = nextId
+			local kind, fall, linger = forced or "normal", C.fallTime(zoneIndex), 0
+			if kind == "storm" then
+				fall, linger = fall * 1.7, C.STORM_EGG_LINGER
+			else
+				local r = math.random()
+				if r < C.GOLDEN_CHANCE then
+					kind, fall = "golden", fall * 1.35
+				elseif r < C.GOLDEN_CHANCE + C.ROTTEN_CHANCE then
+					kind = "rotten"
+				end
+			end
+			eggs[id] = { x = x, z = z, y0 = C.EGG_Y, gy = hit.Position.Y, fall = fall, linger = linger, t0 = os.clock(), zone = zoneIndex, kind = kind }
+			EggSpawn:FireAllClients(id, x, z, C.EGG_Y, hit.Position.Y, fall, zoneIndex, kind, linger)
+			task.delay(fall + linger + 0.8, function()
+				eggs[id] = nil
+			end)
+			return true
+		end
+	end
+	return false
+end
+
+local function roll(luck)
+	for i = #C.RARITY, 2, -1 do
+		if math.random() < math.min(luck / C.RARITY[i].odds, 0.9) then
+			return i
+		end
+	end
+	return 1
+end
+
+Catch.OnServerEvent:Connect(function(plr, id)
+	local e = type(id) == "number" and eggs[id]
+	local d = data[plr]
+	local char = plr.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if not e or e.done or not d or not hrp then
+		return
+	end
+	local now = os.clock()
+	local t = now - e.t0
+	local p = hrp.Position
+	local dx, dz = p.X - e.x, p.Z - e.z
+	local reach = C.basketRadius(d.basket) + 8
+	local eggY = e.y0 + (e.gy - e.y0) * math.clamp(t / e.fall, 0, 1)
+	if t > e.fall + e.linger + 0.6 or dx * dx + dz * dz > reach * reach or eggY > p.Y + 16 then
+		return
+	end
+
+	if e.kind == "rotten" then
+		e.done = true
+		d.slowUntil = now + C.ROTTEN_SLOW
+		d.combo = 0
+		EggGone:FireAllClients(id, plr.UserId, e.kind)
+		sync(plr)
+		say(plr, "Yuck, a rotten egg! You are slow for " .. C.ROTTEN_SLOW .. " seconds", "bad")
+		return
+	end
+	if #d.carry + #d.bag >= carryMax(d) then
+		say(plr, "Basket is full! Hatch your eggs or run to your base", "bad")
+		return
+	end
+	e.done = true
+	if now - d.comboT > C.COMBO_TIME then
+		d.combo = 0
+	end
+	d.combo = d.combo + 1
+	d.comboT = now
+
+	-- the luck is saved with the egg now (combo, storm, golden...), the pet is rolled when the player presses HATCH EGGS
+	local luck = C.luck(d.luck) * C.comboLuck(d.combo) * (storm and C.STORM_LUCK or 1) * (d.passes.luck2 and 2 or 1)
+	if e.kind == "golden" then
+		luck = luck * C.GOLDEN_LUCK
+	elseif e.kind == "storm" then
+		luck = luck * C.STORM_EGG_LUCK
+	end
+	table.insert(d.bag, { z = e.zone, kind = e.kind, luck = luck })
+	EggGone:FireAllClients(id, plr.UserId, e.kind)
+	if e.kind == "storm" then
+		Notice:FireAllClients(plr.DisplayName .. " caught the STORM EGG!", "storm")
+	end
+	renderCarry(plr)
+	sync(plr)
+end)
+
+-- HATCH EGGS button: every egg in the basket hatches; the pets stay in the basket until the player walks home
+local function hatchBag(plr, only, limit)
+	local d = data[plr]
+	if not d or #d.bag == 0 then
+		return
+	end
+	local bag, keep = {}, {}
+	for _, egg in ipairs(d.bag) do
+		if (type(only) ~= "string" or egg.z .. "_" .. egg.kind == only) and (not limit or #bag < limit) then
+			table.insert(bag, egg)
+		else
+			table.insert(keep, egg)
+		end
+	end
+	d.bag = keep
+	for _, egg in ipairs(bag) do
+		local idx = roll(egg.luck)
+		local pet = { z = egg.z, i = idx, t = 1 }
+		local def = C.ZONES[egg.z].pets[idx]
+		local odds = C.RARITY[idx].odds
+		table.insert(d.carry, pet)
+		d.caught = d.caught + 1
+		if odds > d.bestOdds then
+			d.bestOdds, d.bestName = odds, def.name
+		end
+		local key = C.petKey(pet)
+		local isNew = not d.index[key]
+		if isNew then
+			d.index[key] = true
+			local before = d.zonesDone
+			d.zonesDone = zonesDone(d)
+			syncIndex(plr)
+			if d.zonesDone > before then
+				say(plr, C.ZONES[egg.z].name .. " index complete! +" .. math.floor(C.INDEX_BONUS * 100) .. "% cash forever", "legend")
+				renderPen(plr)
+			end
+		end
+		Hatch:FireClient(plr, pet, egg.kind, isNew, 1)
+		if idx == #C.RARITY then
+			Notice:FireAllClients(plr.DisplayName .. " hatched a LEGENDARY " .. def.name .. "! (1 in " .. C.comma(odds) .. ")", "legend")
+		end
+	end
+	renderCarry(plr)
+	sync(plr)
+end
+
+local function occupied()
+	local inZone = {}
+	for plr, d in pairs(data) do
+		local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+		if hrp and d.zone >= 1 then
+			inZone[d.zone] = inZone[d.zone] or {}
+			table.insert(inZone[d.zone], hrp.Position)
+		end
+	end
+	return inZone
+end
+
+-- egg rain: only in zones where somebody is
+task.spawn(function()
+	local acc = {}
+	while true do
+		task.wait(0.5)
+		for zoneIndex, list in pairs(occupied()) do
+			acc[zoneIndex] = (acc[zoneIndex] or 0) + 0.5 * (1.2 + 0.7 * #list) * (storm and C.STORM_RATE or 1)
+			while acc[zoneIndex] >= 1 do
+				acc[zoneIndex] = acc[zoneIndex] - 1
+				spawnEgg(zoneIndex, list[math.random(#list)])
+			end
+		end
+	end
+end)
+
+-- storm event: the clients read StormNext / StormEnd (server time) from workspace
+task.spawn(function()
+	local nextAt = workspace:GetServerTimeNow() + math.random(C.STORM_FIRST[1], C.STORM_FIRST[2]) -- random: nobody knows when
+	local endAt, warned = 0, false
+	local bigEggs = {}
+	workspace:SetAttribute("StormNext", nextAt)
+	workspace:SetAttribute("StormEnd", 0)
+	while true do
+		task.wait(1)
+		local now = workspace:GetServerTimeNow()
+		if not storm then
+			if not warned and now >= nextAt - 10 then
+				warned = true
+				Notice:FireAllClients("EGG STORM in 10 seconds! Run to a zone!", "storm")
+			end
+			if now >= nextAt then
+				storm = true
+				endAt = now + C.STORM_LEN
+				bigEggs = { now + 6, now + 24 }
+				workspace:SetAttribute("StormEnd", endAt)
+				Notice:FireAllClients("EGG STORM! More eggs and x" .. C.STORM_LUCK .. " luck", "storm")
+			end
+		else
+			if bigEggs[1] and now >= bigEggs[1] then
+				table.remove(bigEggs, 1)
+				for zoneIndex, list in pairs(occupied()) do
+					if spawnEgg(zoneIndex, list[math.random(#list)], "storm") then
+						Notice:FireAllClients("A giant STORM EGG is falling in " .. C.ZONES[zoneIndex].name .. "!", "storm")
+					end
+				end
+			end
+			if now >= endAt then
+				storm = false
+				warned = false
+				nextAt = now + math.random(C.STORM_EVERY[1], C.STORM_EVERY[2])
+				workspace:SetAttribute("StormNext", nextAt)
+				workspace:SetAttribute("StormEnd", 0)
+			end
+		end
+	end
+end)
+
+-- ------------------------------------------------------------ main loop: gates, pen, treadmill, walk speed
+task.spawn(function()
+	while true do
+		task.wait(0.25)
+		local now = os.clock()
+		for plr, d in pairs(data) do
+			local char = plr.Character
+			local hrp = char and char:FindFirstChild("HumanoidRootPart")
+			local hum = char and char:FindFirstChildOfClass("Humanoid")
+			if hrp and hum and hum.Health > 0 then
+				local p = hrp.Position
+				local zi = p.Z >= 0 and math.min(math.floor(p.Z / C.ZONE_LEN) + 1, #C.ZONES) or 0
+				if zi > 1 then
+					-- safety net behind the gates: a player standing in a zone they did not buy is put back
+					local allowed = d.unlocked
+					if zi > allowed then
+						hrp.CFrame = hrp.CFrame - p + Vector3.new(p.X, p.Y + 1, allowed * C.ZONE_LEN - 8)
+						hrp.AssemblyLinearVelocity = Vector3.zero
+						zi = allowed
+					end
+				end
+				d.zone = zi
+
+				if d.combo > 0 and now - d.comboT > C.COMBO_TIME then
+					d.combo = 0
+					sync(plr)
+				end
+
+				local base = bases[d.base]
+				if base then
+					if base.pen and #d.carry > 0 then
+						local c = base.pen.Position
+						if math.abs(p.X - c.X) < base.pen.Size.X / 2 and math.abs(p.Z - c.Z) < base.pen.Size.Z / 2 then
+							deposit(plr)
+						end
+					end
+					if base.tread then
+						local c = base.tread.Position
+						if math.abs(p.X - c.X) < 3.5 and math.abs(p.Z - c.Z) < 7 and p.Y < c.Y + 9 then
+							d.speed = d.speed + math.floor(C.trainPower(d.train) * C.rebirthMult(d.rebirth))
+							sync(plr)
+						end
+					end
+				end
+				hum.WalkSpeed = C.walkSpeed(d.speed) * (now < d.slowUntil and C.ROTTEN_FACTOR or 1) * (now < (d.stunUntil or 0) and 0.15 or 1)
+			end
+		end
+	end
+end)
+
+-- pets earn cash every second
+task.spawn(function()
+	while true do
+		task.wait(1)
+		for plr, d in pairs(data) do
+			local inc = income(d)
+			if inc > 0 then
+				d.cash = d.cash + inc
+				sync(plr)
+			end
+		end
+	end
+end)
+
+
+-- ============================================================ NEW MENUS: upgrades from the menu, daily rewards, game passes
+local MPS = game:GetService("MarketplaceService")
+
+-- a pet straight into the pen (daily reward egg): same path as walking home with it, the basket is left alone
+local function hatchToPen(plr, d, z, kind, boost)
+	local luck = C.luck(d.luck) * (d.passes.luck2 and 2 or 1) * (boost or 1)
+	local idx = roll(luck)
+	local pet = { z = z, i = idx, t = 1 }
+	local def = C.ZONES[z].pets[idx]
+	d.caught = d.caught + 1
+	if C.RARITY[idx].odds > d.bestOdds then
+		d.bestOdds, d.bestName = C.RARITY[idx].odds, def.name
+	end
+	local key = C.petKey(pet)
+	local isNew = not d.index[key]
+	if isNew then
+		d.index[key] = true
+		d.zonesDone = zonesDone(d)
+		syncIndex(plr)
+	end
+	Hatch:FireClient(plr, pet, kind, isNew, 1)
+	local keep = d.carry
+	d.carry = { pet }
+	deposit(plr)
+	d.carry = keep
+	renderCarry(plr)
+	sync(plr)
+	if idx == #C.RARITY then
+		Notice:FireAllClients(plr.DisplayName .. " hatched a LEGENDARY " .. def.name .. "! (1 in " .. C.comma(C.RARITY[idx].odds) .. ")", "legend")
+	end
+end
+
+Action.OnServerEvent:Connect(function(plr, what, kind)
+	local d = data[plr]
+	if not d then
+		return
+	end
+	if what == "hatch" then
+		hatchBag(plr, kind)
+	elseif what == "hatch1" then
+		hatchBag(plr, kind, 1) -- the EGGS menu: the player picks which egg to open, one at a time
+	elseif what == "upgrade" then
+		if kind == "basket" or kind == "luck" then
+			buy(plr, kind, nil)
+		elseif kind == "train" then
+			buy(plr, "train", bases[d.base] and bases[d.base].tread)
+		end
+	elseif what == "daily" then
+		local now = os.time()
+		if d.dailyLast > 0 and now - d.dailyLast < C.DAILY_COOLDOWN then
+			say(plr, "Come back later for your next reward", "info")
+			return
+		end
+		local day = (d.dailyLast == 0 or now - d.dailyLast > C.DAILY_RESET) and 1 or (d.dailyDay % #C.DAILY + 1)
+		local r = C.DAILY[day]
+		local cash = math.max(r.min, math.floor(income(d) * r.secs))
+		d.dailyDay, d.dailyLast = day, now
+		d.cash = d.cash + cash
+		sync(plr)
+		say(plr, "Day " .. day .. " reward: +$" .. C.fmt(cash), "buy")
+		if r.egg then
+			hatchToPen(plr, d, d.unlocked, "golden")
+		end
+		save(plr)
+	end
+end)
+
+-- game passes: check what the player owns when they join, and when they buy one
+local function givePass(plr, key)
+	local d = data[plr]
+	if d and not d.passes[key] then
+		d.passes[key] = true
+		sync(plr)
+	end
+end
+Players.PlayerAdded:Connect(function(plr)
+	for _, p in ipairs(C.PASSES) do
+		if p.id ~= 0 then
+			task.spawn(function()
+				local ok, has = pcall(MPS.UserOwnsGamePassAsync, MPS, plr.UserId, p.id)
+				if ok and has then
+					for _ = 1, 50 do -- wait for the save to load
+						if data[plr] then
+							break
+						end
+						task.wait(0.2)
+					end
+					givePass(plr, p.key)
+				end
+			end)
+		end
+	end
+end)
+MPS.PromptGamePassPurchaseFinished:Connect(function(plr, id, bought)
+	if not bought then
+		return
+	end
+	for _, p in ipairs(C.PASSES) do
+		if p.id == id then
+			givePass(plr, p.key)
+			say(plr, p.name .. " unlocked! Thank you!", "legend")
+		end
+	end
+end)
+
+
+-- ============================================================ BIG EGG DROP (VFX + animations by Codex: ReplicatedStorage.BigEggFX)
+-- A giant egg falls into the plaza, digs a crater and stays in it. Everybody gets a weapon; a hit knocks you back,
+-- slows you for a second and stops your claim. Holding E for 5 seconds wins the egg = a pet hatched with big luck.
+local RunService = game:GetService("RunService")
+local BigEgg = remote("BigEgg") -- server -> all: "incoming", pos | "fall", pos | "claim", userId, serverTime | "release", userId | "hit", victimUserId, dir | "win", userId, name | "clear"
+local BigEggSwing = remote("BigEggSwing") -- client -> server: a swing
+local bigEv = nil
+
+local function weaponTool(kind)
+	local t = Instance.new("Tool")
+	t.Name = kind == "Hammer" and "Bonk Hammer" or "Pillow Bat"
+	t.CanBeDropped = false
+	t.ToolTip = "Hit players to stop them taking the BIG EGG"
+	t:SetAttribute("BigEggWeapon", kind)
+	local h = Instance.new("Part")
+	h.Name = "Handle"
+	h.CanCollide, h.Massless = false, true
+	local function add(size, off, col, mat)
+		local p = Instance.new("Part")
+		p.Size, p.Color, p.Material = size, col, mat or Enum.Material.SmoothPlastic
+		p.CanCollide, p.Massless, p.CanTouch, p.CanQuery = false, true, false, false
+		p.CFrame = h.CFrame * off
+		local w = Instance.new("WeldConstraint")
+		w.Part0, w.Part1, w.Parent = h, p, p
+		p.Parent = t
+	end
+	local mesh = RS:FindFirstChild("Assets") and RS.Assets:FindFirstChild(kind == "Hammer" and "BonkHammer" or "PillowBat")
+	if mesh then
+		h:Destroy()
+		h = mesh:Clone()
+		h.Name, h.Anchored, h.CanCollide, h.Massless = "Handle", false, false, true
+	elseif kind == "Hammer" then
+		h.Size, h.Color, h.Material = Vector3.new(0.4, 3, 0.4), Color3.fromRGB(120, 78, 44), Enum.Material.Wood
+		add(Vector3.new(1.4, 1.1, 2.2), CFrame.new(0, 1.6, 0), Color3.fromRGB(255, 70, 90))
+		add(Vector3.new(1.5, 0.3, 2.3), CFrame.new(0, 1.6, 0), Color3.fromRGB(255, 220, 90))
+	else
+		h.Size, h.Color = Vector3.new(0.35, 1.2, 0.35), Color3.fromRGB(240, 240, 255)
+		add(Vector3.new(1.6, 2.4, 0.8), CFrame.new(0, 1.7, 0), Color3.fromRGB(160, 200, 255), Enum.Material.Fabric)
+	end
+	h.Parent = t
+	t.Grip = CFrame.new(0, -1, 0)
+	return t
+end
+
+local function giveWeapons()
+	for i, plr in ipairs(Players:GetPlayers()) do
+		local bp = plr:FindFirstChildOfClass("Backpack")
+		if bp and not bp:FindFirstChild("Bonk Hammer") and not bp:FindFirstChild("Pillow Bat") then
+			weaponTool(i % 2 == 1 and "Hammer" or "Pillow").Parent = bp
+		end
+	end
+end
+
+local function takeWeapons()
+	for _, plr in ipairs(Players:GetPlayers()) do
+		for _, holder in ipairs({ plr:FindFirstChildOfClass("Backpack"), plr.Character }) do
+			if holder then
+				for _, t in ipairs(holder:GetChildren()) do
+					if t:IsA("Tool") and t:GetAttribute("BigEggWeapon") then
+						t:Destroy()
+					end
+				end
+			end
+		end
+	end
+end
+
+local function endBigEgg()
+	if not bigEv then
+		return
+	end
+	if bigEv.target then
+		bigEv.target:Destroy()
+	end
+	bigEv = nil
+	takeWeapons()
+	workspace:SetAttribute("BigEggActive", false)
+end
+
+local function startBigEgg()
+	if bigEv then
+		return
+	end
+	-- a random zone: one where players are now, else any zone somebody has unlocked; the egg lands on the white road in its middle
+	local zones, maxUnlocked = {}, 1
+	for zi in pairs(occupied()) do
+		table.insert(zones, zi)
+	end
+	for _, d in pairs(data) do
+		maxUnlocked = math.max(maxUnlocked, d.unlocked or 1)
+	end
+	local zi = #zones > 0 and zones[math.random(#zones)] or math.random(1, math.min(maxUnlocked, #C.ZONES))
+	local spot = { 0, (zi - 1) * C.ZONE_LEN + C.ZONE_LEN * (0.4 + math.random() * 0.2) }
+	local params = RaycastParams.new()
+	local chars = {}
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p.Character then
+			table.insert(chars, p.Character)
+		end
+	end
+	params.FilterDescendantsInstances = chars
+	local hit = workspace:Raycast(Vector3.new(spot[1], 300, spot[2]), Vector3.new(0, -400, 0), params)
+	local pos = hit and hit.Position or Vector3.new(spot[1], 0.5, spot[2])
+	bigEv = { pos = pos, holds = {} }
+	local ev = bigEv
+	workspace:SetAttribute("BigEggActive", true)
+	BigEgg:FireAllClients("incoming", pos)
+	Notice:FireAllClients("A BIG EGG is falling in " .. C.ZONES[zi].name .. "! Grab a weapon!", "storm")
+	giveWeapons()
+	task.wait(10)
+	if bigEv ~= ev then
+		return
+	end
+	BigEgg:FireAllClients("fall", pos)
+	task.wait(1.7)
+	if bigEv ~= ev then
+		return
+	end
+	-- the claim point does not move with the falling / bobbing visual on the clients
+	local target = Instance.new("Part")
+	target.Name = "BigEggTarget"
+	target.Anchored, target.CanCollide, target.CanQuery, target.Transparency = true, false, false, 1
+	target.Size = Vector3.new(20, 16, 20)
+	target.Position = pos + Vector3.new(0, 8, 0)
+	target.Parent = workspace
+	ev.target = target
+	local pp = Instance.new("ProximityPrompt")
+	pp.ActionText, pp.ObjectText = "CLAIM", "BIG EGG"
+	pp.HoldDuration = C.BIGEGG_CLAIM
+	pp.MaxActivationDistance = 22
+	pp.RequiresLineOfSight = false
+	pp.KeyboardKeyCode = Enum.KeyCode.E
+	pp.Style = Enum.ProximityPromptStyle.Default
+	-- no default prompt box: the clients draw the round E button in the middle of the egg (user, 19 Nov); E still works
+	pp.Style = Enum.ProximityPromptStyle.Custom
+	pp.MaxActivationDistance = 24
+	pp.Parent = target
+	ev.prompt = pp
+	pp.PromptButtonHoldBegan:Connect(function(plr)
+		ev.holds[plr] = os.clock()
+		BigEgg:FireAllClients("claim", plr.UserId, workspace:GetServerTimeNow())
+	end)
+	pp.PromptButtonHoldEnded:Connect(function(plr)
+		if ev.holds[plr] then
+			ev.holds[plr] = nil
+			BigEgg:FireAllClients("release", plr.UserId)
+		end
+	end)
+	pp.Triggered:Connect(function(plr)
+		local d = data[plr]
+		if bigEv ~= ev or not d or ev.won then
+			return
+		end
+		ev.won = true
+		pp.Enabled = false
+		BigEgg:FireAllClients("win", plr.UserId, plr.DisplayName)
+		Notice:FireAllClients(plr.DisplayName .. " claimed the BIG EGG!", "legend")
+		task.delay(1.2, function()
+			hatchToPen(plr, d, d.unlocked, "golden", C.BIGEGG_LUCK)
+			save(plr)
+		end)
+		task.delay(6, function()
+			if bigEv == ev then
+				BigEgg:FireAllClients("clear")
+				endBigEgg()
+			end
+		end)
+	end)
+	task.delay(C.BIGEGG_LIFE, function()
+		if bigEv == ev and not ev.won then
+			Notice:FireAllClients("Nobody claimed the BIG EGG... it sank into the ground", "info")
+			BigEgg:FireAllClients("clear")
+			endBigEgg()
+		end
+	end)
+end
+
+-- swings: the server checks who is in reach; the victim's own client pushes its character (it owns its physics)
+BigEggSwing.OnServerEvent:Connect(function(plr)
+	local d = data[plr]
+	local char = plr.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	local tool = char and char:FindFirstChildOfClass("Tool")
+	if not bigEv or not d or not root or not tool or not tool:GetAttribute("BigEggWeapon") then
+		return
+	end
+	local now = os.clock()
+	if now - (d.swingT or 0) < C.BIGEGG_WEAPON_CD then
+		return
+	end
+	d.swingT = now
+	local best, bestDist = nil, C.BIGEGG_REACH
+	for _, other in ipairs(Players:GetPlayers()) do
+		local oc = other ~= plr and other.Character
+		local orr = oc and oc:FindFirstChild("HumanoidRootPart")
+		local oh = oc and oc:FindFirstChildOfClass("Humanoid")
+		if orr and oh and oh.Health > 0 then
+			local off = orr.Position - root.Position
+			local flat = Vector3.new(off.X, 0, off.Z)
+			local dist = flat.Magnitude
+			if dist < bestDist and (dist < 2.5 or root.CFrame.LookVector:Dot(flat.Unit) > 0.25) then
+				best, bestDist = other, dist
+			end
+		end
+	end
+	if not best then
+		return
+	end
+	task.delay(0.3, function() -- the hit lands at the contact pose of the swing clip
+		local orr = best.Character and best.Character:FindFirstChild("HumanoidRootPart")
+		if not orr or not bigEv then
+			return
+		end
+		local flat = Vector3.new(orr.Position.X - root.Position.X, 0, orr.Position.Z - root.Position.Z)
+		local dir = flat.Magnitude > 0.01 and flat.Unit or root.CFrame.LookVector
+		local od = data[best]
+		if od then
+			od.stunUntil = os.clock() + C.BIGEGG_STUN
+		end
+		BigEgg:FireAllClients("hit", best.UserId, dir)
+		if bigEv.holds[best] and bigEv.prompt then
+			-- a hit breaks the hold: switching the prompt off and on cancels the E hold
+			bigEv.holds[best] = nil
+			BigEgg:FireAllClients("release", best.UserId, true)
+			bigEv.prompt.Enabled = false
+			task.delay(0.15, function()
+				if bigEv and bigEv.prompt and not bigEv.won then
+					bigEv.prompt.Enabled = true
+				end
+			end)
+		end
+	end)
+end)
+
+-- late joiners and respawns during the event still get a weapon
+Players.PlayerAdded:Connect(function(plr)
+	plr.CharacterAdded:Connect(function()
+		task.wait(1)
+		if bigEv then
+			giveWeapons()
+		end
+	end)
+end)
+for _, plr in ipairs(Players:GetPlayers()) do
+	plr.CharacterAdded:Connect(function()
+		task.wait(1)
+		if bigEv then
+			giveWeapons()
+		end
+	end)
+end
+
+-- Studio test: F8 on the client starts a drop now
+Action.OnServerEvent:Connect(function(plr, what)
+	if what == "bigegg" and RunService:IsStudio() then
+		task.spawn(startBigEgg)
+	end
+end)
+
+task.spawn(function()
+	task.wait(math.random(C.BIGEGG_FIRST[1], C.BIGEGG_FIRST[2]))
+	while true do
+		-- every 5 minutes (C.BIGEGG_EVERY); during an egg storm it waits until the storm is over
+		while #Players:GetPlayers() == 0 or storm or bigEv do
+			task.wait(5)
+		end
+		task.spawn(startBigEgg)
+		task.wait(math.random(C.BIGEGG_EVERY[1], C.BIGEGG_EVERY[2]))
+	end
+end)

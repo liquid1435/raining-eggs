@@ -1,0 +1,2 @@
+﻿# Change v3 (user): remove the stars
+Remove the "stars" dizzy VFX when a player is hit. The hit should feel like in the Roblox game "Steal a Brainrot": the hit player gets knocked back / flung a bit (short ragdoll-like stumble) with a punchy hit effect (small impact burst + sound + slight camera shake for the victim), but NO stars circling the head. Update WeaponFX.lua, the Hit animations if needed, README.md, and re-render preview/big_egg_event.mp4 so it also shows a hit without stars. Keep the v2 changes (crater hole, egg in the hole, 5 s claim).
