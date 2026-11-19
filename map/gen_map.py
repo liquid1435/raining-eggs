@@ -489,12 +489,8 @@ def base(i):
             rail(bx + sx * 11.5, zf, 11, True)
             for z in (zb, zf):                                  # corners = plain fence posts (no stone, no lamps)
                 post(bx + sx * 17, z)
-            pillar(bx + sx * 6.4, zf, 10)                       # gate
-            blk(bx + sx * 6.4, 12.4, zf, 1.6, 1.6, 1.6, FW_RAIL, 'Wood')
+            # (v109: user removed the gate at the pen entrance: no pillars / beam, just the opening in the fence)
         rail(bx, zb, 34, True)
-        blk(bx, 10.6, zf, 16.4, 1.8, 2.6, FW_RAIL, 'Wood')       # gate beam: fence wood
-        blk(bx, 10.1, zf, 15.6, 0.5, 3, shade(FW_POST, 0.85), 'Wood')
-        blk(bx, 12.4, zf, 11.2, 0.5, 1.6, shade(FW_RAIL, 1.12), 'Wood')
         blk(bx, 0.02, zf, 10.4, 0.12, 5, lt, **NC)              # door mat
         blk(bx, 0.03, zf, 8.6, 0.12, 3.4, col, **NC)
         # hay and water at the back fence
