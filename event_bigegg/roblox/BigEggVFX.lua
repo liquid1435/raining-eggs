@@ -4,7 +4,7 @@ local Lighting = game:GetService("Lighting")
 local Debris = game:GetService("Debris")
 local FX = require(script.Parent.FX)
 local GeometryService = game:GetService("GeometryService")
-local VFX = {ClaimDuration = 5, ShowRing = true}
+local VFX = {ClaimDuration = 5, ShowRing = true, RingDistance = 42}
 local rng = Random.new()
 local current = nil
 local crater = nil
@@ -449,6 +449,7 @@ function VFX.PlayClaimProgress(egg, p, character)
 		ring.StudsOffsetWorldSpace = Vector3.zero -- in the middle of the egg (user, 19 Nov)
 		ring.AlwaysOnTop, ring.Adornee, ring.Parent = true, root, root
 		ring.Enabled = VFX.ShowRing -- the game shows the ProximityPrompt above the egg instead (user, 19 Nov)
+		ring.MaxDistance = VFX.RingDistance -- only seen when you are close to the egg (user, 19 Nov)
 		s.ring = own(s,ring)
 		s.segments = {}
 		for i = 1, 48 do
