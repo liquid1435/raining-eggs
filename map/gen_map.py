@@ -316,7 +316,7 @@ def wall_run(z0, z1, ground, cliff, H=30):
                     cliff if (k + row) % 2 == 0 else shade(cliff, 1.13), 'Plastic')
             blk(sx * (HALF + 11), H, z + ln / 2, 26, 4, ln, ground, 'Plastic')
             for q in range(2):
-                ex = 2.5 if (k + q) % 2 else 0
+                ex = 0   # v107 (user: 'why is it not uniform'): one even grass band, no up-and-down steps
                 blk(sx * (HALF - 0.7), H - 3 - ex, z + ln * (0.25 + 0.5 * q), 1.6, 3 + ex, ln / 2, ground, 'Plastic', **NC)
         blk(sx * (HALF + 25), 0, (z0 + z1) / 2, 2, 120, z1 - z0, WHITE, transparency=1, name='Wall')
 
@@ -746,7 +746,7 @@ def home():
                 blk(x + 10, -4 + row * 17, -138, 20, 17, 24, DW if (k + row) % 2 == 0 else shade(DW, 1.13), 'Plastic')
             blk(x + 10, 30, -137, 20, 4, 26, G, 'Plastic')
             for q in range(2):
-                ex = 2.5 if (k + q) % 2 else 0
+                ex = 0   # v107 (user: 'why is it not uniform'): one even grass band, no up-and-down steps
                 blk(x + 5 + q * 10, 27 - ex, -125.3, 10, 3 + ex, 1.6, G, 'Plastic', **NC)
             if k % 3 == 1:
                 tree(x + 10, -138, 1.4)
