@@ -69,7 +69,7 @@ def surface_gui(s):
     stroke = item('UIStroke', f'<string name="Name">UIStroke</string><Color3 name="Color">{c3(s["stroke"])}</Color3><float name="Thickness">8</float>'
                   '<token name="ApplyStrokeMode">1</token>')
     if s.get('sub'):
-        labels = label(s['title'], 0.06, 0.58, s['fg'], s['stroke']) + label(s['sub'], 0.64, 0.28, (235, 240, 255), s['stroke'], 'BuilderSans', 700)
+        labels = label(s['title'], 0.06, 0.58, s['fg'], s['stroke'], pad=s.get('pad', 0.04)) + label(s['sub'], 0.64, 0.28, (235, 240, 255), s['stroke'], 'BuilderSans', 700)
     else:
         labels = label(s['title'], 0.14, 0.72, s['fg'], s['stroke'], pad=s.get('pad', 0.04))
     frame = item('Frame', '<string name="Name">Bg</string><Color3 name="BackgroundColor3"><R>1</R><G>1</G><B>1</B></Color3>'
@@ -241,7 +241,8 @@ out = HERE / 'RAINING EGGS - MAP.rbxlx'
 out.write_text(xml, encoding='utf-8')
 import xml.dom.minidom  # noqa: E402  (well-formed check)
 xml.dom.minidom.parseString(out.read_bytes())
-desk = pathlib.Path(os.environ['USERPROFILE']) / 'Desktop' / 'youtube' / 'roblox' / (f'RAINING EGGS - {TAG}.rbxlx' if TAG else 'RAINING EGGS - HARTA.rbxlx')
+home = pathlib.Path(os.environ.get('USERPROFILE') or os.environ['HOME'])   # USERPROFILE on Windows, HOME on a Mac
+desk = home / 'Desktop' / 'youtube' / 'roblox' / (f'RAINING EGGS - {TAG}.rbxlx' if TAG else 'RAINING EGGS - HARTA.rbxlx')
 desk.parent.mkdir(parents=True, exist_ok=True)   # (a teammate's PC may not have this folder yet)
 desk.write_bytes(out.read_bytes())
 print(f'wrote {out.name} ({out.stat().st_size // 1024} KB), {len(data["parts"])} parts -> {desk}')

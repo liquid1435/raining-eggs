@@ -329,8 +329,47 @@ def patches(z0, z1, col, n=46, y=0.0):
         blk(side_x(12, 166), y, rng.uniform(z0 + 8, z1 - 8), w, 0.14, d, col, **NC)
 
 
-def gate(z, title, sub, c1, c2, pill=WHITE):
+def arch_layout(n):
+    """same numbers as arch_layout() in blender/gen_zone_signs.py: P = pillar centre |x|, Y0 = board bottom, H = board height"""
+    return (12.0, 20.0, 12.0) if n == 1 else (11.3, 15.6, 10.0)   # pillars stand on the road edges (ROADW 18; gate C.GATE.width 18 between them)
+
+
+def zone_arch(n, z, front, back, c1, c2, sub=None):
+    """the Blender zone arch (blender/gen_zone_signs.py): soft meshes + invisible collision boxes + the text panels in its frames"""
+    body, glow = f'Map_ZoneArch_{n}', f'Map_ZoneArchNeon_{n}'
+    if not has_mesh(body, glow):
+        return False
+    P, Y0, H = arch_layout(n)
+    big = n == 1
+    W, D, pw = 2 * P + 8, 3.0, (6.0 if big else 4.6)
+    mpart(body, 0, 0, z, cancollide=False)
+    mpart(glow, 0, 0, z, mat='Neon', cancollide=False)
+    INV = dict(transparency=1)
+    for sx in (-1, 1):                                                    # what you bump into: pillars, plinths, board ends
+        blk(sx * P, 0, z, pw + 2.2, 2.2, pw + 2.2, c2, **INV)
+        blk(sx * P, 2.2, z, pw, Y0 - 2.2, pw, c2, **INV)
+    blk(0, Y0, z, W + 3.6, H, D + 1.0, c2, **INV)
+    # the zone name on the board (front = players coming from -Z) and the zone number on the crest
+    b = blk(0, Y0 + 1.4, z, W - 2.6, H - 2.8, 3.2, INK)
+    sign(b, 'Front', front, sub, bg1=shade(c1, 1.04), bg2=shade(c2, 0.95), pps=16 if big else 20, pad=0.035)
+    sign(b, 'Back', back, None, bg1=shade(c1, 1.04), bg2=shade(c2, 0.95), pps=16 if big else 20, pad=0.035)
+    cr = 4.4 if big else 3.4
+    k = cr * 1.2
+    nb = blk(0, Y0 + H + cr * 0.72 - k / 2, z, k, k, D + 1.3, INK)
+    sign(nb, 'Front', str(n), None, bg1=shade(c1, 1.08), bg2=c1, pps=20, pad=0.0)
+    sign(nb, 'Back', str(n), None, bg1=shade(c1, 1.08), bg2=c1, pps=20, pad=0.0)
+    return True
+
+
+def gate(z, title, sub, c1, c2, pill=WHITE, n=None):
     """arch over the road at the start of a zone, sign faces the players coming from -Z"""
+    if n and zone_arch(n, z, title, title, c1, c2):
+        for sx in (-1, 1):                                                # border line with flags across the whole width
+            blk(sx * (HALF + 14) / 2 + sx * 2, 0, z, HALF - 18, 0.3, 2.4, c1, **NC)
+            for x in range(34, HALF - 4, 28):
+                blk(sx * x, 0, z, 0.8, 9, 0.8, WHITE, **NC)
+                blk(sx * x + 2.2, 6, z, 4, 2.6, 0.4, c1, **NC)
+        return
     for sx in (-1, 1):
         blk(sx * 14, 0, z, 5, 22, 5, pill)
         blk(sx * 14, 0, z, 6, 2, 6, c2)
@@ -1878,7 +1917,9 @@ def build():
     for i, (name, sub, c1, c2, fn) in enumerate(ZONES):
         fn(i)
         with group('Gates', unique=False):
-            if i == 0:
+            if i == 0 and zone_arch(1, 0, 'RAINING EGGS', name, c1, c2, sub='catch  •  hatch  •  get lucky'):
+                pass                                                      # the Blender title arch (zone 1)
+            elif i == 0:
                 # big title arch between the plaza and the first zone
                 for sx in (-1, 1):
                     blk(sx * 30, 0, 0, 7, 30, 7, WHITE)
@@ -1889,7 +1930,7 @@ def build():
                 sign(b, 'Front', 'RAINING EGGS', 'catch  •  hatch  •  get lucky', fg=(255, 236, 90), bg1=(90, 170, 255), bg2=(60, 90, 230), pps=16)
                 sign(b, 'Back', name, None, bg1=c1, bg2=c2, pps=16)
             else:
-                gate(i * ZL, name, sub, c1, c2)
+                gate(i * ZL, name, sub, c1, c2, n=i + 1)
     with group('Water', unique=False):
         for sx in (-1, 1):
             for zc in (-380, 1660):

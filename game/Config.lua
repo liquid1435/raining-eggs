@@ -152,7 +152,7 @@ for i, z in ipairs(C.ZONES) do
 end
 
 C.GATE = {
-	width = 23,              -- studs: the glowing gate between the two arch pillars
+	width = 18,              -- studs: the glowing gate between the two arch pillars (= the road: the pillars stand on its edges)
 	height = 15,             -- studs: up to the sign of the arch
 	thick = 1.5,             -- studs
 	transparency = 0.45,     -- 0 = solid colour, 1 = invisible
