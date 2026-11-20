@@ -2127,6 +2127,7 @@ for _, d0 in ipairs(Map:GetDescendants()) do
 		pp.HoldDuration = 0.6
 		pp.MaxActivationDistance = 12
 		pp.RequiresLineOfSight = false
+		pp.Style = Enum.ProximityPromptStyle.Custom -- v126: the client draws its own altar button (AltarPrompt)
 		pp.Parent = d0
 		pp.Triggered:Connect(function(plr)
 			placeAltar(plr, n, false)

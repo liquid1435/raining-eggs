@@ -4221,57 +4221,122 @@ task.spawn(function()
 	end
 end)
 
--- ============================================================ PLACE ALL EGGS button (client, v125)
--- Only in the Golden Nest while some altars are still empty: one tap puts every egg you carry on its altar.
+-- ============================================================ ALTAR BUTTON (client, v126)
+-- user: "every altar keeps its own button, only more professional". The altar ProximityPrompts are Custom style;
+-- this draws a dark glass pill with a gold key badge, the zone name in its colour and a hold bar that fills.
+-- Tap / click the pill works too (touch and mouse).
 task.spawn(function()
-	local player = game:GetService("Players").LocalPlayer
-	local pg = player:WaitForChild("PlayerGui")
-	local sg = Instance.new("ScreenGui")
-	sg.Name, sg.ResetOnSpawn = "AltarButton", false
-	local b = Instance.new("TextButton")
-	b.Name = "PlaceAll"
-	b.AnchorPoint, b.Position, b.Size = Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -110), UDim2.fromOffset(250, 62)
-	b.BackgroundColor3, b.AutoButtonColor = Color3.fromRGB(255, 255, 255), true
-	b.Font, b.TextScaled, b.Text, b.TextColor3 = Enum.Font.FredokaOne, true, "PLACE ALL EGGS", Color3.new(1, 1, 1)
-	b.Visible = false
-	b.Parent = sg
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0.3, 0)
-	corner.Parent = b
-	local g = Instance.new("UIGradient")
-	g.Rotation = 90
-	g.Color = ColorSequence.new(Color3.fromRGB(255, 214, 70), Color3.fromRGB(240, 150, 30))
-	g.Parent = b
-	local st = Instance.new("UIStroke")
-	st.Thickness, st.Color, st.ApplyStrokeMode = 3, Color3.fromRGB(110, 60, 10), Enum.ApplyStrokeMode.Border
-	st.Parent = b
-	local ts = Instance.new("UIStroke")
-	ts.Thickness, ts.Color = 2.5, Color3.fromRGB(110, 60, 10)
-	ts.Parent = b
-	local pad = Instance.new("UIPadding")
-	pad.PaddingTop, pad.PaddingBottom, pad.PaddingLeft, pad.PaddingRight = UDim.new(0.18, 0), UDim.new(0.18, 0), UDim.new(0.08, 0), UDim.new(0.08, 0)
-	pad.Parent = b
-	sg.Parent = pg
-	local last = 0
-	b.Activated:Connect(function()
-		if os.clock() - last < 1 then
+	local PPS = game:GetService("ProximityPromptService")
+	local UIS = game:GetService("UserInputService")
+	local TweenS = game:GetService("TweenService")
+	local function zoneColor(n)
+		local c = C.ZONES[n] and C.ZONES[n].eggCol or { 255, 214, 70 }
+		return Color3.fromRGB(c[1], c[2], c[3])
+	end
+	local function new(cls, props, parent)
+		local o = Instance.new(cls)
+		for k, v in pairs(props) do
+			o[k] = v
+		end
+		o.Parent = parent
+		return o
+	end
+	PPS.PromptShown:Connect(function(prompt, inputType)
+		local part = prompt.Parent
+		local n = part and tonumber(string.match(part.Name, "^EggAltar(%d+)$"))
+		if prompt.Style ~= Enum.ProximityPromptStyle.Custom or not n then
 			return
 		end
-		last = os.clock()
-		Action:FireServer("altarall")
-	end)
-	local z0, z1 = (C.NZ - 1) * C.ZONE_LEN, C.NZ * C.ZONE_LEN
-	while true do
-		task.wait(0.4)
-		local ch = player.Character
-		local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
-		local filled = 0
-		for _, z in ipairs(string.split(player:GetAttribute("Altar") or "", ",")) do
-			if tonumber(z) then
-				filled = filled + 1
+		local col = zoneColor(n)
+		local bb = new("BillboardGui", {
+			Name = "AltarPrompt", Adornee = part, AlwaysOnTop = true, Size = UDim2.fromOffset(300, 86),
+			StudsOffset = Vector3.new(0, 4.2, 0), LightInfluence = 0, ResetOnSpawn = false,
+		}, game:GetService("Players").LocalPlayer:FindFirstChildOfClass("PlayerGui"))
+		local root = new("TextButton", {
+			Name = "Pill", Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0, 0), BackgroundColor3 = Color3.fromRGB(22, 18, 40),
+			BackgroundTransparency = 0.12,
+		}, bb)
+		new("UICorner", { CornerRadius = UDim.new(0.5, 0) }, root)
+		new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(70, 60, 110), Color3.fromRGB(20, 16, 36)) }, root)
+		local stroke = new("UIStroke", { Thickness = 3, Color = Color3.fromRGB(255, 214, 90), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, root)
+		new("UIGradient", { Rotation = 0, Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 240, 170)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 196, 60)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 240, 170)) }) }, stroke)
+		-- hold progress (fills left to right behind the text)
+		local fill = new("Frame", { Name = "Fill", BackgroundColor3 = col, BackgroundTransparency = 0.55, BorderSizePixel = 0,
+			Size = UDim2.fromScale(0, 1), ZIndex = 1 }, root)
+		new("UICorner", { CornerRadius = UDim.new(0.5, 0) }, fill)
+		-- key badge
+		local badge = new("Frame", { Name = "Key", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0),
+			Size = UDim2.new(0, 62, 0, 62), BackgroundColor3 = Color3.fromRGB(255, 255, 255), ZIndex = 3 }, root)
+		new("UICorner", { CornerRadius = UDim.new(1, 0) }, badge)
+		new("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(255, 226, 110), Color3.fromRGB(235, 150, 30)) }, badge)
+		new("UIStroke", { Thickness = 2.5, Color = Color3.fromRGB(120, 66, 10), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, badge)
+		local touch = inputType == Enum.ProximityPromptInputType.Touch
+		local keyName = touch and "TAP" or (inputType == Enum.ProximityPromptInputType.Gamepad and "X") or UIS:GetStringForKeyCode(prompt.KeyboardKeyCode)
+		local keyLbl = new("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Font = Enum.Font.FredokaOne,
+			Text = keyName ~= "" and keyName or "E", TextScaled = true, TextColor3 = Color3.fromRGB(70, 34, 6), ZIndex = 4 }, badge)
+		new("UIPadding", { PaddingTop = UDim.new(0.2, 0), PaddingBottom = UDim.new(0.2, 0), PaddingLeft = UDim.new(0.16, 0), PaddingRight = UDim.new(0.16, 0) }, keyLbl)
+		-- texts
+		local title = new("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 84, 0.1, 0), Size = UDim2.new(1, -100, 0.48, 0),
+			Font = Enum.Font.FredokaOne, Text = prompt.ActionText, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = Color3.new(1, 1, 1), ZIndex = 3 }, root)
+		new("UIStroke", { Thickness = 2, Color = Color3.fromRGB(20, 12, 40) }, title)
+		local sub = new("TextLabel", { BackgroundTransparency = 1, Position = UDim2.new(0, 84, 0.56, 0), Size = UDim2.new(1, -100, 0.32, 0),
+			Font = Enum.Font.GothamBold, Text = n .. ".  " .. prompt.ObjectText, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = col, ZIndex = 3 }, root)
+		new("UIStroke", { Thickness = 1.5, Color = Color3.fromRGB(20, 12, 40) }, sub)
+		-- appear: pop in
+		TweenS:Create(root, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.fromScale(1, 1) }):Play()
+		local conns = {}
+		local holdTween
+		local function holdStart()
+			if holdTween then
+				holdTween:Cancel()
 			end
+			fill.Size = UDim2.fromScale(0, 1)
+			holdTween = TweenS:Create(fill, TweenInfo.new(math.max(prompt.HoldDuration, 0.05), Enum.EasingStyle.Linear), { Size = UDim2.fromScale(1, 1) })
+			holdTween:Play()
+			TweenS:Create(badge, TweenInfo.new(0.12), { Size = UDim2.new(0, 56, 0, 56) }):Play()
 		end
-		local p = hrp and hrp.Position
-		b.Visible = p ~= nil and p.Y < 300 and p.Z >= z0 and p.Z < z1 + 10 and filled < C.NZ
-	end
+		local function holdEnd()
+			if holdTween then
+				holdTween:Cancel()
+			end
+			TweenS:Create(fill, TweenInfo.new(0.15), { Size = UDim2.fromScale(0, 1) }):Play()
+			TweenS:Create(badge, TweenInfo.new(0.12), { Size = UDim2.new(0, 62, 0, 62) }):Play()
+		end
+		table.insert(conns, prompt.PromptButtonHoldBegan:Connect(holdStart))
+		table.insert(conns, prompt.PromptButtonHoldEnded:Connect(holdEnd))
+		table.insert(conns, prompt.Triggered:Connect(function()
+			fill.Size = UDim2.fromScale(1, 1)
+			fill.BackgroundTransparency = 0.2
+			TweenS:Create(fill, TweenInfo.new(0.35), { BackgroundTransparency = 1 }):Play()
+			root.Size = UDim2.fromScale(1.12, 1.12)
+			TweenS:Create(root, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Size = UDim2.fromScale(1, 1) }):Play()
+		end))
+		-- touch / mouse: press the pill itself
+		table.insert(conns, root.InputBegan:Connect(function(io)
+			if io.UserInputType == Enum.UserInputType.Touch or io.UserInputType == Enum.UserInputType.MouseButton1 then
+				prompt:InputHoldBegin()
+			end
+		end))
+		table.insert(conns, root.InputEnded:Connect(function(io)
+			if io.UserInputType == Enum.UserInputType.Touch or io.UserInputType == Enum.UserInputType.MouseButton1 then
+				prompt:InputHoldEnd()
+			end
+		end))
+		local hidden
+		hidden = prompt.PromptHidden:Connect(function()
+			hidden:Disconnect()
+			for _, c in ipairs(conns) do
+				c:Disconnect()
+			end
+			local t = TweenS:Create(root, TweenInfo.new(0.15), { Size = UDim2.fromScale(0, 0) })
+			t:Play()
+			t.Completed:Wait()
+			bb:Destroy()
+		end)
+	end)
 end)
