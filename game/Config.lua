@@ -362,7 +362,7 @@ local BLUSH = Color3.fromRGB(255, 140, 165)
 -- The pets and eggs made in Blender live in ReplicatedStorage.Assets (the server moves the imported model there).
 -- Until they are imported the game uses the old block pets and eggs.
 C.MESH_YAW = math.pi -- half a turn: the imported pets look to +Z, the game wants -Z (write 0 if they look backwards)
-C.MESH_SIZE = 5.0  -- studs: the longest side of a pet at normal size (big, like Steal an Egg)
+C.MESH_SIZE = 7.0  -- studs: the longest side of a pet at normal size (v128: bigger, user wanted the new pets larger)
 C.PROP_YAW = math.pi -- same half turn for the Blender treadmills (write 0 if the console ends up at the wrong end)
 function C.meshOf(name)
 	local assets = game:GetService("ReplicatedStorage"):FindFirstChild("Assets")
