@@ -177,8 +177,8 @@ C.TOTAL = #C.ZONES -- 13: the last zone a player can open
 C.COSMIC = {
 	first = C.NZ + 1, last = C.TOTAL,
 	y = 900,                       -- height of the world 2 ground (top)
-	half = 130,                    -- half width of the floating zones
-	eggX = 105,                    -- eggs land between x = -105 .. 105
+	half = 176,                    -- half width of the zones (v120: as wide as world 1, same walls)
+	eggX = 150,                    -- eggs land between x = -150 .. 150 (like world 1)
 	eggHeight = 90,                -- eggs start this high above the ground
 	fall = 3.6,                    -- seconds an egg falls (slow, low gravity)
 	gravity = 70,                  -- workspace gravity in world 2 (normal 196.2), client side

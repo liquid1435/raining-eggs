@@ -1916,7 +1916,7 @@ def scenery():
 # Cosmic Nest (free through the Golden Portal), Moon Craters, Nebula Reef, then a COMING SOON wall.
 # Built at height 0 like world 1 and lifted by WORLD2['y'] at the end. Keep in sync with C.COSMIC in game/Config.lua
 # (y 900, half width 130, exit portal at z -28, zone k of world 2 = z (k-1)*140 .. k*140).
-WORLD2 = dict(y=900, half=130, zones=3)
+WORLD2 = dict(y=900, half=HALF, zones=3)   # v120: same width as world 1
 W2_UNDER = ((8, 10), (30, 14), (58, 16), (88, 20))
 
 
@@ -1931,6 +1931,15 @@ def w2_floor(z0, z1, c1, c2, under):
         blk(0, y, (z0 + z1) / 2, H * 2 - inset * 2, h, (z1 - z0) - inset, shade(under, 1 - 0.1 * k), 'Slate', **NC)
 
 
+def w2_walls(z0, z1, top, cliff):
+    """v120 (user: 'the walls exactly like in world 1'): the world 1 checker walls + the stepped ledge under them"""
+    zc, ln = (z0 + z1) / 2, z1 - z0
+    for sx in (-1, 1):
+        blk(sx * (HALF - 4), 0, zc, 8, 7, ln, shade(cliff, 0.88), 'Plastic')
+        blk(sx * (HALF - 4.5), 7, zc, 9, 1.5, ln, shade(top, 1.08), 'Plastic')
+    wall_run(z0, z1, top, cliff)
+
+
 def w2_dots(cr, z0, z1, cols, n=60):
     H = WORLD2['half']
     for _ in range(n):
@@ -1942,6 +1951,12 @@ def w2_cosmic(cr, z0):
     H = WORLD2['half']
     with group('Zone11_CosmicNest', unique=False):
         w2_floor(-56, z0 + 140, (54, 40, 96), (70, 52, 122), DARK)
+        w2_walls(-56, z0 + 140, (90, 60, 160), (44, 30, 84))
+        for k, x in enumerate(range(-HALF - 24, HALF + 24, 24)):    # back wall (behind the exit portal), same checker look
+            for row in range(2):
+                blk(x + 12, -4 + row * 17, -68, 24, 17, 24, (44, 30, 84) if (k + row) % 2 == 0 else shade((44, 30, 84), 1.13), 'Plastic')
+            blk(x + 12, 30, -68, 24, 4, 26, (90, 60, 160), 'Plastic')
+        blk(0, 0, -58, HALF * 2 + 48, 120, 2, WHITE, transparency=1, name='Wall')
         w2_dots(cr, -50, z0 + 140, (CYAN, PINK, (255, 240, 150), WHITE), 120)
         for _ in range(12):                                   # glowing cracks
             x, z, yaw = cr.uniform(-H + 20, H - 20), cr.uniform(z0 + 30, z0 + 130), cr.uniform(0, 180)
@@ -1950,7 +1965,7 @@ def w2_cosmic(cr, z0):
                     yaw=-yaw + cr.uniform(-25, 25), **NC)
         for k in range(10):                                   # crystal clusters along both edges
             sx = -1 if k % 2 == 0 else 1
-            x, z = sx * cr.uniform(H - 26, H - 10), z0 + 10 + k * 12 + cr.uniform(-4, 4)
+            x, z = sx * cr.uniform(H - 40, H - 22), z0 + 10 + k * 12 + cr.uniform(-4, 4)
             col = cr.choice((CYAN, PINK, VIO))
             for j in range(cr.randint(3, 5)):
                 h = cr.uniform(8, 22)
@@ -1976,6 +1991,7 @@ def w2_moon(cr, z0):
     H = WORLD2['half']
     with group('Zone12_MoonCraters', unique=False):
         w2_floor(z0, z0 + 140, GREY, GREY2, DARK)
+        w2_walls(z0, z0 + 140, GREY2, (110, 114, 132))
         w2_dots(cr, z0, z0 + 140, (WHITE, (170, 220, 255)), 40)
         for k in range(9):                                    # craters: raised rims of blocks around a dark hole
             x, z, r = cr.choice((-1, 1)) * cr.uniform(28, H - 20), cr.uniform(z0 + 18, z0 + 122), cr.uniform(6, 13)
@@ -2007,6 +2023,7 @@ def w2_nebula(cr, z0):
     H = WORLD2['half']
     with group('Zone13_NebulaReef', unique=False):
         w2_floor(z0, z0 + 140, TEAL, TEAL2, DEEP)
+        w2_walls(z0, z0 + 140, (60, 150, 170), (22, 52, 80))
         w2_dots(cr, z0, z0 + 140, (PINK, CYAN, GOLDN), 90)
         for _ in range(18):                                   # glowing coral: stacked neon branches
             x, z = cr.choice((-1, 1)) * cr.uniform(18, H - 8), cr.uniform(z0 + 8, z0 + 132)
@@ -2033,8 +2050,8 @@ def w2_nebula(cr, z0):
         b = blk(0, 0, ze + 1, H * 2 + 20, 60, 2, (40, 24, 80), 'Slate', name='Wall')
         sign(b, 'Front', 'COMING SOON', 'new zones are on the way', fg=(255, 236, 90), bg1=(120, 70, 230), bg2=(40, 20, 100), pps=8)
         for sx in (-1, 1):
-            blk(sx * (H + 6), 0, ze - 2, 8, 64, 8, (60, 40, 120), 'Slate')
-            blk(sx * (H + 6), 64, ze - 2, 9, 3, 9, PINK, 'Neon')
+            blk(sx * (H - 14), 0, ze - 2, 8, 64, 8, (60, 40, 120), 'Slate')
+            blk(sx * (H - 14), 64, ze - 2, 9, 3, 9, PINK, 'Neon')
         blk(0, 60, ze + 1, H * 2 + 20, 240, 2, WHITE, transparency=1, name='Wall')
 
 
