@@ -238,7 +238,7 @@ def bigegg():
 
 GAME = ''
 if TAG:
-    GAME = (item('ReplicatedStorage', '<string name="Name">ReplicatedStorage</string>', scr('ModuleScript', 'Config', SRC / 'Config.lua') + scr('ModuleScript', 'Sfx', SRC / 'Sfx.lua') + scr('ModuleScript', 'UIMenus', SRC / 'UIMenus.lua') + scr('ModuleScript', 'HatchVFX', SRC / 'HatchVFX.lua') + assets_folder() + bigegg() +
+    GAME = (item('ReplicatedStorage', '<string name="Name">ReplicatedStorage</string>', scr('ModuleScript', 'Config', SRC / 'Config.lua') + scr('ModuleScript', 'Sfx', SRC / 'Sfx.lua') + scr('ModuleScript', 'UIMenus', SRC / 'UIMenus.lua') + scr('ModuleScript', 'HatchVFX', SRC / 'HatchVFX.lua') + scr('ModuleScript', 'PetAnim', SRC / 'PetAnim.lua') + scr('ModuleScript', 'PetAnimData', SRC / 'PetAnimData.lua') + assets_folder() + bigegg() +
                  item('Folder', '<string name="Name">Shared</string>', ''.join(
                      scr('ModuleScript', n, SRC / 'treadmills' / f'{n}.lua') for n in ('TreadmillData', 'TreadmillBuilder', 'TreadmillConfig')))) +
             item('ServerScriptService', '<string name="Name">ServerScriptService</string>', scr('Script', 'GameServer', SRC / 'Server.server.lua')) +

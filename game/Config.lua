@@ -373,9 +373,31 @@ function C.meshOf(name)
 	return src
 end
 
+local petAnimMod = nil
+function C.petAnim() -- v129: ReplicatedStorage.PetAnim (Codex pets made of moving parts), nil when it is not there
+	if petAnimMod == nil then
+		local mod = game:GetService("ReplicatedStorage"):FindFirstChild("PetAnim")
+		local ok, m = false, nil
+		if mod then
+			ok, m = pcall(require, mod)
+		end
+		petAnimMod = ok and m or false
+	end
+	return petAnimMod or nil
+end
+
 function C.buildPet(pet, s, anchored)
 	local def = C.ZONES[pet.z].pets[pet.i]
 	local tier = pet.t or 1
+	local PA = C.petAnim()
+	if PA then -- v129: the animated Codex pet (parts) when its part meshes are imported
+		local ok, am = pcall(PA.build, pet, s, anchored, C.MESH_YAW, C.MESH_SIZE)
+		if ok and am then
+			am.Name = C.petName(pet)
+			am:SetAttribute("Tier", tier)
+			return am
+		end
+	end
 	local src = C.meshOf("Pet_" .. pet.z .. "_" .. pet.i)
 	-- v127: the Codex pets have their own Gold / Rainbow textures (Pet_z_i_G / Pet_z_i_R); old pets only get a tint
 	local variant = (tier == 2 and C.meshOf("Pet_" .. pet.z .. "_" .. pet.i .. "_G")) or (tier == 3 and C.meshOf("Pet_" .. pet.z .. "_" .. pet.i .. "_R")) or nil

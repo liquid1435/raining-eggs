@@ -3038,7 +3038,13 @@ RunService.RenderStepped:Connect(function()
 				else
 					info.sang = false
 				end
-				model:PivotTo(info.cf * CFrame.new(0, hop, 0) * CFrame.Angles(0, turn, 0) * CFrame.Angles(lean, 0, math.sin(t * 2) * 0.05))
+				local PA = model:GetAttribute("AnimKey") and C.petAnim()
+				if PA then
+					-- v129: Codex pet: its own PenLife animation (walks, looks around, sits...) + a slow turn now and then
+					PA.pose(model, "PenLife", now + info.phase * 3, info.cf * CFrame.Angles(0, math.sin(now * 0.15 + info.phase) * 0.9, 0))
+				else
+					model:PivotTo(info.cf * CFrame.new(0, hop, 0) * CFrame.Angles(0, turn, 0) * CFrame.Angles(lean, 0, math.sin(t * 2) * 0.05))
+				end
 				for _, p in ipairs(info.bodies) do
 					p.Color = Color3.fromHSV((now * 0.25 + info.phase * 0.1) % 1, 0.65, 1)
 				end
