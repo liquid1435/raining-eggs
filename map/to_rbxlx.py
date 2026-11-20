@@ -22,6 +22,8 @@ FACE = {'Right': 0, 'Top': 1, 'Back': 2, 'Left': 3, 'Bottom': 4, 'Front': 5}
 _ref = [0]
 
 
+PRECISE = ('LolliTop', 'LolliStick', 'Cake', 'CandyCane', 'IceCream', 'Gumdrop')
+
 def ref():
     _ref[0] += 1
     return f'RBX{_ref[0]}'
@@ -106,6 +108,10 @@ def part_xml(p):
         props += (f'<Content name="MeshContent"><uri>{mesh["id"]}</uri></Content>'
                   f'<Vector3 name="InitialSize"><X>{s[0]}</X><Y>{s[1]}</Y><Z>{s[2]}</Z></Vector3>' +
                   ('<bool name="CanQuery">false</bool>' if p.get('cancollide') is False else '<token name="CollisionFidelity">3</token>'))
+        # v124 (user: the candy designs / the cake "deform" while walking): Roblox swaps in simpler LOD meshes with
+        # distance (RenderFidelity Automatic). Detailed candy meshes keep full detail: Precise (token 1).
+        if any(k in p['mesh'] for k in PRECISE):
+            props += '<token name="RenderFidelity">1</token>'
     if p.get('transparency'):
         props += f'<float name="Transparency">{p["transparency"]}</float>'
     if p.get('reflectance'):
