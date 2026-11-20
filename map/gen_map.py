@@ -174,7 +174,7 @@ def has_mesh(*names):
     return all(n in ids and n in pm for n in names)
 
 
-SOFT_MESH = ('Water', 'ChocoRiver', 'PondWater', 'TidePoolWater', 'DuckTubWater', 'Flowers', 'Spore', 'Puff', 'Star', 'Orb',
+SOFT_MESH = ('Water', 'ChocoRiver', 'WaferBridge', 'PondWater', 'TidePoolWater', 'DuckTubWater', 'Flowers', 'Spore', 'Puff', 'Star', 'Orb',
              'GlowMush', 'Shell', 'Neon', 'Holo', 'Rainbow',
              # v102: irregular shapes collide as one big box in Roblox (players stood in the air next to tree crowns),
              # so they are soft and keep their own fitted helper box (trunk / base) instead
@@ -1062,7 +1062,9 @@ def candy_mesh(z0, rz_, cs):
     for sx in (-1, 1):
         mpart('Map_ChocoRiver', sx * 96, 0, rz_)
     mpart('Map_WaferBridge', 0, 0, rz_)
-    blk(0, 0, rz_, ROADW + 4, 1.6, 24, (240, 200, 130), transparency=1)
+    blk(0, 0, rz_, ROADW + 4, 1.6, 24, (240, 200, 130), transparency=1)   # the deck you walk on (top 1.6, like the mesh)
+    for sz in (-1, 1):                                    # v123: a small step at both ends, so you walk up instead of bumping
+        blk(0, 0, rz_ + sz * 12.75, ROADW + 4, 0.8, 1.6, (240, 200, 130), transparency=1)
     for sx in (-1, 1):
         blk(sx * (ROADW / 2 + 1.5), 1.6, rz_, 1, 3, 24, (255, 120, 150), transparency=1)
     for _ in range(20):
