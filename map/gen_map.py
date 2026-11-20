@@ -1911,6 +1911,101 @@ def scenery():
                     LAMPS.append((sx * 12, lz, -sx, c1))   # built after the zones (to skip spots already taken)
 
 
+
+# ------------------------------------------------------------------ v116: COSMIC NEST, secret zone 11 (floating island in space)
+# Keep the numbers in sync with C.COSMIC in game/Config.lua (centre 0, 900, 700; radius 92 for eggs; exit pad at z 790).
+COSMIC = dict(x=0, y=900, z=700, R=112)
+
+
+def z_cosmic():
+    X, Y, Z, RAD = COSMIC['x'], COSMIC['y'], COSMIC['z'], COSMIC['R']
+    STONE, STONE2, DARK = (54, 40, 96), (70, 52, 122), (30, 22, 58)
+    CYAN, PINK, VIO = (90, 230, 255), (255, 110, 220), (170, 110, 255)
+    cr = random.Random(116)
+    with group('Zone11_CosmicNest', unique=False):
+        # island top: one strip per row (few parts), two shades like the zone tiles
+        T = 8
+        for k, dz in enumerate(range(-RAD, RAD + 1, T)):
+            half = math.sqrt(max(0.0, RAD * RAD - (dz + T / 2) ** 2)) if dz < 0 else math.sqrt(max(0.0, RAD * RAD - dz * dz))
+            if half < 6:
+                continue
+            blk(X, Y - 4, Z + dz + T / 2, half * 2, 4, T, STONE if k % 2 else STONE2, 'Slate', name='CosmicGround')
+        # underside: shrinking layers + hanging rocks (floating island)
+        for k, (r, h) in enumerate(((RAD - 8, 10), (RAD - 26, 12), (RAD - 48, 14), (RAD - 70, 16), (RAD - 88, 18))):
+            y = Y - 4 - sum(hh for _, hh in ((RAD - 8, 10), (RAD - 26, 12), (RAD - 48, 14), (RAD - 70, 16), (RAD - 88, 18))[:k + 1])
+            for dz in range(-r, r + 1, 16):
+                half = math.sqrt(max(0.0, r * r - dz * dz))
+                if half > 6:
+                    blk(X, y, Z + dz, half * 2, h, 16, shade(DARK, 1 - 0.08 * k), 'Slate', **NC)
+        for _ in range(26):
+            a, r = cr.uniform(0, 6.283), cr.uniform(20, RAD - 20)
+            x, z, h = X + math.cos(a) * r, Z + math.sin(a) * r, cr.uniform(12, 40)
+            blk(x, Y - 30 - h, z, cr.uniform(6, 14), h, cr.uniform(6, 14), DARK, 'Slate', yaw=cr.uniform(0, 90), **NC)
+            if cr.random() < 0.4:
+                blk(x, Y - 34 - h, z, 2, 4, 2, CYAN, 'Neon', **NC)
+        # glowing star dots and glowing cracks on the ground (thin = soft, nobody gets stuck)
+        for _ in range(140):
+            a, r = cr.uniform(0, 6.283), math.sqrt(cr.random()) * (RAD - 6)
+            c = cr.choice((CYAN, PINK, (255, 240, 150), WHITE))
+            blk(X + math.cos(a) * r, Y, Z + math.sin(a) * r, 1, 0.15, 1, c, 'Neon', **NC)
+        for _ in range(16):
+            a, r = cr.uniform(0, 6.283), cr.uniform(25, RAD - 10)
+            x, z = X + math.cos(a) * r, Z + math.sin(a) * r
+            yaw = cr.uniform(0, 180)
+            for j in range(4):
+                blk(x + j * 3 * math.cos(math.radians(yaw)), Y, z + j * 3 * math.sin(math.radians(yaw)), 3.4, 0.2, 0.7, VIO, 'Neon', yaw=-yaw + cr.uniform(-25, 25), **NC)
+        # crystal clusters around the edge
+        for k in range(14):
+            a = k * 6.283 / 14 + cr.uniform(-0.15, 0.15)
+            if abs(math.sin(a) - 1) < 0.25:
+                continue                        # keep the exit side (+Z) open
+            r = RAD - cr.uniform(10, 20)
+            x, z = X + math.cos(a) * r, Z + math.sin(a) * r
+            col = cr.choice((CYAN, PINK, VIO))
+            for j in range(cr.randint(3, 5)):
+                h = cr.uniform(8, 22)
+                part((cr.uniform(2.5, 4.5), h, cr.uniform(2.5, 4.5)), C(x + cr.uniform(-4, 4), Y + h / 2 - 1, z + cr.uniform(-4, 4)) *
+                     R(cr.uniform(-18, 18), cr.uniform(0, 90), cr.uniform(-18, 18)), col, 'Glass', transparency=0.15)
+            light(blk(x, Y, z, 2, 2, 2, col, 'Neon', **NC), col, 24, 2)
+        # centre: the Cosmic Egg on a floating ring
+        for j in range(16):
+            a = j * 6.283 / 16
+            blk(X + math.cos(a) * 16, Y + 2, Z + math.sin(a) * 16, 6, 1.2, 3, VIO if j % 2 else CYAN, 'Neon', yaw=-math.degrees(a), **NC)
+        vcyl(X, Y, Z, 2, 22, DARK, 'Slate')
+        egg(X, Y + 16, Z, 4.2, (120, 70, 230), CYAN, beam=False, mat='Glass', n=9, name='CosmicEgg')
+        b = vcyl(X, Y + 24, Z, 300, 8, VIO, 'Neon', transparency=0.75, name='CosmicBeam', **NC)
+        light(b, VIO, 60, 3)
+        # exit pad (z = 790): glowing disc + arch with a sign; the server watches this spot
+        ez = Z + 90
+        vcyl(X, Y, ez, 0.4, 18, CYAN, 'Neon', name='CosmicExit', **NC)
+        vcyl(X, Y - 0.2, ez, 0.3, 22, DARK, 'Slate', **NC)
+        for sx in (-1, 1):
+            blk(X + sx * 11, Y, ez, 3, 18, 3, DARK, 'Slate')
+            blk(X + sx * 11, Y + 18, ez, 3.6, 1.2, 3.6, CYAN, 'Neon', **NC)
+        bb = blk(X, Y + 18, ez, 26, 5, 2, DARK, 'Slate')
+        sign(bb, 'Front', 'BACK TO EARTH', 'stand in the light', fg=(255, 255, 255), bg1=(120, 70, 230), bg2=(60, 30, 140), pps=16)
+        sign(bb, 'Back', 'COSMIC NEST', 'the secret zone', fg=(255, 255, 255), bg1=(120, 70, 230), bg2=(60, 30, 140), pps=16)
+        # sky: planets, a ringed giant, a moon and stars (far away, soft)
+        def planet(x, y, z, d, col, band=None):
+            sph(x, y, z, d, col, 'SmoothPlastic', **NC)
+            if band:
+                blk(x, y - d * 0.08, z, d * 1.02, d * 0.14, d * 1.02, band, 'SmoothPlastic', **NC)
+        planet(X + 330, Y + 120, Z - 120, 120, (255, 150, 80), (255, 210, 140))
+        for j in range(24):                     # its ring
+            a = j * 6.283 / 24
+            part((20, 2, 6), C(X + 330 + math.cos(a) * 105, Y + 120 + math.sin(a) * 18, Z - 120 + math.sin(a) * 105) *
+                 R(0, -math.degrees(a), 10), (255, 230, 170), 'Neon', transparency=0.3, **NC)
+        planet(X - 360, Y + 170, Z + 260, 80, (80, 150, 255), (120, 230, 255))
+        planet(X - 160, Y + 260, Z - 330, 40, (225, 225, 235))
+        planet(X + 240, Y + 60, Z + 380, 30, (255, 110, 220))
+        for _ in range(110):
+            a, e = cr.uniform(0, 6.283), cr.uniform(0.05, 1.2)
+            d = cr.uniform(420, 560)
+            s = cr.uniform(1.5, 4)
+            blk(X + math.cos(a) * math.cos(e) * d, Y - 60 + math.sin(e) * d, Z + math.sin(a) * math.cos(e) * d, s, s, s,
+                cr.choice((WHITE, (255, 240, 170), (170, 220, 255))), 'Neon', **NC)
+
+
 def build():
     home()
     scenery()
@@ -1998,6 +2093,7 @@ if __name__ == '__main__':
     with group('Scenery', unique=False):
         for args in LAMPS:
             street_lamp(*args)
+    z_cosmic()
     clear_circles()
     solidify()
     spawn = [p for p in PARTS if p.get('spawn')]

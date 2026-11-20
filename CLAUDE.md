@@ -30,4 +30,5 @@ Hatch show: world-space VFX module `HatchVFX` (Config `C.HATCH_STYLE = "vfx"`). 
 - Test in Studio when you can and say exactly what you tested and what you could not.
 
 ## Latest
+v118 (20 Nov 2026): COSMIC NEST = secret zone 11 (C.ZONES[11], C.COSMIC in Config, `z_cosmic()` in gen_map): floating island at y 900 above the map, only reachable through the Golden Portal (all 10 altars; server teleports when you stand in it), low gravity + night sky (client), slow cosmic eggs with 5 new pets (1e9 base income), exit pad -> Golden Nest, falling off puts you back on the island. `C.NZ` = the 10 normal zones (use it instead of #C.ZONES for gates/unlocks/index/altars). Big egg never drops there.
 v104 (19 Nov 2026): SELL PETS menu with selectable pet cards, single-egg HATCH, pen entrance in fence wood colours, fitted hitboxes, solid crater + big egg, faster big egg fall with knockback, new street lamps, Rebirth NOW>NEXT medals, BIG EGG every 5 minutes, quieter hatch sounds.

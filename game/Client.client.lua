@@ -922,7 +922,7 @@ local bonusText = title(bonusFace, UDim2.fromScale(0.9, 0.62), UDim2.fromScale(0
 bonusText.Font = Enum.Font.FredokaOne
 bonusText.ZIndex = 2
 
-local NZ, NR = #C.ZONES, #C.RARITY
+local NZ, NR = C.NZ, #C.RARITY
 local selZone = 1
 local found = {}
 local tabs = {}
@@ -3733,7 +3733,7 @@ task.spawn(function()
 	end
 	local function startPreview(at)
 		stopPreview()
-		local z = math.clamp(math.floor(at.Z / C.ZONE_LEN) + 1, 1, #C.ZONES)
+		local z = math.clamp(math.floor(at.Z / C.ZONE_LEN) + 1, 1, C.NZ)
 		local pets = C.ZONES[z].pets
 		preview = Instance.new("Folder")
 		preview.Name = "BigEggPreview"
@@ -4064,7 +4064,7 @@ task.spawn(function()
 				n = n + 1
 			end
 		end
-		if n >= #C.ZONES then
+		if n >= C.NZ then
 			openPortal(false)
 		end
 	end
@@ -4092,5 +4092,93 @@ task.spawn(function()
 		local st = Instance.new("UIStroke")
 		st.Thickness, st.Color = 2.5, Color3.fromRGB(30, 20, 40)
 		st.Parent = t
+	end
+end)
+
+-- ============================================================ COSMIC NEST (client, v116)
+-- On the secret island (high above the map): night sky with stars, purple light, low gravity and a big title.
+-- Everything is local to this player and goes back to normal when they leave.
+task.spawn(function()
+	local Lighting = game:GetService("Lighting")
+	local TweenS = game:GetService("TweenService")
+	local CO = C.COSMIC
+	local player = game:GetService("Players").LocalPlayer
+	local inside, saved = false, nil
+	local function title()
+		local pg = player:FindFirstChildOfClass("PlayerGui")
+		if not pg then
+			return
+		end
+		local sg = Instance.new("ScreenGui")
+		sg.Name, sg.ResetOnSpawn, sg.IgnoreGuiInset = "CosmicTitle", false, true
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency, t.AnchorPoint = 1, Vector2.new(0.5, 0.5)
+		t.Position, t.Size = UDim2.fromScale(0.5, 0.3), UDim2.fromScale(0.8, 0.12)
+		t.Font, t.TextScaled, t.Text = Enum.Font.FredokaOne, true, "COSMIC NEST"
+		t.TextColor3, t.TextTransparency = Color3.fromRGB(200, 170, 255), 1
+		t.Parent = sg
+		local st = Instance.new("UIStroke")
+		st.Thickness, st.Color = 4, Color3.fromRGB(30, 10, 70)
+		st.Parent = t
+		local g = Instance.new("UIGradient")
+		g.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(120, 230, 255)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 120, 230)) })
+		g.Parent = t
+		local s = Instance.new("TextLabel")
+		s.BackgroundTransparency, s.AnchorPoint = 1, Vector2.new(0.5, 0)
+		s.Position, s.Size = UDim2.fromScale(0.5, 0.36), UDim2.fromScale(0.6, 0.05)
+		s.Font, s.TextScaled, s.Text = Enum.Font.FredokaOne, true, "low gravity  •  cosmic eggs  •  the rarest pets"
+		s.TextColor3, s.TextTransparency = Color3.new(1, 1, 1), 1
+		s.Parent = sg
+		sg.Parent = pg
+		local info = TweenInfo.new(0.8)
+		TweenS:Create(t, info, { TextTransparency = 0 }):Play()
+		TweenS:Create(s, info, { TextTransparency = 0 }):Play()
+		task.delay(3.5, function()
+			TweenS:Create(t, info, { TextTransparency = 1 }):Play()
+			TweenS:Create(s, info, { TextTransparency = 1 }):Play()
+			task.wait(1)
+			sg:Destroy()
+		end)
+	end
+	local function enter()
+		local atm = Lighting:FindFirstChildOfClass("Atmosphere")
+		saved = {
+			clock = Lighting.ClockTime, bright = Lighting.Brightness, amb = Lighting.Ambient, oamb = Lighting.OutdoorAmbient,
+			grav = workspace.Gravity, atm = atm, dens = atm and atm.Density, haze = atm and atm.Haze, col = atm and atm.Color,
+		}
+		Lighting.ClockTime = 0
+		Lighting.Brightness = 2
+		Lighting.Ambient = Color3.fromRGB(70, 50, 120)
+		Lighting.OutdoorAmbient = Color3.fromRGB(120, 100, 190)
+		if atm then
+			atm.Density, atm.Haze, atm.Color = 0.05, 0, Color3.fromRGB(40, 20, 80)
+		end
+		workspace.Gravity = CO.gravity
+		title()
+	end
+	local function leave()
+		if not saved then
+			return
+		end
+		Lighting.ClockTime, Lighting.Brightness = saved.clock, saved.bright
+		Lighting.Ambient, Lighting.OutdoorAmbient = saved.amb, saved.oamb
+		if saved.atm then
+			saved.atm.Density, saved.atm.Haze, saved.atm.Color = saved.dens, saved.haze, saved.col
+		end
+		workspace.Gravity = saved.grav
+		saved = nil
+	end
+	while true do
+		task.wait(0.3)
+		local ch = player.Character
+		local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+		local now = hrp ~= nil and hrp.Position.Y > CO.y - 400
+		if now and not inside then
+			inside = true
+			enter()
+		elseif inside and not now then
+			inside = false
+			leave()
+		end
 	end
 end)

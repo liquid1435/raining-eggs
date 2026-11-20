@@ -307,6 +307,8 @@ for _k in [k for k in VIEWS if k.startswith('z')]:
 for _i in range(10):
     _sx = -1 if _i % 2 == 0 else 1
     VIEWS[f'zone{_i + 1}'] = ((_sx * 64, 58, _i * 140 - 34), (-_sx * 18, 8, _i * 140 + 84), 19)
+VIEWS['cosmic'] = ((-95, 960, 560), (0, 905, 720), 20)   # v116 Cosmic Nest island
+VIEWS['cosmic2'] = ((0, 915, 640), (0, 915, 790), 24)
 todo = list(VIEWS) if args == ['all'] else args
 cam_data = bpy.data.cameras.new('Cam')
 cam = bpy.data.objects.new('Cam', cam_data)

@@ -249,7 +249,7 @@ end)
 
 local function zonesDone(d)
 	local n = 0
-	for z = 1, #C.ZONES do
+	for z = 1, C.NZ do
 		local all = true
 		for i = 1, #C.RARITY do
 			if not d.index[z .. "_" .. i] then
@@ -797,7 +797,7 @@ local function tryUnlock(plr, zoneIndex)
 	sync(plr) -- the "Unlocked" attribute tells the client to fade the gate away
 end
 
-for zoneIndex = 2, #C.ZONES do
+for zoneIndex = 2, C.NZ do
 	local z = (zoneIndex - 1) * C.ZONE_LEN -- the arch of zone n stands at z = (n - 1) * 140
 	local col = Color3.fromRGB(C.ZONES[zoneIndex].eggCol[1], C.ZONES[zoneIndex].eggCol[2], C.ZONES[zoneIndex].eggCol[3])
 	local model = Instance.new("Model")
@@ -832,7 +832,7 @@ GateFolder.Parent = workspace
 -- the big arch signs of the map still say "SPEED 500+": write the cash price there instead
 do
 	local newText = {}
-	for i = 2, #C.ZONES do
+	for i = 2, C.NZ do
 		newText["SPEED " .. C.fmt(C.ZONES[i].req) .. "+"] = "COSTS $" .. C.fmt(C.ZONES[i].price)
 	end
 	for _, o in ipairs(Map:GetDescendants()) do
@@ -1100,7 +1100,7 @@ local function load(plr)
 	local unlocked = tonumber(saved.unlocked)
 	if not unlocked then
 		unlocked = 1
-		for i = 2, #C.ZONES do
+		for i = 2, C.NZ do
 			if d.speed >= C.ZONES[i].req then
 				unlocked = i
 			else
@@ -1108,9 +1108,9 @@ local function load(plr)
 			end
 		end
 	end
-	d.unlocked = math.clamp(math.floor(unlocked), 1, #C.ZONES)
+	d.unlocked = math.clamp(math.floor(unlocked), 1, C.NZ)
 	if C.TEST_ALL_ZONES_FREE and game:GetService("RunService"):IsStudio() then
-		d.unlocked = #C.ZONES -- Studio test: every zone open for free (Config C.TEST_ALL_ZONES_FREE)
+		d.unlocked = C.NZ -- Studio test: every zone open for free (Config C.TEST_ALL_ZONES_FREE)
 	end
 	d.zonesDone = zonesDone(d)
 	return d
@@ -1226,6 +1226,39 @@ rayParams.RespectCanCollide = true
 
 local function spawnEgg(zoneIndex, near, forced)
 	local z0 = (zoneIndex - 1) * C.ZONE_LEN
+	local CO = C.COSMIC
+	if zoneIndex == CO.zone then -- v116 Cosmic Nest: eggs fall slowly onto the floating island
+		for _ = 1, 6 do
+			local a, r = math.random() * math.pi * 2, math.sqrt(math.random()) * CO.radius
+			local x, z = CO.x + math.cos(a) * r, CO.z + math.sin(a) * r
+			if near and math.random() < 0.6 then
+				local a2, r2 = math.random() * math.pi * 2, 10 + math.random() * 35
+				local nx, nz = near.X + math.cos(a2) * r2, near.Z + math.sin(a2) * r2
+				if (nx - CO.x) ^ 2 + (nz - CO.z) ^ 2 < CO.radius * CO.radius then
+					x, z = nx, nz
+				end
+			end
+			local y0 = CO.y + CO.eggHeight
+			local hit = workspace:Raycast(Vector3.new(x, y0, z), Vector3.new(0, -CO.eggHeight - 40, 0), rayParams)
+			if hit and hit.Position.Y > CO.y - 25 then
+				nextId = nextId + 1
+				local id = nextId
+				local kind, fall, linger = forced or "normal", CO.fall, 0
+				if kind == "storm" then
+					fall, linger = fall * 1.4, C.STORM_EGG_LINGER
+				elseif math.random() < C.GOLDEN_CHANCE then
+					kind, fall = "golden", fall * 1.2
+				end
+				eggs[id] = { x = x, z = z, y0 = y0, gy = hit.Position.Y, fall = fall, linger = linger, t0 = os.clock(), zone = zoneIndex, kind = kind }
+				EggSpawn:FireAllClients(id, x, z, y0, hit.Position.Y, fall, zoneIndex, kind, linger)
+				task.delay(fall + linger + 0.8, function()
+					eggs[id] = nil
+				end)
+				return true
+			end
+		end
+		return false
+	end
 	for _ = 1, 5 do
 		local x, z
 		if near and (forced or math.random() < 0.65) then
@@ -1451,8 +1484,35 @@ task.spawn(function()
 			local hum = char and char:FindFirstChildOfClass("Humanoid")
 			if hrp and hum and hum.Health > 0 then
 				local p = hrp.Position
-				local zi = p.Z >= 0 and math.min(math.floor(p.Z / C.ZONE_LEN) + 1, #C.ZONES) or 0
-				if zi > 1 then
+				local zi = p.Z >= 0 and math.min(math.floor(p.Z / C.ZONE_LEN) + 1, C.NZ) or 0
+				-- v116 Cosmic Nest: everything high above the map is the secret island
+				local CO = C.COSMIC
+				local opened = #altarList(d) >= C.NZ
+				if p.Y > CO.y - 400 then
+					zi = CO.zone
+					if not opened then -- no way in without the portal
+						hrp.CFrame = CFrame.new(CO.back[1], CO.back[2], CO.back[3])
+						hrp.AssemblyLinearVelocity = Vector3.zero
+						zi = C.NZ
+					elseif p.Y < CO.y - 40 then -- fell off the island: back onto it
+						hrp.CFrame = CFrame.new(CO.x, CO.y + 6, CO.z - 50)
+						hrp.AssemblyLinearVelocity = Vector3.zero
+					elseif (p.X - CO.exit[1]) ^ 2 + (p.Z - CO.exit[3]) ^ 2 < CO.exit[4] ^ 2 and p.Y < CO.exit[2] + 12 then
+						hrp.CFrame = CFrame.new(CO.back[1], CO.back[2], CO.back[3]) -- exit pad: back to the Golden Nest
+						hrp.AssemblyLinearVelocity = Vector3.zero
+						zi = C.NZ
+					end
+				elseif zi == C.NZ and opened and p.Y < CO.portal[2] + 25
+					and (p.X - CO.portal[1]) ^ 2 + (p.Z - CO.portal[3]) ^ 2 < CO.portal[4] ^ 2 then
+					hrp.CFrame = CFrame.new(CO.x, CO.y + 6, CO.z - 50) -- into the Golden Portal
+					hrp.AssemblyLinearVelocity = Vector3.zero
+					zi = CO.zone
+					if not d.cosmicSeen then
+						d.cosmicSeen = true
+						Notice:FireAllClients(plr.DisplayName .. " entered the COSMIC NEST!", "legend")
+					end
+				end
+				if zi > 1 and zi <= C.NZ then
 					-- safety net behind the gates: a player standing in a zone they did not buy is put back
 					local allowed = d.unlocked
 					if zi > allowed then
@@ -1697,12 +1757,14 @@ local function startBigEgg()
 	-- a random zone: one where players are now, else any zone somebody has unlocked; the egg lands on the white road in its middle
 	local zones, maxUnlocked = {}, 1
 	for zi in pairs(occupied()) do
-		table.insert(zones, zi)
+		if zi <= C.NZ then -- never on the Cosmic Nest island
+			table.insert(zones, zi)
+		end
 	end
 	for _, d in pairs(data) do
 		maxUnlocked = math.max(maxUnlocked, d.unlocked or 1)
 	end
-	local zi = #zones > 0 and zones[math.random(#zones)] or math.random(1, math.min(maxUnlocked, #C.ZONES))
+	local zi = #zones > 0 and zones[math.random(#zones)] or math.random(1, math.min(maxUnlocked, C.NZ))
 	local spot = { 0, (zi - 1) * C.ZONE_LEN + C.ZONE_LEN * (0.4 + math.random() * 0.2) }
 	local params = RaycastParams.new()
 	local chars = {}
@@ -1925,13 +1987,13 @@ for _, d0 in ipairs(Map:GetDescendants()) do
 			sync(plr)
 			GoldenAltar:FireClient(plr, "place", n)
 			local count = #altarList(d)
-			if count >= #C.ZONES then
+			if count >= C.NZ then
 				task.delay(0.8, function()
 					GoldenAltar:FireClient(plr, "sink")
 				end)
 				Notice:FireAllClients(plr.DisplayName .. " opened the GOLDEN PORTAL!", "legend")
 			else
-				say(plr, C.ZONES[n].name .. " egg placed! " .. count .. " / " .. #C.ZONES .. " altars", "good")
+				say(plr, C.ZONES[n].name .. " egg placed! " .. count .. " / " .. C.NZ .. " altars", "good")
 			end
 			save(plr)
 		end)
@@ -1942,13 +2004,13 @@ end
 Action.OnServerEvent:Connect(function(plr, what)
 	local d = data[plr]
 	if what == "altartest" and d and RunService:IsStudio() then
-		for z = 1, #C.ZONES - 1 do
+		for z = 1, C.NZ - 1 do
 			if not d.altar[z] then
 				d.altar[z] = true
 				GoldenAltar:FireClient(plr, "place", z)
 			end
 		end
-		table.insert(d.bag, { z = #C.ZONES, kind = "normal", luck = 1 })
+		table.insert(d.bag, { z = C.NZ, kind = "normal", luck = 1 })
 		sync(plr)
 		say(plr, "Studio test: altars 1-9 filled, a Golden Nest egg is in your EGGS", "info")
 	end

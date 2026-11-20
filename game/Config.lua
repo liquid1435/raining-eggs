@@ -141,7 +141,32 @@ C.ZONES = {
 		{ "Egg God", { 255, 240, 150 }, { 160, 100, 250 }, 2, "o" },
 	}),
 }
-C.PET_COUNT = #C.ZONES * #C.RARITY
+-- v116: the 10 normal zones (gates, unlocks, index, altars). Zone 11 below is the secret one.
+C.NZ = #C.ZONES
+
+-- ============================================================ COSMIC NEST (v116): secret zone 11
+-- A floating island in space high above the map. The only way in: the Golden Portal (all 10 altars filled).
+-- Low gravity, night sky, cosmic eggs with the best pets of the game. The exit pad takes you back to the Golden Nest.
+C.ZONES[C.NZ + 1] = zone("Cosmic Nest", 0, 1e9, { 120, 70, 230 }, { 90, 230, 255 }, {
+	{ "Star Kitten", { 70, 60, 150 }, { 255, 240, 140 }, 1, "q" },
+	{ "Moon Bunny", { 220, 225, 245 }, { 120, 140, 255 }, 2, "q" },
+	{ "Comet Fox", { 60, 120, 255 }, { 120, 240, 255 }, 1, "q" },
+	{ "Nebula Wolf", { 110, 50, 180 }, { 255, 110, 220 }, 1, "q" },
+	{ "Galaxy Dragon", { 30, 24, 70 }, { 160, 255, 250 }, 1, "q" },
+})
+C.COSMIC = {
+	zone = C.NZ + 1,
+	x = 0, y = 900, z = 700,       -- centre of the island top (keep in sync with map/gen_map.py COSMIC)
+	radius = 92,                   -- eggs land inside this circle
+	eggHeight = 90,                -- eggs start this high above the island
+	fall = 3.6,                    -- seconds an egg falls (slow, low gravity)
+	gravity = 70,                  -- workspace gravity on the island (normal 196.2), client side
+	portal = { 0, 0, 1352, 15 },   -- Golden Portal in the Golden Nest: x, ground y, z, radius
+	exit = { 0, 900, 790, 9 },     -- exit pad on the island: x, y, z, radius
+	back = { 0, 4, 1318 },         -- where the exit pad puts you (in front of the portal)
+}
+
+C.PET_COUNT = C.NZ * #C.RARITY
 
 -- ============================================================ ZONE GATES (tweak here)
 -- Cash price to open each zone, in order. Zone 1 is free. Change a number = change the price.
