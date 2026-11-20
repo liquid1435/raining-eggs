@@ -133,10 +133,224 @@ local function own(s, item)
 	return item
 end
 
+-- ---------------------------------------------------------------- v126 compact "BIG EGG INCOMING" card
+-- (user, 20 Nov: "smaller but noticeable, must not cover any UI"). It looks for the first free spot near the
+-- top centre of the screen: every visible piece of the game's own UI (buttons, banners, panels, text) is
+-- measured and the card moves down until it overlaps none of them; checked again twice a second.
+local UIS = game:GetService("UserInputService")
+
+local function uiRects(skip)
+	local rects = {}
+	local pg = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	local cam = workspace.CurrentCamera
+	if not pg or not cam then return rects end
+	local vp = cam.ViewportSize
+	local function walk(obj)
+		for _, c in ipairs(obj:GetChildren()) do
+			if c:IsA("GuiObject") then
+				if c.Visible then
+					local sz, p = c.AbsoluteSize, c.AbsolutePosition
+					local big = sz.X * sz.Y > vp.X * vp.Y * 0.3      -- full-screen containers / dimmers
+					local drawn = c.BackgroundTransparency < 0.9
+						or ((c:IsA("TextLabel") or c:IsA("TextButton")) and c.Text ~= "" and c.TextTransparency < 0.9)
+						or ((c:IsA("ImageLabel") or c:IsA("ImageButton")) and c.Image ~= "" and c.ImageTransparency < 0.9)
+					if drawn and not big and sz.X > 2 and sz.Y > 2 then
+						table.insert(rects, { p.X, p.Y, p.X + sz.X, p.Y + sz.Y })
+					end
+					walk(c)
+				end
+			elseif c:IsA("Folder") then
+				walk(c)
+			end
+		end
+	end
+	for _, g in ipairs(pg:GetChildren()) do
+		if g:IsA("ScreenGui") and g.Enabled and g ~= skip then
+			walk(g)                                                   -- AbsolutePosition space (same for every ScreenGui)
+		end
+	end
+	return rects
+end
+
+-- origin = AbsolutePosition of offset (0, 0) in our own ScreenGui; returns AbsolutePosition-space x, y
+local function freeSpot(w, h, skip, origin)
+	local cam = workspace.CurrentCamera
+	local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
+	local top = origin.Y + 6                                       -- the top of our own screen area (below Roblox's top bar)
+	local rects = uiRects(skip)
+	local pad = 6
+	local function free(x, y)
+		for _, r in ipairs(rects) do
+			if x - pad < r[3] and x + w + pad > r[1] and y - pad < r[4] and y + h + pad > r[2] then
+				return false
+			end
+		end
+		return true
+	end
+	local cx = origin.X + (vp.X - w) / 2
+	local xs = { cx, cx - w * 0.6, cx + w * 0.6 }                  -- centre first, then a bit left / right
+	for y = top, origin.Y + vp.Y * 0.62, 4 do
+		for _, x in ipairs(xs) do
+			if x >= origin.X + 4 and x + w <= origin.X + vp.X - 4 and free(x, y) then
+				return x, y
+			end
+		end
+	end
+	return cx, top                                                 -- nothing free (tiny screen): top centre
+end
+
+local function incomingCard(pos)
+	if gui then gui:Destroy() end
+	gui = Instance.new("ScreenGui")
+	gui.Name = "BigEggBanner"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 20
+	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+	local vp = workspace.CurrentCamera.ViewportSize
+	local w = math.clamp(vp.X * 0.26, 230, 340)
+	local h = math.floor(w * 0.24)
+	local card = Instance.new("Frame")
+	card.Name = "Card"
+	card.Size = UDim2.fromOffset(w, h)
+	card.BackgroundColor3 = FX.plum
+	card.BackgroundTransparency = 0.06
+	card.Parent = gui
+	Instance.new("UICorner", card).CornerRadius = UDim.new(0, math.floor(h * 0.28))
+	local bg = Instance.new("UIGradient")
+	bg.Rotation = 90
+	bg.Color = ColorSequence.new(Color3.fromRGB(78, 56, 122), Color3.fromRGB(36, 24, 60))
+	bg.Parent = card
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 2.5
+	stroke.Color = FX.gold
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = card
+	local scale = Instance.new("UIScale", card)
+	-- egg badge on the left
+	local badge = Instance.new("Frame")
+	badge.AnchorPoint = Vector2.new(0, 0.5)
+	badge.Position = UDim2.new(0, h * 0.14, 0.5, 0)
+	badge.Size = UDim2.fromOffset(h * 0.74, h * 0.74)
+	badge.BackgroundColor3 = FX.gold
+	badge.Parent = card
+	Instance.new("UICorner", badge).CornerRadius = UDim.new(1, 0)
+	local bgr = Instance.new("UIGradient")
+	bgr.Rotation = 90
+	bgr.Color = ColorSequence.new(Color3.fromRGB(255, 220, 110), Color3.fromRGB(240, 140, 30))
+	bgr.Parent = badge
+	local eggIcon = Instance.new("Frame")
+	eggIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+	eggIcon.Position = UDim2.fromScale(0.5, 0.52)
+	eggIcon.Size = UDim2.fromScale(0.46, 0.6)
+	eggIcon.BackgroundColor3 = FX.cream
+	eggIcon.Parent = badge
+	Instance.new("UICorner", eggIcon).CornerRadius = UDim.new(0.5, 0)
+	local es = Instance.new("UIStroke", eggIcon)
+	es.Thickness, es.Color = 2, Color3.fromRGB(120, 70, 20)
+	local textX = h * 0.98
+	local title = FX.label(card, UDim2.new(1, -textX - h * 0.75, 0.46, 0))
+	title.Position = UDim2.new(0, textX, 0.1, 0)
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.TextColor3 = FX.gold
+	title.TextStrokeTransparency = 0.15
+	title.Text = "BIG EGG INCOMING"
+	local sub = FX.label(card, UDim2.new(1, -textX - h * 0.75, 0.3, 0))
+	sub.Position = UDim2.new(0, textX, 0.56, 0)
+	sub.TextXAlignment = Enum.TextXAlignment.Left
+	sub.TextColor3 = FX.cream
+	sub.Font = Enum.Font.GothamBold
+	sub.Text = "LANDS IN 10s"
+	-- arrow pointing to where the egg lands (seen from the camera) + distance
+	local arrow = FX.label(card, UDim2.fromOffset(h * 0.42, h * 0.42))
+	arrow.AnchorPoint = Vector2.new(0.5, 0.5)
+	arrow.Position = UDim2.new(1, -h * 0.36, 0.42, 0)
+	arrow.Font = Enum.Font.GothamBlack
+	arrow.TextColor3 = FX.teal
+	arrow.Text = "▲"
+	local dist = FX.label(card, UDim2.fromOffset(h * 0.62, h * 0.2))
+	dist.AnchorPoint = Vector2.new(0.5, 0)
+	dist.Position = UDim2.new(1, -h * 0.36, 0.66, 0)
+	dist.Font = Enum.Font.GothamBold
+	dist.TextColor3 = FX.teal
+	-- countdown bar along the bottom edge
+	local track = Instance.new("Frame")
+	track.AnchorPoint = Vector2.new(0.5, 1)
+	track.Position = UDim2.new(0.5, 0, 1, -h * 0.07)
+	track.Size = UDim2.new(1, -h * 0.5, 0, math.max(3, h * 0.07))
+	track.BackgroundColor3 = Color3.fromRGB(20, 12, 36)
+	track.BorderSizePixel = 0
+	track.Parent = card
+	Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.fromScale(1, 1)
+	fill.BackgroundColor3 = FX.teal
+	fill.BorderSizePixel = 0
+	fill.Parent = track
+	Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+	local probe = Instance.new("Frame")                  -- where offset (0, 0) of our ScreenGui is on screen
+	probe.BackgroundTransparency, probe.Size = 1, UDim2.fromOffset(1, 1)
+	probe.Parent = gui
+	local function spot()
+		local o = probe.AbsolutePosition
+		local ax, ay = freeSpot(w, h, gui, o)
+		return ax - o.X, ay - o.Y
+	end
+	local x, y = spot()
+	card.Position = UDim2.fromOffset(x, y - h * 0.6)
+	card.BackgroundTransparency = 1
+	FX.tween(card, 0.35, { Position = UDim2.fromOffset(x, y), BackgroundTransparency = 0.06 }, Enum.EasingStyle.Back)
+	local api = {}
+	local nextCheck, lastSec = 0, nil
+	function api.update(t)
+		local left = math.max(0, 10 - t)
+		local sec = math.ceil(left)
+		sub.Text = "LANDS IN " .. sec .. "s"
+		fill.Size = UDim2.fromScale(left / 10, 1)
+		local urgent = left <= 3
+		stroke.Color = urgent and FX.coral or FX.gold
+		fill.BackgroundColor3 = urgent and FX.coral or FX.teal
+		stroke.Transparency = 0.15 + 0.35 * (0.5 + 0.5 * math.sin(t * (urgent and 12 or 6)))
+		if sec ~= lastSec then
+			lastSec = sec
+			scale.Scale = urgent and 1.06 or 1.03                  -- small "tick" every second
+			FX.tween(scale, 0.25, { Scale = 1 })
+		end
+		local cam = workspace.CurrentCamera
+		if cam then
+			local rel = cam.CFrame:PointToObjectSpace(pos)
+			arrow.Rotation = math.deg(math.atan2(rel.X, -rel.Z))
+			local char = Players.LocalPlayer.Character
+			local root = char and char:FindFirstChild("HumanoidRootPart")
+			local d = root and (root.Position - pos).Magnitude
+			dist.Text = d and (d < 30 and "HERE!" or (math.floor(d / 10 + 0.5) * 10 .. " studs")) or ""
+		end
+		if t >= nextCheck then                                    -- the HUD may change (EGG STORM banner, menus...)
+			nextCheck = t + 0.5
+			local nx, ny = spot()
+			if math.abs(nx - x) + math.abs(ny - y) > 2 then
+				x, y = nx, ny
+				FX.tween(card, 0.25, { Position = UDim2.fromOffset(x, y) })
+			end
+		end
+	end
+	function api.close()
+		local g = gui
+		FX.tween(card, 0.25, { Position = UDim2.fromOffset(x, y - h * 0.6), BackgroundTransparency = 1 })
+		for _, o in ipairs(card:GetDescendants()) do
+			if o:IsA("TextLabel") then FX.tween(o, 0.2, { TextTransparency = 1, TextStrokeTransparency = 1 })
+			elseif o:IsA("Frame") then FX.tween(o, 0.2, { BackgroundTransparency = 1 })
+			elseif o:IsA("UIStroke") then FX.tween(o, 0.2, { Transparency = 1 }) end
+		end
+		Debris:AddItem(g, 0.3)
+	end
+	return api
+end
+
 function VFX.PlayIncoming(pos)
 	VFX.Clear()
 	local s = state()
-	local screen, label = banner("BIG EGG INCOMING!", "DROP IN   10")
+	local card = incomingCard(pos)
 	local tint = own(s, Instance.new("ColorCorrectionEffect"))
 	tint.Parent = Lighting
 	FX.tween(tint, 1.3, {Brightness = -0.13, TintColor = Color3.fromRGB(192, 204, 255)})
@@ -146,8 +360,8 @@ function VFX.PlayIncoming(pos)
 	local start = os.clock()
 	run(s, function(now)
 		local t = now - start
-		if t >= 10 then screen:Destroy() marker:Destroy() return false end
-		label.Text = string.format("DROP IN   %02d", math.ceil(10 - t))
+		if t >= 10 then card.close() marker:Destroy() return false end
+		card.update(t)
 		pulse(8 + 0.5 * math.sin(t * 5), 0.18)
 	end)
 end
@@ -439,61 +653,302 @@ function VFX.PlayImpact(pos)
 	end)
 end
 
-local function clearRing(s)
-	if s.ring then s.ring:Destroy() s.ring = nil end
+-- ---------------------------------------------------------------- v126 claim badge (user, 20 Nov: "more professional,
+-- higher quality"): a round badge in the middle of the egg - dark disc, smooth progress ring (gold -> cream),
+-- keycap with the key to hold (E / the gamepad button / TAP on phones), a "HOLD TO CLAIM" pill under it.
+-- The badge lives in PlayerGui (Adornee = the egg), so phones can tap and hold it: the prompt is Style Custom,
+-- which draws no button of its own (before v126 touch players could not claim at all).
+local function claimPrompt()
+	local t = workspace:FindFirstChild("BigEggTarget")
+	return t and t:FindFirstChildOfClass("ProximityPrompt")
+end
+
+local function keyText()
+	local last = UIS:GetLastInputType()
+	if last == Enum.UserInputType.Touch then
+		return "TAP", "TAP & HOLD TO CLAIM"
+	end
+	if last.Name:find("Gamepad") then
+		local pp = claimPrompt()
+		local k = pp and pp.GamepadKeyCode.Name:gsub("^Button", "") or "X"
+		return k, "HOLD " .. k .. " TO CLAIM"
+	end
+	local pp = claimPrompt()
+	local k = pp and pp.KeyboardKeyCode.Name or "E"
+	return k, "HOLD " .. k .. " TO CLAIM"
+end
+
+-- one half of the progress ring: a full disc clipped to its half; a sharp UIGradient decides how much shows
+local function ringHalf(parent, right)
+	local clip = Instance.new("Frame")
+	clip.BackgroundTransparency = 1
+	clip.ClipsDescendants = true
+	clip.Size = UDim2.fromScale(0.5, 1)
+	clip.Position = UDim2.fromScale(right and 0.5 or 0, 0)
+	clip.ZIndex = 2
+	clip.Parent = parent
+	local disc = Instance.new("Frame")
+	disc.Size = UDim2.fromScale(2, 1)
+	disc.Position = UDim2.fromScale(right and -1 or 0, 0)
+	disc.BackgroundColor3 = Color3.new(1, 1, 1)
+	disc.BorderSizePixel = 0
+	disc.ZIndex = 2
+	disc.Parent = clip
+	Instance.new("UICorner", disc).CornerRadius = UDim.new(1, 0)
+	local g = Instance.new("UIGradient")
+	g.Color = ColorSequence.new(FX.gold, FX.cream)
+	g.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.5, 0),
+		NumberSequenceKeypoint.new(0.501, 1), NumberSequenceKeypoint.new(1, 1) })
+	g.Parent = disc
+	return g, disc
+end
+
+local function buildBadge(s, root)
+	local bb = Instance.new("BillboardGui")
+	bb.Name = "BigEggClaim"
+	bb.Size = UDim2.fromOffset(150, 186)
+	bb.StudsOffsetWorldSpace = Vector3.zero -- in the middle of the egg (user, 19 Nov)
+	bb.AlwaysOnTop = true
+	bb.Active = true
+	bb.Adornee = root
+	bb.Enabled = VFX.ShowRing
+	bb.MaxDistance = VFX.RingDistance -- only seen when you are close to the egg (user, 19 Nov)
+	bb.ResetOnSpawn = false
+	bb.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+	local box = Instance.new("Frame")
+	box.BackgroundTransparency = 1
+	box.Size = UDim2.fromScale(1, 1)
+	box.Parent = bb
+	local sc = Instance.new("UIScale", box)
+	local ring = Instance.new("Frame")                    -- 132 px badge at the top of the billboard
+	ring.Name = "Ring"
+	ring.AnchorPoint = Vector2.new(0.5, 0)
+	ring.Position = UDim2.fromScale(0.5, 0)
+	ring.Size = UDim2.fromOffset(132, 132)
+	ring.BackgroundTransparency = 1
+	ring.Parent = box
+	local glow = Instance.new("Frame")                    -- soft breathing glow behind everything
+	glow.AnchorPoint = Vector2.one * 0.5
+	glow.Position = UDim2.fromScale(0.5, 0.5)
+	glow.Size = UDim2.fromScale(1.12, 1.12)
+	glow.BackgroundColor3 = FX.gold
+	glow.BackgroundTransparency = 0.7
+	glow.ZIndex = 0
+	glow.Parent = ring
+	Instance.new("UICorner", glow).CornerRadius = UDim.new(1, 0)
+	local track = Instance.new("Frame")                   -- ring track (dark)
+	track.Size = UDim2.fromScale(1, 1)
+	track.BackgroundColor3 = Color3.fromRGB(58, 40, 98)
+	track.BackgroundTransparency = 0
+	track.ZIndex = 1
+	track.Parent = ring
+	Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
+	local ts = Instance.new("UIStroke", track)
+	ts.Thickness, ts.Color, ts.Transparency = 2, FX.cream, 0.55
+	local gR, dR = ringHalf(ring, true)
+	local gL, dL = ringHalf(ring, false)
+	local inner = Instance.new("Frame")                   -- covers the middle: what is left of the discs is the ring
+	inner.AnchorPoint = Vector2.one * 0.5
+	inner.Position = UDim2.fromScale(0.5, 0.5)
+	inner.Size = UDim2.fromScale(0.76, 0.76)
+	inner.BackgroundColor3 = Color3.new(1, 1, 1)               -- white: a UIGradient multiplies the background colour
+	inner.ZIndex = 3
+	inner.Parent = ring
+	Instance.new("UICorner", inner).CornerRadius = UDim.new(1, 0)
+	local ig = Instance.new("UIGradient", inner)
+	ig.Rotation = 90
+	ig.Color = ColorSequence.new(Color3.fromRGB(124, 92, 190), Color3.fromRGB(66, 44, 116))
+	local is_ = Instance.new("UIStroke", inner)
+	is_.Thickness, is_.Color, is_.Transparency = 1.5, Color3.new(0, 0, 0), 0.4
+	local cap = Instance.new("Frame")                     -- the keycap
+	cap.AnchorPoint = Vector2.one * 0.5
+	cap.Position = UDim2.fromScale(0.5, 0.47)
+	cap.Size = UDim2.fromScale(0.44, 0.44)
+	cap.BackgroundColor3 = Color3.fromRGB(250, 248, 240)
+	cap.ZIndex = 5
+	cap.Parent = ring
+	Instance.new("UICorner", cap).CornerRadius = UDim.new(0.22, 0)
+	local cg = Instance.new("UIGradient", cap)
+	cg.Rotation = 90
+	cg.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(214, 206, 226))
+	local cs = Instance.new("UIStroke", cap)
+	cs.Thickness, cs.Color = 2.5, Color3.fromRGB(30, 20, 50)
+	local capShadow = cap:Clone()                         -- the key's lower edge (gives it depth)
+	capShadow:ClearAllChildren()
+	Instance.new("UICorner", capShadow).CornerRadius = UDim.new(0.22, 0)
+	capShadow.BackgroundColor3 = Color3.fromRGB(30, 20, 50)
+	capShadow.Position = UDim2.fromScale(0.5, 0.51)
+	capShadow.ZIndex = 4
+	capShadow.Parent = ring
+	local key = FX.label(cap, UDim2.fromScale(0.8, 0.8))
+	key.Position = UDim2.fromScale(0.1, 0.1)
+	key.Font = Enum.Font.GothamBlack
+	key.TextColor3 = Color3.fromRGB(36, 24, 60)
+	key.TextStrokeTransparency = 1
+	key.ZIndex = 6
+	key.Text = (keyText())
+	local pct = FX.label(ring, UDim2.fromScale(0.5, 0.14))  -- "64%" under the key while someone holds
+	pct.AnchorPoint = Vector2.new(0.5, 0)
+	pct.Position = UDim2.fromScale(0.5, 0.71)
+	pct.Font = Enum.Font.GothamBlack
+	pct.TextColor3 = FX.gold
+	pct.ZIndex = 6
+	local pill = Instance.new("Frame")                    -- "HOLD E TO CLAIM" pill under the badge
+	pill.AnchorPoint = Vector2.new(0.5, 0)
+	pill.Position = UDim2.new(0.5, 0, 0, 140)
+	pill.Size = UDim2.fromOffset(150, 40)
+	pill.BackgroundColor3 = FX.plum
+	pill.BackgroundTransparency = 0.08
+	pill.Parent = box
+	Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0)
+	local ps = Instance.new("UIStroke", pill)
+	ps.Thickness, ps.Color = 2, FX.gold
+	local line1 = FX.label(pill, UDim2.new(1, -16, 0.56, 0))
+	line1.Position = UDim2.new(0, 8, 0.06, 0)
+	line1.Font = Enum.Font.GothamBlack
+	line1.TextColor3 = FX.cream
+	line1.TextStrokeTransparency = 1
+	local line2 = FX.label(pill, UDim2.new(1, -16, 0.3, 0))
+	line2.Position = UDim2.new(0, 8, 0.6, 0)
+	line2.Font = Enum.Font.GothamBold
+	line2.TextColor3 = FX.gold
+	line2.TextStrokeTransparency = 1
+	line2.Text = "BIG EGG  ·  x25 LUCK"
+	-- touch / click: hold the badge = hold the prompt (keyboard E and gamepad still work as before)
+	local hit = Instance.new("TextButton")
+	hit.BackgroundTransparency = 1
+	hit.Text = ""
+	hit.Size = UDim2.fromScale(1, 1)
+	hit.ZIndex = 10
+	hit.Parent = box
+	local holding = false
+	hit.InputBegan:Connect(function(io)
+		if io.UserInputType == Enum.UserInputType.Touch or io.UserInputType == Enum.UserInputType.MouseButton1 then
+			local pp = claimPrompt()
+			if pp and pp.Enabled then
+				holding = true
+				pcall(pp.InputHoldBegin, pp)
+			end
+		end
+	end)
+	-- release anywhere ends the hold (a finger / mouse let go outside the badge must not leave the prompt held)
+	local function release(io)
+		if holding and (io.UserInputType == Enum.UserInputType.Touch or io.UserInputType == Enum.UserInputType.MouseButton1) then
+			holding = false
+			local pp = claimPrompt()
+			if pp then pcall(pp.InputHoldEnd, pp) end
+		end
+	end
+	hit.InputEnded:Connect(release)
+	table.insert(s.connections, UIS.InputEnded:Connect(release))
+	bb.Destroying:Connect(function()
+		if holding then
+			holding = false
+			local pp = claimPrompt()
+			if pp then pcall(pp.InputHoldEnd, pp) end
+		end
+	end)
+	local t0 = os.clock()
+	local b = { gui = bb, scale = sc, gR = gR, gL = gL, dR = dR, dL = dL, glow = glow, key = key, cap = cap, pct = pct,
+		line1 = line1, line2 = line2, pill = pill, pillStroke = ps, ring = ring }
+	run(s, function(now)                                  -- idle "breathing" glow + live key label
+		if not bb.Parent then return false end
+		local t = now - t0
+		glow.Size = UDim2.fromScale(1.1 + 0.05 * math.sin(t * 3), 1.1 + 0.05 * math.sin(t * 3))
+		glow.BackgroundTransparency = (b.p or 0) > 0 and 0.5 or (0.68 + 0.08 * math.sin(t * 3))
+		local k, l = keyText()
+		key.Text = k                                       -- the key follows the last device used (E / TAP / gamepad)
+		if (b.p or 0) == 0 and not b.busy then
+			line1.Text = l
+		end
+	end)
+	return b
+end
+
+local function setRing(b, p, color)
+	local a = p * 360
+	b.gR.Rotation = math.clamp(a, 0, 180)                  -- right half fills 12 -> 6 o'clock
+	b.gL.Rotation = 180 + math.clamp(a - 180, 0, 180)      -- left half fills 6 -> 12 o'clock
+	local c = color and ColorSequence.new(color) or ColorSequence.new(FX.gold, FX.cream)
+	b.gR.Color, b.gL.Color = c, c
+	local hidden = p <= 0
+	b.dR.Visible, b.dL.Visible = not hidden, not hidden
 end
 
 function VFX.PlayClaimProgress(egg, p, character)
 	local s = state()
 	local root = FX.root(egg)
 	if not root then return end
-	if not s.ring or not s.ring.Parent or s.ring.Adornee ~= root then
-		clearRing(s)
-		local ring = Instance.new("BillboardGui")
-		ring.Name = "BigEggClaim"
-		ring.Size = UDim2.fromOffset(130,130)
-		ring.StudsOffsetWorldSpace = Vector3.zero -- in the middle of the egg (user, 19 Nov)
-		ring.AlwaysOnTop, ring.Adornee, ring.Parent = true, root, root
-		ring.Enabled = VFX.ShowRing -- the game shows the ProximityPrompt above the egg instead (user, 19 Nov)
-		ring.MaxDistance = VFX.RingDistance -- only seen when you are close to the egg (user, 19 Nov)
-		s.ring = own(s,ring)
-		s.segments = {}
-		for i = 1, 48 do
-			local a = (i-1)*math.pi/24
-			local tile = Instance.new("Frame")
-			tile.AnchorPoint = Vector2.one*.5
-			tile.Position = UDim2.fromScale(.5+.43*math.sin(a), .5-.43*math.cos(a))
-			tile.Size, tile.Rotation = UDim2.fromOffset(7,10), math.deg(a)
-			tile.BorderSizePixel, tile.Parent = 0, ring
-			s.segments[i] = tile
-		end
-		s.caption = FX.label(ring, UDim2.fromScale(.54,.48))
-		s.caption.Position = UDim2.fromScale(.23,.26)
+	if not s.badge or not s.badge.gui.Parent or s.badge.gui.Adornee ~= root then
+		if s.badge then s.badge.gui:Destroy() end
+		s.badge = buildBadge(s, root)
+		own(s, s.badge.gui)
+		s.ring = s.badge.gui
 	end
-	p = math.clamp(p,0,1)
+	local b = s.badge
+	p = math.clamp(p, 0, 1)
 	local claimant = if p > 0 then character else nil
 	if s.claimant ~= claimant then
 		stopClaim(s)
 		s.claimant = claimant
 		if claimant then s.claimTrack = characterClip(claimant,"Claim",true,.22) end
 	end
-	s.caption.Text = if p == 0 then "E" else string.format("%d%%",math.floor(p*100))
-	for i, tile in ipairs(s.segments) do tile.BackgroundColor3 = if i<=p*48 then FX.teal else FX.plum end
+	local was = b.p or 0
+	b.p = p
+	setRing(b, p)
+	if p > 0 then
+		local me = character and character == Players.LocalPlayer.Character
+		local who = character and Players:GetPlayerFromCharacter(character)
+		b.pct.Text = math.floor(p * 100) .. "%"
+		b.line1.Text = me and "CLAIMING..." or ((who and who.DisplayName:upper() or "SOMEONE") .. " IS CLAIMING!")
+		b.line1.TextColor3 = me and FX.cream or FX.coral
+		b.pillStroke.Color = me and FX.teal or FX.coral
+		if was == 0 then                                     -- press: the key goes down a little
+			FX.tween(b.cap, 0.08, { Position = UDim2.fromScale(0.5, 0.5) })
+			b.scale.Scale = 1.05
+			FX.tween(b.scale, 0.2, { Scale = 1 })
+		end
+		if p >= 1 then
+			b.pct.Text = "100%"
+		end
+	else
+		b.pct.Text = ""
+		b.line1.TextColor3 = FX.cream
+		b.pillStroke.Color = FX.gold
+		if was > 0 then
+			FX.tween(b.cap, 0.12, { Position = UDim2.fromScale(0.5, 0.47) })
+		end
+	end
 end
 
 function VFX.PlayClaimBreak(egg)
 	local s = state()
-	if not s.ring or s.ring.Adornee ~= FX.root(egg) then return end
+	local b = s.badge
+	if not b or b.gui.Adornee ~= FX.root(egg) then return end
 	stopClaim(s)
-	local ring = s.ring
-	s.ring = nil
-	s.caption.Visible = false
-	for i,tile in ipairs(s.segments) do
-		local a = (i-1)*math.pi/24
-		tile.BackgroundColor3 = FX.coral
-		FX.tween(tile,.28,{Position=UDim2.fromScale(.5+.64*math.sin(a),.5-.64*math.cos(a)),Rotation=tile.Rotation+35,BackgroundTransparency=1})
-	end
-	Debris:AddItem(ring,.3)
+	b.p = 0
+	setRing(b, 1, FX.coral)                                  -- flash the whole ring red, shake, then reset
+	b.pct.Text = ""
+	b.line1.Text = "INTERRUPTED!"
+	b.busy = true
+	b.line1.TextColor3 = FX.coral
+	b.pillStroke.Color = FX.coral
+	FX.tween(b.cap, 0.12, { Position = UDim2.fromScale(0.5, 0.47) })
+	local ring = b.ring
+	task.spawn(function()
+		for i = 1, 6 do
+			ring.Position = UDim2.new(0.5, (i % 2 == 0 and 5 or -5) * (1 - i / 7), 0, 0)
+			task.wait(0.04)
+		end
+		ring.Position = UDim2.fromScale(0.5, 0)
+		task.wait(0.4)
+		b.busy = false
+		if b.gui.Parent and (b.p or 0) == 0 then
+			setRing(b, 0)
+			b.pillStroke.Color = FX.gold
+			b.line1.TextColor3 = FX.cream
+		end
+	end)
 end
 
 function VFX.PlayWin(egg, playerName, winnerCharacter)
