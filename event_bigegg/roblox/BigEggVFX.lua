@@ -323,7 +323,11 @@ local function incomingCard(pos)
 			local char = Players.LocalPlayer.Character
 			local root = char and char:FindFirstChild("HumanoidRootPart")
 			local d = root and (root.Position - pos).Magnitude
-			dist.Text = d and (d < 30 and "HERE!" or (math.floor(d / 10 + 0.5) * 10 .. " studs")) or ""
+			if root and math.abs(root.Position.Y - pos.Y) > 300 then -- v131: the egg is in the other world (space is 900 up)
+				dist.Text = pos.Y > 500 and "IN WORLD 2" or "IN WORLD 1"
+			else
+				dist.Text = d and (d < 30 and "HERE!" or (math.floor(d / 10 + 0.5) * 10 .. " studs")) or ""
+			end
 		end
 		if t >= nextCheck then                                    -- the HUD may change (EGG STORM banner, menus...)
 			nextCheck = t + 0.5

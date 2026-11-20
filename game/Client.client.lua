@@ -1572,7 +1572,8 @@ end
 
 -- ------------------------------------------------------------ "your base" marker
 local marker = make("BillboardGui", {
-	Name = "BaseMarker", Size = UDim2.fromOffset(170, 44), StudsOffsetWorldSpace = Vector3.new(0, 7, 0), AlwaysOnTop = true, MaxDistance = 3000, Enabled = false, ResetOnSpawn = false,
+	-- v131: sized in studs (shrinks with distance) so it no longer sits on top of zone signs far away
+	Name = "BaseMarker", Size = UDim2.new(16, 60, 4.2, 16), StudsOffsetWorldSpace = Vector3.new(0, 9, 0), AlwaysOnTop = true, MaxDistance = 3000, Enabled = false, ResetOnSpawn = false,
 }, plr:WaitForChild("PlayerGui"))
 local markerText = text(marker, UDim2.fromScale(1, 1), UDim2.fromScale(0, 0), 30, "YOUR BASE")
 markerText.TextColor3 = Color3.fromRGB(120, 240, 120)
@@ -4110,7 +4111,15 @@ task.spawn(function()
 	local CO = C.COSMIC
 	local player = game:GetService("Players").LocalPlayer
 	local inside, saved = false, nil
+	local bannerUntil = 0
+	player:GetAttributeChangedSignal("Unlocked"):Connect(function()
+		bannerUntil = os.clock() + 3.4 -- v131: the NEW ZONE UNLOCKED banner is showing (same spot as the zone title)
+	end)
 	local function title(name, sub)
+		task.wait(0.15)
+		if os.clock() < bannerUntil then
+			task.wait(bannerUntil - os.clock())
+		end
 		local pg = player:FindFirstChildOfClass("PlayerGui")
 		if not pg then
 			return
@@ -4198,6 +4207,128 @@ task.spawn(function()
 			p.Parent = workspace
 		end
 	end)
+	-- v131: world 2 is not drawn while you are in world 1 (it hung in the sky). Its models wait in a client-only folder;
+	-- they come back near the Golden Nest (before the portal) and up there.
+	local Map = workspace:WaitForChild("Map")
+	local hideBox = Instance.new("Folder")
+	hideBox.Name = "World2Hidden"
+	local w2models = {}
+	for _, m in ipairs(Map:GetChildren()) do
+		local n = m.Name
+		if n:match("^Zone1[1-9]_") or n:match("^W2") or n == "SaturnRing" then
+			table.insert(w2models, m)
+		end
+	end
+	local w2shown = true
+	local function showWorld2(on)
+		if on == w2shown then
+			return
+		end
+		w2shown = on
+		for _, m in ipairs(w2models) do
+			m.Parent = on and Map or hideBox
+		end
+	end
+	-- Saturn's ring: tilted, slowly turning
+	local ring = Map:FindFirstChild("SaturnRing")
+	local sat = CO.saturn
+	if ring and sat then
+		local centre = Vector3.new(sat[1], sat[2], sat[3])
+		local _, size = ring:GetBoundingBox()
+		ring.WorldPivot = CFrame.new(centre)
+		local spin = 0
+		game:GetService("RunService").Heartbeat:Connect(function(dt)
+			if w2shown then
+				spin = spin + dt * 0.08
+				ring:PivotTo(CFrame.new(centre) * CFrame.Angles(sat[4], 0, sat[4] * 0.4) * CFrame.Angles(0, spin, 0))
+			end
+		end)
+	end
+	-- the moment you go through a portal: a violet flash + whoosh of light
+	local function portalFlash(col)
+		local pg = player:FindFirstChildOfClass("PlayerGui")
+		if not pg then
+			return
+		end
+		local sg = Instance.new("ScreenGui")
+		sg.Name, sg.IgnoreGuiInset, sg.ResetOnSpawn, sg.DisplayOrder = "PortalFlash", true, false, 50
+		local f = Instance.new("Frame")
+		f.Size, f.BackgroundColor3, f.BackgroundTransparency, f.BorderSizePixel = UDim2.fromScale(1, 1), col, 0.05, 0
+		f.Parent = sg
+		local g = Instance.new("UIGradient")
+		g.Color = ColorSequence.new(Color3.new(1, 1, 1), col)
+		g.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.35) })
+		g.Parent = f
+		sg.Parent = pg
+		local cam = workspace.CurrentCamera
+		local fov = cam.FieldOfView
+		cam.FieldOfView = math.min(fov + 25, 110)
+		TweenS:Create(cam, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { FieldOfView = fov }):Play()
+		local t = TweenS:Create(f, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { BackgroundTransparency = 1 })
+		t:Play()
+		t.Completed:Connect(function()
+			sg:Destroy()
+		end)
+	end
+	-- extra life for both portals: swirling sparks pulled into the centre, a ground glow ring, a pulsing light
+	local function portalExtras(at, size, col)
+		local h = size
+		local p = Instance.new("Part")
+		p.Name = "PortalExtras"
+		p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.Transparency = true, false, false, false, 1
+		p.Size = Vector3.new(h * 0.7, h * 0.9, 1)
+		p.CFrame = CFrame.new(at + Vector3.new(0, h * 0.5, 0))
+		p.Parent = workspace
+		local a0 = Instance.new("Attachment")
+		a0.Parent = p
+		local suck = Instance.new("ParticleEmitter") -- sparks spawn around the rim and fall into the middle
+		suck.Shape, suck.ShapeStyle, suck.ShapeInOut = Enum.ParticleEmitterShape.Box, Enum.ParticleEmitterShapeStyle.Surface, Enum.ParticleEmitterShapeInOut.Inward
+		suck.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		suck.Color, suck.LightEmission, suck.LightInfluence = ColorSequence.new(Color3.new(1, 1, 1), col), 1, 0
+		suck.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 0) })
+		suck.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+		suck.Lifetime, suck.Rate, suck.Speed = NumberRange.new(0.8, 1.3), 40, NumberRange.new(6, 10)
+		suck.RotSpeed, suck.Rotation = NumberRange.new(-180, 180), NumberRange.new(0, 360)
+		suck.Parent = p
+		local mist = Instance.new("ParticleEmitter") -- slow glowing mist in front of the swirl
+		mist.Texture = "rbxasset://textures/particles/smoke_main.dds"
+		mist.Color, mist.LightEmission, mist.LightInfluence = ColorSequence.new(col), 0.8, 0
+		mist.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, h * 0.15), NumberSequenceKeypoint.new(1, h * 0.35) })
+		mist.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.85), NumberSequenceKeypoint.new(0.5, 0.7), NumberSequenceKeypoint.new(1, 1) })
+		mist.Lifetime, mist.Rate, mist.Speed, mist.RotSpeed = NumberRange.new(2, 3), 6, NumberRange.new(0.5, 1), NumberRange.new(-20, 20)
+		mist.Parent = p
+		local light = Instance.new("PointLight")
+		light.Color, light.Range, light.Brightness, light.Shadows = col, h * 1.4, 3, false
+		light.Parent = p
+		local ringPart = Instance.new("Part") -- glowing circle on the ground
+		ringPart.Name = "PortalGroundGlow"
+		ringPart.Shape = Enum.PartType.Cylinder
+		ringPart.Anchored, ringPart.CanCollide, ringPart.CanQuery, ringPart.CanTouch = true, false, false, false
+		ringPart.Material, ringPart.Color, ringPart.Transparency = Enum.Material.Neon, col, 0.55
+		ringPart.Size = Vector3.new(0.15, h * 0.9, h * 0.9)
+		ringPart.CFrame = CFrame.new(at + Vector3.new(0, 0.12, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+		ringPart.Parent = workspace
+		local t0 = os.clock()
+		game:GetService("RunService").Heartbeat:Connect(function()
+			local t = os.clock() - t0
+			light.Brightness = 2.6 + math.sin(t * 2.4) * 1.1
+			ringPart.Transparency = 0.5 + math.sin(t * 2.4) * 0.15
+			suck.Rate = 35 + math.sin(t * 1.3) * 12
+		end)
+		return p
+	end
+	local VIOLET, CYANP = Color3.fromRGB(186, 104, 255), Color3.fromRGB(80, 220, 255)
+	task.spawn(function() -- the world 2 exit portal always has its extras; the golden one once it is open
+		portalExtras(Vector3.new(CO.exit[1], CO.exit[2], CO.exit[3]), 26, CYANP)
+		local golden = nil
+		while not golden do
+			task.wait(1)
+			local fx = workspace:FindFirstChild("GoldenPortal", true)
+			if fx and fx:IsA("BasePart") and fx.Position.Y < 300 then
+				golden = portalExtras(Vector3.new(CO.portal[1], CO.portal[2], CO.portal[3]), 30, VIOLET)
+			end
+		end
+	end)
 	local SUBS = {
 		[CO.first] = "low gravity  •  cosmic eggs  •  the rarest pets",
 		[CO.first + 1] = "WORLD 2  •  ZONE 2",
@@ -4209,19 +4340,25 @@ task.spawn(function()
 		local ch = player.Character
 		local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
 		local now = hrp ~= nil and hrp.Position.Y > CO.y - 400
+		if hrp then
+			local pz = hrp.Position
+			showWorld2(pz.Y > 300 or pz.Z > (C.NZ - 1) * C.ZONE_LEN - 20) -- world 2 + the Golden Nest (the portal is there)
+		end
 		if now and not inside then
 			inside = true
+			portalFlash(VIOLET)
 			enter()
 		elseif inside and not now then
 			inside = false
 			lastZone = nil
+			portalFlash(CYANP)
 			leave()
 		end
 		if now then -- a big title for every world 2 zone you walk into
 			local zi = C.w2Zone(hrp.Position.Z)
 			if zi ~= lastZone then
 				lastZone = zi
-				title(string.upper(C.ZONES[zi].name), SUBS[zi] or "")
+				task.spawn(title, string.upper(C.ZONES[zi].name), SUBS[zi] or "")
 			end
 		end
 	end

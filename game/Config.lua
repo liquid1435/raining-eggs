@@ -182,9 +182,10 @@ C.COSMIC = {
 	eggHeight = 90,                -- eggs start this high above the ground
 	fall = 3.6,                    -- seconds an egg falls (slow, low gravity)
 	gravity = 70,                  -- workspace gravity in world 2 (normal 196.2), client side
-	portal = { 0, 0, 1352, 15 },   -- Golden Portal in the Golden Nest: x, ground y, z, radius
+	portal = { 0, 0, 1352, 10 },   -- Golden Portal in the Golden Nest: x, ground y, z (its plane), half width of the opening
 	spawn = { 0, 906, 22 },        -- where the Golden Portal puts you (start of the Cosmic Nest)
-	exit = { 0, 900, -28, 9 },     -- exit portal at the start of world 2: x, ground y, z, radius
+	exit = { 0, 900, -28, 9 },     -- exit portal at the start of world 2: x, ground y, z (its plane), half width of the opening
+	saturn = { 380, 1040, 120, 0.35 }, -- ringed planet centre + ring tilt (radians); the client spins Map.SaturnRing
 	back = { 0, 4, 1318 },         -- where the exit portal puts you (in front of the Golden Portal)
 }
 -- zone index of a point in world 2 (call only when the point is up there)

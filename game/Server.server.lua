@@ -1617,7 +1617,11 @@ task.spawn(function()
 							d.unlocked = CO.first -- the Cosmic Nest is free once the portal is open
 							sync(plr)
 						end
-						if (p.X - CO.exit[1]) ^ 2 + (p.Z - CO.exit[3]) ^ 2 < CO.exit[4] ^ 2 and p.Y < CO.exit[2] + 14 then
+						-- v131: only when you walk THROUGH the exit portal (cross its plane inside the frame), not next to it
+						local side = p.Z < CO.exit[3] and -1 or 1
+						local crossed = d.exitSide ~= nil and side ~= d.exitSide
+						d.exitSide = side
+						if crossed and math.abs(p.X - CO.exit[1]) < CO.exit[4] and p.Y < CO.exit[2] + 20 then
 							put(CO.back[1], CO.back[2], CO.back[3]) -- exit portal: back to the Golden Nest
 							zi = C.NZ
 						elseif zi > d.unlocked then -- a world 2 zone this player did not buy
@@ -1627,8 +1631,8 @@ task.spawn(function()
 							put(0, CO.y + 6, math.max(C.w2Z0(zi) + 12, CO.spawn[3]))
 						end
 					end
-				elseif zi == C.NZ and opened and p.Y < CO.portal[2] + 25
-					and (p.X - CO.portal[1]) ^ 2 + (p.Z - CO.portal[3]) ^ 2 < CO.portal[4] ^ 2 then
+				elseif zi == C.NZ and opened and p.Y < CO.portal[2] + 26 and math.abs(p.X - CO.portal[1]) < CO.portal[4]
+					and math.abs(p.Z - CO.portal[3]) < 4 then -- v131: inside the portal (its plane), not just next to it
 					hrp.CFrame = CFrame.new(CO.spawn[1], CO.spawn[2], CO.spawn[3]) -- into the Golden Portal
 					hrp.AssemblyLinearVelocity = Vector3.zero
 					zi = CO.first

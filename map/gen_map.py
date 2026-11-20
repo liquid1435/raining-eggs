@@ -1965,15 +1965,21 @@ def w2_cosmic(cr, z0):
             for j in range(4):
                 blk(x + j * 3 * math.cos(math.radians(yaw)), 0, z + j * 3 * math.sin(math.radians(yaw)), 3.4, 0.2, 0.7, VIO, 'Neon',
                     yaw=-yaw + cr.uniform(-25, 25), **NC)
-        for k in range(10):                                   # crystal clusters along both edges
-            sx = -1 if k % 2 == 0 else 1
-            x, z = sx * cr.uniform(H - 40, H - 22), z0 + 10 + k * 12 + cr.uniform(-4, 4)
-            col = cr.choice((CYAN, PINK, VIO))
-            for j in range(cr.randint(3, 5)):
-                h = cr.uniform(8, 22)
-                part((cr.uniform(2.5, 4.5), h, cr.uniform(2.5, 4.5)), C(x + cr.uniform(-4, 4), h / 2 - 1, z + cr.uniform(-4, 4)) *
-                     R(cr.uniform(-18, 18), cr.uniform(0, 90), cr.uniform(-18, 18)), col, 'Glass', transparency=0.15)
-            light(blk(x, 0, z, 2, 2, 2, col, 'Neon', **NC), col, 24, 2)
+        # v131 (user: "crystals that look like crystals, over the whole zone"): the Crystal Coast crystal meshes,
+        # big clusters spread on a jittered grid over the whole floor (the road and the start stay free) + small ones
+        for gx in range(-150, 151, 34):
+            for gz in range(14, 136, 30):
+                x, z = gx + cr.uniform(-9, 9), gz + cr.uniform(-8, 8)
+                if abs(x) < 22 or abs(x) > H - 18:
+                    continue
+                if cr.random() < 0.62:
+                    mpart(f'Map_CrystalCluster{cr.randint(1, 4)}', x, 0, z0 + z, cr.uniform(0, 360), cr.uniform(0.55, 1.15))
+                    light(blk(x, 1, z0 + z, 1.5, 1.5, 1.5, cr.choice((CYAN, PINK, VIO)), 'Neon', **NC), cr.choice((CYAN, PINK, VIO)), 26, 1.6)
+        for _ in range(70):
+            x, z = cr.uniform(-H + 14, H - 14), cr.uniform(z0 - 40, z0 + 136)
+            if abs(x) < 14:
+                continue
+            mpart(f'Map_Crystal{cr.randint(1, 4)}', x, 0, z, cr.uniform(0, 360), cr.uniform(0.8, 2.2))
         # v122: the static Cosmic Egg is gone (user: the BIG EGG falls in world 2 like in world 1)
         # exit portal pad at z -28 (the portal itself is Codex's GoldenPortalVFX, made by the game client)
         vcyl(0, 0, -28, 0.3, 30, DARK, 'Slate', **NC)
@@ -1996,9 +2002,13 @@ def w2_moon(cr, z0):
             for j in range(n):
                 a = j * 6.283 / n
                 blk(x + math.cos(a) * r, 0, z + math.sin(a) * r, 4, cr.uniform(1.2, 2.6), 4, GREY2, 'Slate', yaw=-math.degrees(a))
-        for _ in range(14):                                   # moon rocks
-            x, z, s = cr.choice((-1, 1)) * cr.uniform(20, H - 6), cr.uniform(z0 + 6, z0 + 134), cr.uniform(2, 5)
-            blk(x, 0, z, s * 1.4, s, s * 1.2, cr.choice((GREY, DARK, (140, 144, 160))), 'Slate', yaw=cr.uniform(0, 90))
+        for _ in range(26):                                   # moon rocks (v131: Blender rock meshes over the whole zone)
+            x, z = cr.choice((-1, 1)) * cr.uniform(20, H - 14), cr.uniform(z0 + 6, z0 + 134)
+            mpart(f'Map_Rock{cr.randint(1, 2)}', x, 0, z, cr.uniform(0, 360), cr.uniform(0.6, 1.8))
+        for _ in range(6):                                    # moon base domes with a glowing ring
+            x, z = cr.choice((-1, 1)) * cr.uniform(40, H - 30), cr.uniform(z0 + 20, z0 + 120)
+            sph(x, 2, z, cr.uniform(10, 16), (226, 230, 240), 'SmoothPlastic')
+            vcyl(x, 0, z, 0.4, 17, (120, 200, 255), 'Neon', **NC)
         for sx in (-1, 1):                                    # flags
             x, z = sx * 60, z0 + 70
             blk(x, 0, z, 0.6, 14, 0.6, WHITE, 'Metal')
@@ -2163,10 +2173,10 @@ def world2():
     w2_moon(cr, 140)
     w2_nebula(cr, 280)
     w2_scenery(random.Random(121))
-    with group('Gates', unique=False):
+    with group('W2Gates', unique=False):
         gate(140, 'MOON CRATERS', None, (200, 205, 220), (120, 130, 160))
         gate(280, 'NEBULA REEF', None, (255, 110, 220), (90, 240, 230))
-    keep = [q for q in PARTS[start:] if not ('Gates' in q['g'] and abs(q['p'][0]) > WORLD2['half'])]   # no flags in the void
+    keep = [q for q in PARTS[start:] if not ('W2Gates' in q['g'] and abs(q['p'][0]) > WORLD2['half'])]   # no flags in the void
     PARTS[start:] = keep
     with group('Zone11_CosmicNest', unique=False):           # sky: planets, a ringed giant, a moon and stars (far away)
         def planet(x, y, z, d, col, band=None):
@@ -2174,10 +2184,16 @@ def world2():
             if band:
                 blk(x, y - d * 0.08, z, d * 1.02, d * 0.14, d * 1.02, band, 'SmoothPlastic', **NC)
         planet(380, 140, 120, 140, (255, 150, 80), (255, 210, 140))
-        for j in range(24):
-            a = j * 6.283 / 24
-            part((22, 2, 7), C(380 + math.cos(a) * 120, 140 + math.sin(a) * 20, 120 + math.sin(a) * 120) *
-                 R(0, -math.degrees(a), 10), (255, 230, 170), 'Neon', transparency=0.3, **NC)
+    with group('SaturnRing', unique=False):                  # v131: flat and solid, built level (the client tilts + spins it)
+        for r0, r1, col, tr in ((96, 112, (255, 222, 170), 0.15), (114, 126, (240, 190, 140), 0.25), (129, 146, (255, 236, 200), 0.35)):
+            n = 72
+            rm, w = (r0 + r1) / 2, r1 - r0
+            ln = 2 * math.pi * rm / n * 1.06
+            for j in range(n):
+                a = j * 2 * math.pi / n
+                part((ln, 1.2, w), C(380 + math.cos(a) * rm, 140, 120 + math.sin(a) * rm) * R(0, -math.degrees(a) - 90, 0),
+                     col, 'Neon', transparency=tr, name='Ring', **NC)
+    with group('Zone11_CosmicNest', unique=False):
         planet(-400, 190, 330, 90, (80, 150, 255), (120, 230, 255))
         planet(-180, 280, -260, 46, (225, 225, 235))
         planet(260, 70, 560, 34, (255, 110, 220))
