@@ -2273,6 +2273,49 @@ def solidify():
     print('invisible boxes on solid meshes switched off:', off)
 
 
+def precise_hitboxes():
+    """v125 (user: "hitboxes exactly at the edge of every object, precise"). Every real map mesh gets an id
+    ('precise'); the game server rebuilds its collision with PreciseConvexDecomposition at start (AssetService) and,
+    where that works, switches the mesh solid and turns off the invisible helper boxes linked to it ('hitboxof').
+    Where it fails the old helpers stay (nobody walks through things). Water, flowers, lights and tiny bits stay soft."""
+    DECOR = ('Water', 'Flowers', 'Spore', 'Puff', 'Star', 'Orb', 'Neon', 'Glow', 'Light', 'Lamp_Lantern')
+    KEEP = ('Wall', 'Bounce', 'PenFloor', 'ShopPad', 'ShopZone', 'Treadmill', 'Collect', 'HumanoidRootPart', 'EggAltar',
+            'GoldenEggBlock', 'Spawn')
+    meshes = []
+    uid = 0
+    for q in PARTS:
+        m = q.get('mesh')
+        if not m or q['m'] == 'Neon' or q.get('transparency', 0) > 0.5 or any(k in m for k in DECOR) or max(q['size']) < 3:
+            continue
+        uid += 1
+        q['precise'] = uid
+        if q.get('cancollide') is False:
+            q['solidafter'] = True
+        meshes.append(q)
+    linked = 0
+    for h in PARTS:
+        if h.get('mesh') or h.get('transparency', 0) < 0.99 or 'Gates' in h['g'] and not h['g'].endswith('Gates'):
+            continue
+        if any(k in (h.get('name') or '') for k in KEEP):
+            continue
+        hx, hy, hz = h['p']
+        best, bd = None, 1e9
+        for q in meshes:
+            x, y, z = q['p']
+            r = max(q['size'][0], q['size'][2]) / 2 + 1
+            if abs(hx - x) > r or abs(hz - z) > r:
+                continue
+            if hy + h['size'][1] / 2 < y - q['size'][1] / 2 - 1 or hy - h['size'][1] / 2 > y + q['size'][1] / 2 + 1:
+                continue
+            d = (hx - x) ** 2 + (hz - z) ** 2
+            if d < bd:
+                best, bd = q, d
+        if best:
+            h['hitboxof'] = best['precise']
+            linked += 1
+    print('precise hitboxes:', uid, 'meshes,', linked, 'helper boxes linked')
+
+
 if __name__ == '__main__':
     build()
     with group('Scenery', unique=False):
@@ -2281,6 +2324,7 @@ if __name__ == '__main__':
     world2()
     clear_circles()
     solidify()
+    precise_hitboxes()
     spawn = [p for p in PARTS if p.get('spawn')]
     out = {'parts': PARTS, 'spawn': spawn[0]['p'] if spawn else [0, 1, 0]}
     (HERE / 'map.json').write_text(json.dumps(out), encoding='utf-8')

@@ -2076,6 +2076,47 @@ end)
 -- a portal opens (client: GoldenPortalVFX by Codex). Progress is per player.
 local GoldenAltar = remote("GoldenAltar") -- server -> one client: "place", zone | "sink"
 local altars = {}
+-- put the player's egg of zone n on altar n. Returns "placed", "has" (already there) or "noegg". quiet = no per-altar message
+local function placeAltar(plr, n, quiet)
+	local d = data[plr]
+	if not d then
+		return "noegg"
+	end
+	if d.altar[n] then
+		if not quiet then
+			say(plr, "This altar already has your " .. C.ZONES[n].name .. " egg", "info")
+		end
+		return "has"
+	end
+	local pick
+	for k, egg in ipairs(d.bag) do
+		if egg.z == n and (not pick or egg.kind == "normal") then
+			pick = k
+		end
+	end
+	if not pick then
+		if not quiet then
+			say(plr, "Bring an egg from " .. C.ZONES[n].name .. " (catch one, do not hatch it)", "bad")
+		end
+		return "noegg"
+	end
+	table.remove(d.bag, pick)
+	d.altar[n] = true
+	renderCarry(plr)
+	sync(plr)
+	GoldenAltar:FireClient(plr, "place", n)
+	local count = #altarList(d)
+	if count >= C.NZ then
+		task.delay(0.8, function()
+			GoldenAltar:FireClient(plr, "sink")
+		end)
+		Notice:FireAllClients(plr.DisplayName .. " opened the GOLDEN PORTAL!", "legend")
+	elseif not quiet then
+		say(plr, C.ZONES[n].name .. " egg placed! " .. count .. " / " .. C.NZ .. " altars", "good")
+	end
+	save(plr)
+	return "placed"
+end
 for _, d0 in ipairs(Map:GetDescendants()) do
 	local n = d0:IsA("BasePart") and tonumber(string.match(d0.Name, "^EggAltar(%d+)$"))
 	if n and C.ZONES[n] then
@@ -2088,42 +2129,44 @@ for _, d0 in ipairs(Map:GetDescendants()) do
 		pp.RequiresLineOfSight = false
 		pp.Parent = d0
 		pp.Triggered:Connect(function(plr)
-			local d = data[plr]
-			if not d then
-				return
-			end
-			if d.altar[n] then
-				say(plr, "This altar already has your " .. C.ZONES[n].name .. " egg", "info")
-				return
-			end
-			local pick
-			for k, egg in ipairs(d.bag) do
-				if egg.z == n and (not pick or egg.kind == "normal") then
-					pick = k
-				end
-			end
-			if not pick then
-				say(plr, "Bring an egg from " .. C.ZONES[n].name .. " (catch one, do not hatch it)", "bad")
-				return
-			end
-			table.remove(d.bag, pick)
-			d.altar[n] = true
-			renderCarry(plr)
-			sync(plr)
-			GoldenAltar:FireClient(plr, "place", n)
-			local count = #altarList(d)
-			if count >= C.NZ then
-				task.delay(0.8, function()
-					GoldenAltar:FireClient(plr, "sink")
-				end)
-				Notice:FireAllClients(plr.DisplayName .. " opened the GOLDEN PORTAL!", "legend")
-			else
-				say(plr, C.ZONES[n].name .. " egg placed! " .. count .. " / " .. C.NZ .. " altars", "good")
-			end
-			save(plr)
+			placeAltar(plr, n, false)
 		end)
 	end
 end
+
+-- v125: the PLACE ALL EGGS button (client, only in the Golden Nest): every egg the player has for an empty altar goes on it
+Action.OnServerEvent:Connect(function(plr, what)
+	local d = data[plr]
+	if what ~= "altarall" or not d then
+		return
+	end
+	if d.zone ~= C.NZ then
+		say(plr, "Go to the Golden Nest to use the altars", "info")
+		return
+	end
+	local now = os.clock()
+	if now - (d.altarAllT or 0) < 1 then
+		return
+	end
+	d.altarAllT = now
+	local placed, missing = 0, {}
+	for n = 1, C.NZ do
+		if altars[n] and not d.altar[n] then
+			local r = placeAltar(plr, n, true)
+			if r == "placed" then
+				placed = placed + 1
+			elseif r == "noegg" then
+				table.insert(missing, C.ZONES[n].name)
+			end
+		end
+	end
+	local count = #altarList(d)
+	if placed == 0 and count < C.NZ then
+		say(plr, "No eggs to place. Still missing: " .. table.concat(missing, ", "), "bad")
+	elseif count < C.NZ then
+		say(plr, placed .. " eggs placed! " .. count .. " / " .. C.NZ .. " altars. Missing: " .. table.concat(missing, ", "), "good")
+	end
+end)
 
 -- Studio test (F7): altars 1-9 filled + one zone-10 egg in your EGGS, so the 10th altar opens the portal
 Action.OnServerEvent:Connect(function(plr, what)
@@ -2139,4 +2182,85 @@ Action.OnServerEvent:Connect(function(plr, what)
 		sync(plr)
 		say(plr, "Studio test: altars 1-9 filled, a Golden Nest egg is in your EGGS", "info")
 	end
+end)
+
+
+-- ============================================================ PRECISE HITBOXES (v125)
+-- user: "hitboxes exactly at the edge of every object". Meshes loaded from the place file collide as one big box, so
+-- the map used invisible helper boxes. Here every map mesh with a PreciseId gets its real shape as collision
+-- (AssetService:CreateMeshPartAsync with PreciseConvexDecomposition + ApplyMesh). Where that works the mesh becomes
+-- solid and its linked helper boxes (HitboxOf = same id) stop colliding; where it fails nothing changes.
+task.spawn(function()
+	local AssetService = game:GetService("AssetService")
+	local byId, groups, helpers = {}, {}, {}
+	for _, o in ipairs(Map:GetDescendants()) do
+		if o:IsA("IntValue") and o.Name == "PreciseId" and o.Parent:IsA("MeshPart") then
+			local mp = o.Parent
+			local key = mp.MeshId ~= "" and mp.MeshId or (mp.MeshContent and mp.MeshContent.Uri) or ""
+			if key ~= "" then
+				groups[key] = groups[key] or {}
+				table.insert(groups[key], mp)
+				byId[o.Value] = mp
+			end
+		elseif o:IsA("IntValue") and o.Name == "HitboxOf" and o.Parent:IsA("BasePart") then
+			helpers[o.Value] = helpers[o.Value] or {}
+			table.insert(helpers[o.Value], o.Parent)
+		end
+	end
+	local done, failed, running = 0, 0, 0
+	local okUid = {}
+	for key, list in pairs(groups) do
+		while running >= 6 do
+			task.wait()
+		end
+		running = running + 1
+		task.spawn(function()
+			local opts = {
+				CollisionFidelity = Enum.CollisionFidelity.PreciseConvexDecomposition,
+				RenderFidelity = list[1].RenderFidelity,
+			}
+			local ok, src = pcall(function()
+				return AssetService:CreateMeshPartAsync(key, opts) -- older API: the id string
+			end)
+			if not ok then
+				ok, src = pcall(function()
+					return AssetService:CreateMeshPartAsync(Content.fromUri(key), opts) -- newer API: a Content
+				end)
+			end
+			if ok and src then
+				for _, mp in ipairs(list) do
+					local size, cf = mp.Size, mp.CFrame
+					local applied = pcall(function()
+						mp:ApplyMesh(src)
+					end)
+					if applied then
+						mp.Size, mp.CFrame = size, cf
+						if mp:FindFirstChild("SolidAfter") then
+							mp.CanCollide, mp.CanQuery = true, true
+						end
+						okUid[mp.PreciseId.Value] = true
+						done = done + 1
+					else
+						failed = failed + 1
+					end
+				end
+				src:Destroy()
+			else
+				failed = failed + #list
+				warn("Precise hitbox failed for", key, src)
+			end
+			running = running - 1
+		end)
+	end
+	while running > 0 do
+		task.wait()
+	end
+	local off = 0
+	for uid in pairs(okUid) do
+		for _, h in ipairs(helpers[uid] or {}) do
+			h.CanCollide, h.CanQuery = false, false
+			off = off + 1
+		end
+	end
+	print(("Precise hitboxes: %d meshes exact, %d failed, %d helper boxes off"):format(done, failed, off))
 end)

@@ -123,6 +123,12 @@ def part_xml(p):
     if cls == 'SpawnLocation':
         props += '<bool name="Neutral">true</bool><int name="Duration">0</int>'
     kids = ''.join(light_item(l) for l in p.get('lights', [])) + ''.join(surface_gui(s) for s in p.get('signs', []))
+    # v125 precise hitboxes: the server reads these (see PRECISE HITBOXES in Server.server.lua)
+    for key, nm in (('precise', 'PreciseId'), ('hitboxof', 'HitboxOf')):
+        if p.get(key):
+            kids += item('IntValue', f'<string name="Name">{nm}</string><int64 name="Value">{p[key]}</int64>')
+    if p.get('solidafter'):
+        kids += item('BoolValue', '<string name="Name">SolidAfter</string><bool name="Value">true</bool>')
     if p.get('headmesh'):                                   # classic Roblox head
         kids += item('SpecialMesh', '<string name="Name">Mesh</string><token name="MeshType">0</token>'
                      '<Vector3 name="Scale"><X>1.25</X><Y>1.25</Y><Z>1.25</Z></Vector3>')

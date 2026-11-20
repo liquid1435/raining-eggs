@@ -6,8 +6,6 @@ local VFX = {}
 local Y = Vector3.yAxis
 local TAU = 2 * math.pi
 local gold, cream = FX.gold, FX.cream
-local purple = Color3.fromRGB(164, 78, 255)
-local orchid = Color3.fromRGB(235, 169, 255)
 local smokeTexture = "rbxasset://textures/particles/smoke_main.dds"
 local random = Random.new()
 local altars, placements, originals = {}, {}, {}
@@ -364,107 +362,168 @@ function VFX.PlaySink(goldenEgg: BasePart, beamPart: BasePart?, groundY: number,
 	end)
 end
 
--- Cubic Hermite arcs follow a parametric ellipse. The changing radius and
--- depth make the rim filaments visibly cross and the inner arms spiral.
-local function ribbon(parent, segments, color, width, fade, sample)
-	local knots, beams = {}, {}
-	for i = 0, segments do
-		knots[i+1] = FX.attach(parent, Vector3.zero)
-		if i > 0 then
-			beams[i] = beam(parent, knots[i], knots[i+1], color, width, width, fade)
-		end
-	end
-	return function(phase)
-		for i = 0, segments do
-			local u = i/segments
-			local point = sample(u,phase)
-			local tangent = (sample(u+.001,phase)-sample(u-.001,phase))/.002
-			local a = knots[i+1]
-			a.Position, a.Axis = point, tangent.Unit
-			local handle = tangent.Magnitude/(3*segments)
-			if i > 0 then beams[i].CurveSize1 = handle end
-			if i < segments then beams[i+1].CurveSize0 = handle end
-		end
-	end
-end
+-- The arch is laid out in fractions of the requested height, in the trigger's XY plane.
+-- Colors run from masonry, facing and trim to the seal, gem, sky and spiral.
+local palettes = {
+	-- user (20 Nov): the portal is VIOLET (default theme); "cosmic" (world 2 exit) leans cyan/blue so they differ
+	gold = {{44,28,70},{112,64,176},{214,186,255},{250,240,255},{186,104,255},{30,16,56},{82,44,136}},
+	cosmic = {{20,32,60},{52,96,160},{150,206,245},{200,255,255},{80,220,255},{12,20,48},{36,66,118}},
+}
 
-function VFX.ShowPortal(position: Vector3, size: number?)
+function VFX.ShowPortal(position: Vector3, size: number?, theme: string?)
 	if portal then stop(portal) end
 	local h = math.max(1, size or 30)
-	local rx, ry = h*.35, h*.455
 	local frame = CFrame.new(position + Y*h*.5)
 	local p = anchor(root(), "GoldenPortal", frame)
-	p.Size = Vector3.new(rx*1.95,ry*2,h*.09)
-	p.CanTouch, p.CanQuery = true, true
-	local s = {root = p}
+	p.Size = Vector3.new(.35*1.95,.455*2,.09)*h
+	p.CanCollide, p.CanTouch, p.CanQuery = false, true, true
+	local s = {root=p}
 	portal = s
-	local veil = FX.part(p, "AmethystDepth", Vector3.new(rx*1.98,ry*1.99,h*.045), frame, Color3.fromRGB(54,21,91))
-	veil.Shape, veil.Transparency = Enum.PartType.Ball, .16
-	local ribbons = {}
-	for strand = 1, 3 do
-		local phaseOffset = TAU*(strand-1)/3
-		table.insert(ribbons, ribbon(p, 12, ({gold,purple,cream})[strand], h*({.021,.016,.008})[strand], .045, function(u,phase)
-			local a = TAU*u
-			local wave = 3*a+phase+phaseOffset
-			local r = 1+.038*math.cos(wave)
-			return Vector3.new(rx*r*math.cos(a),ry*r*math.sin(a),h*.023*math.sin(wave))
-		end))
+	local colors = {}
+	for i, rgb in palettes[theme] or palettes.gold do colors[i] = Color3.fromRGB(table.unpack(rgb)) end
+	local metal, neon, stone = Enum.Material.Metal, Enum.Material.Neon, Enum.Material.Slate
+	local stones, energy, spirals, sparks = {}, {}, {}, {}
+	local function piece(name, dims, cf, ink, material, ellipsoid, group)
+		local part = FX.part(p, name, dims*h, frame * (cf.Rotation + cf.Position*h), colors[ink])
+		part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch = true,false,false,false
+		part.Material = material
+		if ellipsoid then
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = part
+		end
+		if group then table.insert(group, {part=part, cf=part.CFrame, size=part.Size}) end
+		return part
 	end
-	-- Render spiral arms on both faces so the aperture reads from either side.
-	for _, side in {-1,1} do
-		for j = 1, 3 do
-			table.insert(ribbons, ribbon(p, 7, if j==2 then orchid else purple, h*.009, .21, function(u,phase)
-				local r = .095+.79*u
-				local a = TAU*j/3+side*(2.8*u+phase*.49)
-				return Vector3.new(rx*r*math.cos(a),ry*r*math.sin(a),side*h*(.026+.007*(1-u)))
-			end))
+	local v = Vector3.new
+	local function mount(a,r,z,offset)
+		local x,y = math.cos(a), math.sin(a)
+		local turn = math.atan2(.436*x,-.348*y)
+		return CFrame.new(.348*r*x,.436*r*y,z)*CFrame.Angles(0,0,turn)*CFrame.new(offset or 0,0,0)
+	end
+	for i=0,19 do
+		local a = TAU*i/20
+		local group = {}
+		local span = TAU/20 * math.sqrt((.348*math.sin(a))^2+(.436*math.cos(a))^2)
+		piece("ArchStone",v(span*1.04,.057,.081),mount(a,1,0),1,stone,nil,group)
+		piece("GiltFacing",v(span*.88,.044,.089),mount(a,1,0),2,metal,nil,group)
+		piece("EnamelTablet",v(span*.71,.028,.092),mount(a,1,0),1,metal,nil,group)
+		piece("Seal",v(.014,.014,.096),mount(a,1,0)*CFrame.Angles(0,0,math.pi/4),if i%2==0 then 4 else 3,if i%2==0 then neon else metal,nil,group)
+		if i%5==0 then
+			piece("EggSetting",v(.057,.079,.104),mount(a,1.08,0),3,metal,true,group)
+			piece("Cabochon",v(.039,.060,.112),mount(a,1.08,0),5,neon,true,group)
+		end
+		table.insert(stones,{items=group,delay=.42*(1+math.sin(a))/2,offset=v(.08*math.cos(a),.065*math.sin(a),0)*h})
+	end
+	for j=0,2 do
+		piece("Threshold",v(.52-j*.065,.024,.245-j*.037),CFrame.new(0,-.488+j*.024,0),if j==1 then 2 else 1,if j==1 then metal else stone)
+	end
+	for _,side in {-1,1} do
+		piece("Heel",v(.105,.111,.137),CFrame.new(side*.159,-.407,0)*CFrame.Angles(0,0,-side*.21),2,metal)
+	end
+	-- Cubic Beams form closed metal lips and tapering inlaid streams on both faces.
+	local function stroke(points, ink, widths, moving)
+		local knots, lines = {}, {}
+		local function pose(ca,sa,initialize)
+			for j,k in knots do
+				local q=points[j]
+				k.Position=v(.348*(ca*q.x-sa*q.y),.436*(sa*q.x+ca*q.y),q.z)*h
+				local tangent=v(.348*(ca*q.dx-sa*q.dy),.436*(sa*q.dx+ca*q.dy),0)*h
+				k.Axis=tangent.Unit
+				if not initialize then continue end
+				local handle=tangent.Magnitude/3
+				if j>1 then lines[j-1].CurveSize1=handle end
+				if j<#points then lines[j].CurveSize0=handle end
+			end
+		end
+		for j=1,#points do knots[j]=FX.attach(p,Vector3.zero) end
+		for j=1,#points-1 do
+			local b=beam(p,knots[j],knots[j+1],colors[ink],widths[j]*h,widths[j+1]*h,.035)
+			b.Segments=5
+			b.Enabled=false
+			lines[j]=b
+		end
+		pose(1,0,true)
+		table.insert(spirals,{draw=if moving then pose else nil,lines=lines, moving=moving, side=math.sign(points[1].z)})
+	end
+	local function track(radius, delta, angle, sweep, z, ink, width, moving)
+		local count=if moving then 6 else 8
+		local points,widths={},{}
+		for j=0,count do
+			local u=j/count
+			local r,a=radius+delta*u, angle+sweep*u
+			local ca,sa=math.cos(a),math.sin(a)
+			points[j+1]={x=r*ca,y=r*sa,z=z,dx=(delta*ca-sweep*r*sa)/count,dy=(delta*sa+sweep*r*ca)/count}
+			widths[j+1]=width*(if moving then .10+.90*math.sin(math.pi*u)^.75 else 1)
+		end
+		stroke(points,ink,widths,moving)
+	end
+	for _,side in {-1,1} do
+		track(.919,0,0,TAU,side*.039,4,.006,false)
+		track(1.071,0,0,TAU,side*.038,3,.008,false)
+		for arm=0,3 do
+			local a=arm*TAU/4
+			track(.085,.79,a,4.35,side*.033,7,.032,true)
+			track(.11,.75,a+.16,4.35,side*.035,5,.009,true)
+			track(.30,.56,a+.83,3.37,side*.036,4,.003,true)
 		end
 	end
-	for j = 1, 12 do
-		local a = TAU*j/12
-		local big = j%3==0
-		local gem = FX.part(p, "DialMarker", Vector3.new(h*.012,h*(if big then .064 else .031),h*.014),
-			frame*CFrame.new(rx*1.105*math.cos(a),ry*1.046*math.sin(a),0)*CFrame.Angles(0,0,a-math.pi/2), if big then cream else gold)
-		gem.Material = Enum.Material.Neon
+	piece("EnamelSky",v(.655,.821,.054),CFrame.identity,6,Enum.Material.SmoothPlastic,true,energy)
+	piece("Oculus",v(.054,.067,.081),CFrame.identity,4,neon,true,energy)
+	for i=1,18 do
+		sparks[i]=piece("Infall",v(.003,.006,.003)*(1+i%3*.22),CFrame.identity,if i%3==0 then 5 else 4,neon,true)
 	end
-	local motes = {}
-	for j = 1, 6 do
-		local a = FX.attach(p, Vector3.zero)
-		local emitter = FX.emitter(a, if j%2==0 then orchid else cream, h*.019)
-		emitter.Speed = NumberRange.new(h*.012,h*.038)
-		emitter.SpreadAngle = Vector2.new(25,25)
-		emitter.Rate = 5
-		emitter.Lifetime = NumberRange.new(.48,1.05)
-		table.insert(motes,a)
-	end
-	local foot = FX.attach(p,-Y*ry*.92)
-	local stars = FX.emitter(foot, gold, h*.018)
-	stars.Speed = NumberRange.new(h*.16,h*.32)
-	stars.SpreadAngle = Vector2.new(32,32)
-	stars.Lifetime, stars.Rate = NumberRange.new(1.3,2.4), 12
-	local lantern = light(p, gold, h*1.24, 1.7)
-	local last = -1
+	local lamp=light(p,colors[4],h*.90,0)
+	local last=-1
 	local function flow(t)
-		if not p.Parent then
-			stop(s)
-			portal = nil
-			return false
+		if not p.Parent then stop(s) portal=nil return false end
+		if t-last<1/30 then return true end
+		local prev=last
+		last=t
+		if prev<1.22 then
+			for _,g in stones do
+				local u=ease((t-g.delay)/.80)
+				for _,item in g.items do
+					item.part.CFrame=item.cf+g.offset*(1-u)
+					item.part.Size=item.size*math.max(.001,u)
+					item.part.Transparency=if u==0 then 1 else 0
+				end
+			end
 		end
-		if t-last < 1/30 then return true end
-		last = t
-		for _, draw in ribbons do draw(t*.93) end
-		for i, a in motes do
-			local angle = TAU*i/6+t*(.58+i*.035)
-			local r = .66+.16*math.sin(t*.68+i)
-			a.Position = Vector3.new(rx*r*math.cos(angle),ry*r*math.sin(angle),h*.034*(if i%2==0 then 1 else -1))
+		local fill=ease((t-.72)/.75)
+		if prev<1.48 then
+			for _,item in energy do
+				item.part.Size=item.size*math.max(.001,fill)
+				item.part.Transparency=1-fill
+			end
 		end
-		lantern.Brightness = 1.7+.48*math.sin(t*1.9)
+		local camera=workspace.CurrentCamera
+		local viewZ=if camera then camera.CFrame.Position.Z-p.Position.Z else 0
+		local ca,sa=math.cos(t*.42),math.sin(t*.42)
+		for _,strand in spirals do
+			-- The opaque sky hides the far streams. Refresh that face when the viewer crosses.
+			if strand.draw and viewZ*strand.side >= -h*.05 then strand.draw(ca,sa,false) end
+			if prev>=1.48 then continue end
+			for j,b in strand.lines do
+				local on=if strand.moving then fill>=j/#strand.lines else t>=1.12
+				if on~=b.Enabled then b.Enabled=on end
+			end
+		end
+		for i,mote in sparks do
+			local u=(i*.618034+t*.29)%1
+			local r=.89*(1-u)+.08
+			local a=i*2.4+t*.42+u*2
+			mote.Position=p.Position+v(.348*r*math.cos(a),.436*r*math.sin(a),(if i%2==0 then 1 else -1)*(.042+.035*(1-u)))*h
+			mote.Transparency=1-fill*math.sin(math.pi*u)
+		end
+		lamp.Brightness=fill*(1.4+.28*math.sin(t*2)+2.8*math.exp(-((t-1.48)/.15)^2))
 		return true
 	end
 	flow(0)
 	animate(s,flow)
 	return p
 end
+
 
 function VFX.Clear()
 	endRitual()

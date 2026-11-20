@@ -4180,7 +4180,7 @@ task.spawn(function()
 			copy.Parent = fx
 			local okReq, V2 = pcall(require, copy)
 			if okReq and V2 and V2.ShowPortal then
-				ok = pcall(V2.ShowPortal, at, 26)
+				ok = pcall(V2.ShowPortal, at, 26, "cosmic") -- v125: new portal, cosmic (cyan) theme here
 			end
 		end
 		if not ok then -- fallback: a glowing ring
@@ -4218,5 +4218,60 @@ task.spawn(function()
 				title(string.upper(C.ZONES[zi].name), SUBS[zi] or "")
 			end
 		end
+	end
+end)
+
+-- ============================================================ PLACE ALL EGGS button (client, v125)
+-- Only in the Golden Nest while some altars are still empty: one tap puts every egg you carry on its altar.
+task.spawn(function()
+	local player = game:GetService("Players").LocalPlayer
+	local pg = player:WaitForChild("PlayerGui")
+	local sg = Instance.new("ScreenGui")
+	sg.Name, sg.ResetOnSpawn = "AltarButton", false
+	local b = Instance.new("TextButton")
+	b.Name = "PlaceAll"
+	b.AnchorPoint, b.Position, b.Size = Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -110), UDim2.fromOffset(250, 62)
+	b.BackgroundColor3, b.AutoButtonColor = Color3.fromRGB(255, 255, 255), true
+	b.Font, b.TextScaled, b.Text, b.TextColor3 = Enum.Font.FredokaOne, true, "PLACE ALL EGGS", Color3.new(1, 1, 1)
+	b.Visible = false
+	b.Parent = sg
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.3, 0)
+	corner.Parent = b
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Color = ColorSequence.new(Color3.fromRGB(255, 214, 70), Color3.fromRGB(240, 150, 30))
+	g.Parent = b
+	local st = Instance.new("UIStroke")
+	st.Thickness, st.Color, st.ApplyStrokeMode = 3, Color3.fromRGB(110, 60, 10), Enum.ApplyStrokeMode.Border
+	st.Parent = b
+	local ts = Instance.new("UIStroke")
+	ts.Thickness, ts.Color = 2.5, Color3.fromRGB(110, 60, 10)
+	ts.Parent = b
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop, pad.PaddingBottom, pad.PaddingLeft, pad.PaddingRight = UDim.new(0.18, 0), UDim.new(0.18, 0), UDim.new(0.08, 0), UDim.new(0.08, 0)
+	pad.Parent = b
+	sg.Parent = pg
+	local last = 0
+	b.Activated:Connect(function()
+		if os.clock() - last < 1 then
+			return
+		end
+		last = os.clock()
+		Action:FireServer("altarall")
+	end)
+	local z0, z1 = (C.NZ - 1) * C.ZONE_LEN, C.NZ * C.ZONE_LEN
+	while true do
+		task.wait(0.4)
+		local ch = player.Character
+		local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+		local filled = 0
+		for _, z in ipairs(string.split(player:GetAttribute("Altar") or "", ",")) do
+			if tonumber(z) then
+				filled = filled + 1
+			end
+		end
+		local p = hrp and hrp.Position
+		b.Visible = p ~= nil and p.Y < 300 and p.Z >= z0 and p.Z < z1 + 10 and filled < C.NZ
 	end
 end)
