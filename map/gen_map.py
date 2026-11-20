@@ -1972,13 +1972,7 @@ def w2_cosmic(cr, z0):
                 part((cr.uniform(2.5, 4.5), h, cr.uniform(2.5, 4.5)), C(x + cr.uniform(-4, 4), h / 2 - 1, z + cr.uniform(-4, 4)) *
                      R(cr.uniform(-18, 18), cr.uniform(0, 90), cr.uniform(-18, 18)), col, 'Glass', transparency=0.15)
             light(blk(x, 0, z, 2, 2, 2, col, 'Neon', **NC), col, 24, 2)
-        zc = z0 + 84                                          # the Cosmic Egg on a floating ring
-        for j in range(16):
-            a = j * 6.283 / 16
-            blk(math.cos(a) * 16, 2, zc + math.sin(a) * 16, 6, 1.2, 3, VIO if j % 2 else CYAN, 'Neon', yaw=-math.degrees(a), **NC)
-        vcyl(0, 0, zc, 2, 22, DARK, 'Slate')
-        egg(0, 16, zc, 4.2, (120, 70, 230), CYAN, mat='Glass', n=9, name='CosmicEgg')
-        light(vcyl(0, 24, zc, 300, 8, VIO, 'Neon', transparency=0.75, name='CosmicBeam', **NC), VIO, 60, 3)
+        # v122: the static Cosmic Egg is gone (user: the BIG EGG falls in world 2 like in world 1)
         # exit portal pad at z -28 (the portal itself is Codex's GoldenPortalVFX, made by the game client)
         vcyl(0, 0, -28, 0.3, 30, DARK, 'Slate', **NC)
         vcyl(0, 0.05, -28, 0.3, 24, VIO, 'Neon', name='ExitPad', **NC)
@@ -2124,8 +2118,6 @@ def w2_scenery(cr):
             for sx in (-1, 1):
                 for k in range(5):
                     lz = z0 + 14 + k * 28
-                    if j == 0 and abs(lz - 84) < 26:
-                        continue
                     w2_lamp(sx * 12, lz, glow, shade(c2, 0.7))
             # things standing on top of both side walls
             for sx in (-1, 1):

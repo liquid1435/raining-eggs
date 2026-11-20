@@ -1882,15 +1882,15 @@ local function startBigEgg()
 	-- a random zone: one where players are now, else any zone somebody has unlocked; the egg lands on the white road in its middle
 	local zones, maxUnlocked = {}, 1
 	for zi in pairs(occupied()) do
-		if zi <= C.NZ then -- never on the Cosmic Nest island
-			table.insert(zones, zi)
-		end
+		table.insert(zones, zi) -- v122: world 2 zones too (it lands on the space ground, cosmic crater)
 	end
 	for _, d in pairs(data) do
 		maxUnlocked = math.max(maxUnlocked, d.unlocked or 1)
 	end
 	local zi = #zones > 0 and zones[math.random(#zones)] or math.random(1, math.min(maxUnlocked, C.NZ))
-	local spot = { 0, (zi - 1) * C.ZONE_LEN + C.ZONE_LEN * (0.4 + math.random() * 0.2) }
+	local w2 = zi > C.NZ
+	local spot = { 0, (w2 and C.w2Z0(zi) or (zi - 1) * C.ZONE_LEN) + C.ZONE_LEN * (0.4 + math.random() * 0.2) }
+	local top = w2 and C.COSMIC.y or 0
 	local params = RaycastParams.new()
 	local chars = {}
 	for _, p in ipairs(Players:GetPlayers()) do
@@ -1899,8 +1899,8 @@ local function startBigEgg()
 		end
 	end
 	params.FilterDescendantsInstances = chars
-	local hit = workspace:Raycast(Vector3.new(spot[1], 300, spot[2]), Vector3.new(0, -400, 0), params)
-	local pos = hit and hit.Position or Vector3.new(spot[1], 0.5, spot[2])
+	local hit = workspace:Raycast(Vector3.new(spot[1], top + 300, spot[2]), Vector3.new(0, -400, 0), params)
+	local pos = hit and hit.Position or Vector3.new(spot[1], top + 0.5, spot[2])
 	bigEv = { pos = pos, holds = {} }
 	local ev = bigEv
 	workspace:SetAttribute("BigEggActive", true)

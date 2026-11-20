@@ -8,6 +8,9 @@ local VFX = {ClaimDuration = 5, ShowRing = true, RingDistance = 42}
 local rng = Random.new()
 local current = nil
 local crater = nil
+-- v122 (user: 'instead of earth put cosmic earth'): world 2 (high above the map) gets a cosmic crater
+local cosmic = false
+local function cc(normal, space) return if cosmic then space else normal end
 local gui = nil
 local shakeEnd = 0
 local unshake = CFrame.identity
@@ -222,7 +225,7 @@ end
 local function fragments(pos, count, confetti, radius)
 	local colors = {FX.gold, FX.coral, FX.teal, FX.cream}
 	for i = 1, count do
-		local color = if confetti then colors[(i-1)%4+1] else Color3.fromRGB(157, 111, 77)
+		local color = if confetti then colors[(i-1)%4+1] else cc(Color3.fromRGB(157, 111, 77), Color3.fromRGB(80, 52, 150))
 		local size = if confetti then Vector3.new(.32,.05,.55) else Vector3.one*rng:NextNumber(.35,1.1)
 		local part = FX.part(workspace, "EggFragment", size, CFrame.new(pos), color)
 		part.Material = if confetti then Enum.Material.SmoothPlastic else Enum.Material.Slate
@@ -266,7 +269,7 @@ local function buildCrater(s, pos)
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = if s.egg then {s.egg} else {}
 	local hit = workspace:Raycast(pos + Vector3.yAxis * .45, -Vector3.yAxis * .95, params)
-	local soil = Color3.fromRGB(84, 54, 46)
+	local soil = cc(Color3.fromRGB(84, 54, 46), Color3.fromRGB(40, 24, 80))
 	local lip = if hit then hit.Instance.Color else Color3.fromRGB(153, 111, 76)
 	local function disk(name, y, thickness, color)
 		local cf = CFrame.new(pos + Vector3.yAxis*y) * CFrame.Angles(0, 0, math.pi/2)
@@ -283,8 +286,10 @@ local function buildCrater(s, pos)
 
 	-- (v2, user: "more professional and realistic") earth walls, a raised soil mound, broken pieces of the
 	-- surface tilted up around the lip, radial cracks, scattered stones, dirt splashes and slow settling dust.
-	local dirt = Color3.fromRGB(110, 76, 52)
-	local darkDirt = Color3.fromRGB(62, 42, 30)
+	local dirt = cc(Color3.fromRGB(110, 76, 52), Color3.fromRGB(80, 52, 150))
+	local darkDirt = cc(Color3.fromRGB(62, 42, 30), Color3.fromRGB(26, 16, 56))
+	local crackCol = cc(darkDirt, Color3.fromRGB(90, 230, 255)) -- cosmic: glowing cracks
+	local crackMat = cc(Enum.Material.Slate, Enum.Material.Neon)
 	local function solid(p, mat)
 		p.Material = mat
 		p.CanCollide, p.CanQuery = true, true -- solid: nobody walks or looks through the crater (user, 19 Nov)
@@ -335,10 +340,10 @@ local function buildCrater(s, pos)
 		local a = pos + Vector3.new(math.cos(angle), 0, math.sin(angle)) * p0
 		local b = pos + Vector3.new(math.cos(a2), 0, math.sin(a2)) * (p0 + len)
 		local mid = (a + b) / 2
-		solid(FX.part(model, "Crack", Vector3.new(rng:NextNumber(.18, .35), .06, (b - a).Magnitude), CFrame.lookAt(mid + Vector3.yAxis*.04, b + Vector3.yAxis*.04), darkDirt), Enum.Material.Slate)
+		solid(FX.part(model, "Crack", Vector3.new(rng:NextNumber(.18, .35), .06, (b - a).Magnitude), CFrame.lookAt(mid + Vector3.yAxis*.04, b + Vector3.yAxis*.04), crackCol), crackMat)
 		-- a small branch
 		local c = mid + Vector3.new(math.cos(a2 + 0.7), 0, math.sin(a2 + 0.7)) * len * .3
-		solid(FX.part(model, "Crack", Vector3.new(.14, .05, (c - mid).Magnitude), CFrame.lookAt((mid + c) / 2 + Vector3.yAxis*.04, c + Vector3.yAxis*.04), darkDirt), Enum.Material.Slate)
+		solid(FX.part(model, "Crack", Vector3.new(.14, .05, (c - mid).Magnitude), CFrame.lookAt((mid + c) / 2 + Vector3.yAxis*.04, c + Vector3.yAxis*.04), crackCol), crackMat)
 	end
 	-- scattered stones and dirt splashes further out
 	for i = 1, 26 do
@@ -346,7 +351,7 @@ local function buildCrater(s, pos)
 		local d = radius * rng:NextNumber(1.3, 2.4)
 		local s = rng:NextNumber(.25, .9)
 		local stone = solid(FX.part(model, "Stone", Vector3.new(s, s * .7, s * 1.1), CFrame.new(pos + Vector3.new(math.cos(angle) * d, s * .3, math.sin(angle) * d))
-			* CFrame.Angles(rng:NextNumber(0, 3), rng:NextNumber(0, 3), rng:NextNumber(0, 3)), Color3.fromRGB(120, 112, 104):Lerp(dirt, rng:NextNumber(0, .6))), Enum.Material.Slate)
+			* CFrame.Angles(rng:NextNumber(0, 3), rng:NextNumber(0, 3), rng:NextNumber(0, 3)), cc(Color3.fromRGB(120, 112, 104), Color3.fromRGB(60, 50, 100)):Lerp(dirt, rng:NextNumber(0, .6))), Enum.Material.Slate)
 		stone.Shape = rng:NextNumber() < .5 and Enum.PartType.Ball or Enum.PartType.Block
 	end
 	for i = 1, 10 do
@@ -360,7 +365,7 @@ local function buildCrater(s, pos)
 	end
 	-- dust keeps drifting out of the hole for a few seconds
 	local dustA = FX.anchor(pos + Vector3.yAxis * .5, 9)
-	local drift = FX.emitter(dustA, Color3.fromRGB(190, 160, 125), 3.5, "rbxasset://textures/particles/smoke_main.dds")
+	local drift = FX.emitter(dustA, cc(Color3.fromRGB(190, 160, 125), Color3.fromRGB(150, 120, 230)), 3.5, "rbxasset://textures/particles/smoke_main.dds")
 	drift.LightEmission, drift.Drag, drift.Rate = .02, 2, 14
 	drift.Speed = NumberRange.new(1.5, 4)
 	drift.Lifetime = NumberRange.new(2, 3.5)
@@ -401,10 +406,11 @@ end
 function VFX.PlayImpact(pos)
 	local s = state()
 	if crater then return end
+	cosmic = pos.Y > 500
 	local radius = buildCrater(s, pos)
 	local ground = own(s, FX.anchor(pos + Vector3.yAxis * 0.12, 15))
 	local resize = FX.ring(ground, 3, .58, FX.cream)
-	local dust = FX.emitter(ground, Color3.fromRGB(206,164,107), 4, "rbxasset://textures/particles/smoke_main.dds")
+	local dust = FX.emitter(ground, cc(Color3.fromRGB(206,164,107), Color3.fromRGB(150,120,230)), 4, "rbxasset://textures/particles/smoke_main.dds")
 	dust.LightEmission = .07
 	dust.Drag = 3
 	dust.Size = NumberSequence.new({NumberSequenceKeypoint.new(0,.7),NumberSequenceKeypoint.new(.56,4.3),NumberSequenceKeypoint.new(1,5.7)})
@@ -420,7 +426,7 @@ function VFX.PlayImpact(pos)
 	for i = 1, 8 do
 		local a = i*math.pi/4
 		local puff = FX.attach(ground, Vector3.new(math.cos(a),0,math.sin(a))*radius)
-		FX.emitter(puff, Color3.fromRGB(180,145,104), 3, "rbxasset://textures/particles/smoke_main.dds"):Emit(5)
+		FX.emitter(puff, cc(Color3.fromRGB(180,145,104), Color3.fromRGB(130,100,220)), 3, "rbxasset://textures/particles/smoke_main.dds"):Emit(5)
 	end
 	fragments(pos, 14, false, radius)
 	shake(pos)
