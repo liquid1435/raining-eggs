@@ -144,34 +144,62 @@ C.ZONES = {
 -- v116: the 10 normal zones (gates, unlocks, index, altars). Zone 11 below is the secret one.
 C.NZ = #C.ZONES
 
--- ============================================================ COSMIC NEST (v116): secret zone 11
--- A floating island in space high above the map. The only way in: the Golden Portal (all 10 altars filled).
--- Low gravity, night sky, cosmic eggs with the best pets of the game. The exit pad takes you back to the Golden Nest.
-C.ZONES[C.NZ + 1] = zone("Cosmic Nest", 0, 1e9, { 120, 70, 230 }, { 90, 230, 255 }, {
+-- ============================================================ WORLD 2 (v119): COSMIC NEST + 2 zones, then COMING SOON
+-- A strip of floating zones in space high above the map (same layout as world 1: zone k of world 2 covers
+-- z = (k-1)*140 .. k*140, at height C.COSMIC.y). The only way in: the Golden Portal (all 10 altars) -> Cosmic Nest is
+-- free, the next zones are bought at their gates like in world 1. Low gravity + night sky (client).
+-- The exit portal at the start of world 2 takes you back to the Golden Nest. Keep in sync with map/gen_map.py WORLD2.
+local HUGE = math.huge -- world 2 zones are never opened by the old "speed" rule
+C.ZONES[C.NZ + 1] = zone("Cosmic Nest", HUGE, 1e9, { 120, 70, 230 }, { 90, 230, 255 }, {
 	{ "Star Kitten", { 70, 60, 150 }, { 255, 240, 140 }, 1, "q" },
 	{ "Moon Bunny", { 220, 225, 245 }, { 120, 140, 255 }, 2, "q" },
 	{ "Comet Fox", { 60, 120, 255 }, { 120, 240, 255 }, 1, "q" },
 	{ "Nebula Wolf", { 110, 50, 180 }, { 255, 110, 220 }, 1, "q" },
 	{ "Galaxy Dragon", { 30, 24, 70 }, { 160, 255, 250 }, 1, "q" },
 })
+C.ZONES[C.NZ + 2] = zone("Moon Craters", HUGE, 1e10, { 200, 205, 220 }, { 120, 130, 160 }, {
+	{ "Moon Mouse", { 200, 200, 210 }, { 255, 170, 190 }, 1, "q" },
+	{ "Crater Pup", { 150, 150, 165 }, { 90, 90, 110 }, 1, "q" },
+	{ "Rocket Rabbit", W, { 240, 70, 70 }, 2, "q" },
+	{ "Astro Panda", W, { 40, 40, 52 }, 1, "q" },
+	{ "Lunar Phoenix", { 220, 230, 255 }, { 120, 200, 255 }, 0, "b" },
+})
+C.ZONES[C.NZ + 3] = zone("Nebula Reef", HUGE, 1e11, { 255, 110, 220 }, { 90, 240, 230 }, {
+	{ "Nebula Jelly", { 255, 140, 230 }, { 120, 240, 255 }, 0, "o" },
+	{ "Star Fish", { 255, 200, 90 }, { 255, 120, 80 }, 0, "o" },
+	{ "Comet Seahorse", { 90, 230, 210 }, { 255, 240, 150 }, 0, "b" },
+	{ "Void Shark", { 40, 34, 80 }, { 160, 110, 255 }, 0, "o" },
+	{ "Galaxy Kraken", { 120, 40, 160 }, { 90, 240, 230 }, 0, "o" },
+})
+C.TOTAL = #C.ZONES -- 13: the last zone a player can open
 C.COSMIC = {
-	zone = C.NZ + 1,
-	x = 0, y = 900, z = 700,       -- centre of the island top (keep in sync with map/gen_map.py COSMIC)
-	radius = 92,                   -- eggs land inside this circle
-	eggHeight = 90,                -- eggs start this high above the island
+	first = C.NZ + 1, last = C.TOTAL,
+	y = 900,                       -- height of the world 2 ground (top)
+	half = 130,                    -- half width of the floating zones
+	eggX = 105,                    -- eggs land between x = -105 .. 105
+	eggHeight = 90,                -- eggs start this high above the ground
 	fall = 3.6,                    -- seconds an egg falls (slow, low gravity)
-	gravity = 70,                  -- workspace gravity on the island (normal 196.2), client side
+	gravity = 70,                  -- workspace gravity in world 2 (normal 196.2), client side
 	portal = { 0, 0, 1352, 15 },   -- Golden Portal in the Golden Nest: x, ground y, z, radius
-	exit = { 0, 900, 790, 9 },     -- exit pad on the island: x, y, z, radius
-	back = { 0, 4, 1318 },         -- where the exit pad puts you (in front of the portal)
+	spawn = { 0, 906, 22 },        -- where the Golden Portal puts you (start of the Cosmic Nest)
+	exit = { 0, 900, -28, 9 },     -- exit portal at the start of world 2: x, ground y, z, radius
+	back = { 0, 4, 1318 },         -- where the exit portal puts you (in front of the Golden Portal)
 }
+-- zone index of a point in world 2 (call only when the point is up there)
+function C.w2Zone(z)
+	return C.NZ + math.clamp(math.floor(z / C.ZONE_LEN) + 1, 1, C.TOTAL - C.NZ)
+end
+-- start z of a world 2 zone
+function C.w2Z0(zoneIndex)
+	return (zoneIndex - C.NZ - 1) * C.ZONE_LEN
+end
 
 C.PET_COUNT = C.NZ * #C.RARITY
 
 -- ============================================================ ZONE GATES (tweak here)
 -- Cash price to open each zone, in order. Zone 1 is free. Change a number = change the price.
 -- A player must buy them in order (zone 3 can not be bought before zone 2).
-C.ZONE_PRICE = { 0, 1e3, 1e4, 7.5e4, 5e5, 4e6, 3e7, 2.5e8, 2e9, 1.5e10 }
+C.ZONE_PRICE = { 0, 1e3, 1e4, 7.5e4, 5e5, 4e6, 3e7, 2.5e8, 2e9, 1.5e10, 0, 2e11, 2e12 } -- 11-13 = world 2 (11 free: the Golden Portal)
 for i, z in ipairs(C.ZONES) do
 	z.price = C.ZONE_PRICE[i] or 0
 end

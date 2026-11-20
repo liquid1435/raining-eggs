@@ -797,15 +797,20 @@ local function tryUnlock(plr, zoneIndex)
 	sync(plr) -- the "Unlocked" attribute tells the client to fade the gate away
 end
 
-for zoneIndex = 2, C.NZ do
-	local z = (zoneIndex - 1) * C.ZONE_LEN -- the arch of zone n stands at z = (n - 1) * 140
+for zoneIndex = 2, C.TOTAL do
+	if zoneIndex == C.NZ + 1 then
+		continue -- the Cosmic Nest has no gate (the Golden Portal opens it)
+	end
+	local w2 = zoneIndex > C.NZ -- v119: world 2 gates stand up in space
+	local z = w2 and C.w2Z0(zoneIndex) or (zoneIndex - 1) * C.ZONE_LEN -- the arch of zone n stands at z = (n - 1) * 140
+	local gy = w2 and C.COSMIC.y or 0
 	local col = Color3.fromRGB(C.ZONES[zoneIndex].eggCol[1], C.ZONES[zoneIndex].eggCol[2], C.ZONES[zoneIndex].eggCol[3])
 	local model = Instance.new("Model")
 	model.Name = "Gate" .. zoneIndex
 	model:SetAttribute("Zone", zoneIndex)
 
 	-- the glowing gate in the arch, with the price on both sides
-	local gate = gatePart("Gate", Vector3.new(G.width, G.height, G.thick), Vector3.new(0, G.height / 2, z), col, G.transparency, model)
+	local gate = gatePart("Gate", Vector3.new(G.width, G.height, G.thick), Vector3.new(0, gy + G.height / 2, z), col, G.transparency, model)
 	gate.Material = Enum.Material.Neon
 	gateSign(gate, Enum.NormalId.Front, zoneIndex)
 	gateSign(gate, Enum.NormalId.Back, zoneIndex)
@@ -820,11 +825,11 @@ for zoneIndex = 2, C.NZ do
 	local side = (G.wallWidth - G.width) / 2
 	for _, sx in ipairs({ -1, 1 }) do
 		local wall = gatePart(sx < 0 and "WallLeft" or "WallRight", Vector3.new(side, G.height, G.thick),
-			Vector3.new(sx * (G.width / 2 + side / 2), G.height / 2, z), col, G.wallTransparency, model)
+			Vector3.new(sx * (G.width / 2 + side / 2), gy + G.height / 2, z), col, G.wallTransparency, model)
 		wall.CanTouch = false
 		wall.Material = Enum.Material.Neon -- glows like the gate, so you see where the locked zone starts
 	end
-	gatePart("Blocker", Vector3.new(G.wallWidth, G.blockHeight, G.thick), Vector3.new(0, G.height + G.blockHeight / 2, z), col, 1, model).CanTouch = false
+	gatePart("Blocker", Vector3.new(G.wallWidth, G.blockHeight, G.thick), Vector3.new(0, gy + G.height + G.blockHeight / 2, z), col, 1, model).CanTouch = false
 	model.Parent = GateFolder
 end
 GateFolder.Parent = workspace
@@ -1108,7 +1113,7 @@ local function load(plr)
 			end
 		end
 	end
-	d.unlocked = math.clamp(math.floor(unlocked), 1, C.NZ)
+	d.unlocked = math.clamp(math.floor(unlocked), 1, C.TOTAL)
 	if C.TEST_ALL_ZONES_FREE and game:GetService("RunService"):IsStudio() then
 		d.unlocked = C.NZ -- Studio test: every zone open for free (Config C.TEST_ALL_ZONES_FREE)
 	end
@@ -1227,17 +1232,16 @@ rayParams.RespectCanCollide = true
 local function spawnEgg(zoneIndex, near, forced)
 	local z0 = (zoneIndex - 1) * C.ZONE_LEN
 	local CO = C.COSMIC
-	if zoneIndex == CO.zone then -- v116 Cosmic Nest: eggs fall slowly onto the floating island
+	if zoneIndex > C.NZ then -- v119 world 2: eggs fall slowly onto the floating zone
+		local w0 = C.w2Z0(zoneIndex)
 		for _ = 1, 6 do
-			local a, r = math.random() * math.pi * 2, math.sqrt(math.random()) * CO.radius
-			local x, z = CO.x + math.cos(a) * r, CO.z + math.sin(a) * r
+			local x, z = (math.random() * 2 - 1) * CO.eggX, w0 + 10 + math.random() * (C.ZONE_LEN - 20)
 			if near and math.random() < 0.6 then
-				local a2, r2 = math.random() * math.pi * 2, 10 + math.random() * 35
-				local nx, nz = near.X + math.cos(a2) * r2, near.Z + math.sin(a2) * r2
-				if (nx - CO.x) ^ 2 + (nz - CO.z) ^ 2 < CO.radius * CO.radius then
-					x, z = nx, nz
-				end
+				local a, r = math.random() * math.pi * 2, 10 + math.random() * 35
+				x, z = near.X + math.cos(a) * r, near.Z + math.sin(a) * r
 			end
+			x = math.clamp(x, -CO.eggX, CO.eggX)
+			z = math.clamp(z, w0 + 10, w0 + C.ZONE_LEN - 10)
 			local y0 = CO.y + CO.eggHeight
 			local hit = workspace:Raycast(Vector3.new(x, y0, z), Vector3.new(0, -CO.eggHeight - 40, 0), rayParams)
 			if hit and hit.Position.Y > CO.y - 25 then
@@ -1485,28 +1489,38 @@ task.spawn(function()
 			if hrp and hum and hum.Health > 0 then
 				local p = hrp.Position
 				local zi = p.Z >= 0 and math.min(math.floor(p.Z / C.ZONE_LEN) + 1, C.NZ) or 0
-				-- v116 Cosmic Nest: everything high above the map is the secret island
+				-- v119 world 2: everything high above the map (only through the Golden Portal)
 				local CO = C.COSMIC
 				local opened = #altarList(d) >= C.NZ
 				if p.Y > CO.y - 400 then
-					zi = CO.zone
+					zi = C.w2Zone(p.Z)
+					local function put(x, y, z)
+						hrp.CFrame = CFrame.new(x, y, z)
+						hrp.AssemblyLinearVelocity = Vector3.zero
+					end
 					if not opened then -- no way in without the portal
-						hrp.CFrame = CFrame.new(CO.back[1], CO.back[2], CO.back[3])
-						hrp.AssemblyLinearVelocity = Vector3.zero
+						put(CO.back[1], CO.back[2], CO.back[3])
 						zi = C.NZ
-					elseif p.Y < CO.y - 40 then -- fell off the island: back onto it
-						hrp.CFrame = CFrame.new(CO.x, CO.y + 6, CO.z - 50)
-						hrp.AssemblyLinearVelocity = Vector3.zero
-					elseif (p.X - CO.exit[1]) ^ 2 + (p.Z - CO.exit[3]) ^ 2 < CO.exit[4] ^ 2 and p.Y < CO.exit[2] + 12 then
-						hrp.CFrame = CFrame.new(CO.back[1], CO.back[2], CO.back[3]) -- exit pad: back to the Golden Nest
-						hrp.AssemblyLinearVelocity = Vector3.zero
-						zi = C.NZ
+					else
+						if d.unlocked < CO.first then
+							d.unlocked = CO.first -- the Cosmic Nest is free once the portal is open
+							sync(plr)
+						end
+						if (p.X - CO.exit[1]) ^ 2 + (p.Z - CO.exit[3]) ^ 2 < CO.exit[4] ^ 2 and p.Y < CO.exit[2] + 14 then
+							put(CO.back[1], CO.back[2], CO.back[3]) -- exit portal: back to the Golden Nest
+							zi = C.NZ
+						elseif zi > d.unlocked then -- a world 2 zone this player did not buy
+							put(p.X, CO.y + 4, C.w2Z0(d.unlocked) + C.ZONE_LEN - 8)
+							zi = d.unlocked
+						elseif p.Y < CO.y - 40 then -- fell off: back to the start of this zone
+							put(0, CO.y + 6, math.max(C.w2Z0(zi) + 12, CO.spawn[3]))
+						end
 					end
 				elseif zi == C.NZ and opened and p.Y < CO.portal[2] + 25
 					and (p.X - CO.portal[1]) ^ 2 + (p.Z - CO.portal[3]) ^ 2 < CO.portal[4] ^ 2 then
-					hrp.CFrame = CFrame.new(CO.x, CO.y + 6, CO.z - 50) -- into the Golden Portal
+					hrp.CFrame = CFrame.new(CO.spawn[1], CO.spawn[2], CO.spawn[3]) -- into the Golden Portal
 					hrp.AssemblyLinearVelocity = Vector3.zero
-					zi = CO.zone
+					zi = CO.first
 					if not d.cosmicSeen then
 						d.cosmicSeen = true
 						Notice:FireAllClients(plr.DisplayName .. " entered the COSMIC NEST!", "legend")

@@ -1631,7 +1631,7 @@ local function refresh()
 	lastSpeed, lastCash = speed, cash
 
 	-- next zone bar
-	local nextZone = C.ZONES[attr("Unlocked", 1) + 1] -- nil when every zone is bought
+	local nextZone = attr("Unlocked", 1) ~= C.NZ and C.ZONES[attr("Unlocked", 1) + 1] or nil -- nil when every zone is bought (zone 11 is opened by the Golden Portal, not bought)
 	-- the next locked gate shows how far this player is: "$380 / $1K" (green when they can buy it)
 	local wantZone = attr("Unlocked", 1) + 1
 	local gates = workspace:FindFirstChild("ZoneGates")
@@ -4104,7 +4104,7 @@ task.spawn(function()
 	local CO = C.COSMIC
 	local player = game:GetService("Players").LocalPlayer
 	local inside, saved = false, nil
-	local function title()
+	local function title(name, sub)
 		local pg = player:FindFirstChildOfClass("PlayerGui")
 		if not pg then
 			return
@@ -4114,7 +4114,7 @@ task.spawn(function()
 		local t = Instance.new("TextLabel")
 		t.BackgroundTransparency, t.AnchorPoint = 1, Vector2.new(0.5, 0.5)
 		t.Position, t.Size = UDim2.fromScale(0.5, 0.3), UDim2.fromScale(0.8, 0.12)
-		t.Font, t.TextScaled, t.Text = Enum.Font.FredokaOne, true, "COSMIC NEST"
+		t.Font, t.TextScaled, t.Text = Enum.Font.FredokaOne, true, name
 		t.TextColor3, t.TextTransparency = Color3.fromRGB(200, 170, 255), 1
 		t.Parent = sg
 		local st = Instance.new("UIStroke")
@@ -4126,7 +4126,7 @@ task.spawn(function()
 		local s = Instance.new("TextLabel")
 		s.BackgroundTransparency, s.AnchorPoint = 1, Vector2.new(0.5, 0)
 		s.Position, s.Size = UDim2.fromScale(0.5, 0.36), UDim2.fromScale(0.6, 0.05)
-		s.Font, s.TextScaled, s.Text = Enum.Font.FredokaOne, true, "low gravity  •  cosmic eggs  •  the rarest pets"
+		s.Font, s.TextScaled, s.Text = Enum.Font.FredokaOne, true, sub
 		s.TextColor3, s.TextTransparency = Color3.new(1, 1, 1), 1
 		s.Parent = sg
 		sg.Parent = pg
@@ -4154,7 +4154,6 @@ task.spawn(function()
 			atm.Density, atm.Haze, atm.Color = 0.05, 0, Color3.fromRGB(40, 20, 80)
 		end
 		workspace.Gravity = CO.gravity
-		title()
 	end
 	local function leave()
 		if not saved then
@@ -4168,6 +4167,37 @@ task.spawn(function()
 		workspace.Gravity = saved.grav
 		saved = nil
 	end
+	-- the exit portal at the start of world 2: the same portal as in the Golden Nest (Codex), from a copy of the
+	-- module so both portals can be on screen at once
+	task.spawn(function()
+		local fx = RS:WaitForChild("BigEggFX", 30)
+		local mod = fx and fx:FindFirstChild("GoldenPortalVFX")
+		local at = Vector3.new(CO.exit[1], CO.exit[2], CO.exit[3])
+		local ok = false
+		if mod then
+			local copy = mod:Clone()
+			copy.Name = "ExitPortalVFX"
+			copy.Parent = fx
+			local okReq, V2 = pcall(require, copy)
+			if okReq and V2 and V2.ShowPortal then
+				ok = pcall(V2.ShowPortal, at, 26)
+			end
+		end
+		if not ok then -- fallback: a glowing ring
+			local p = Instance.new("Part")
+			p.Shape, p.Anchored, p.CanCollide, p.Material = Enum.PartType.Cylinder, true, false, Enum.Material.Neon
+			p.Size, p.Color, p.Transparency = Vector3.new(1.5, 24, 24), Color3.fromRGB(190, 120, 255), 0.25
+			p.CFrame = CFrame.new(at + Vector3.new(0, 13, 0)) * CFrame.Angles(0, math.pi / 2, 0)
+			p.Name = "ExitPortal"
+			p.Parent = workspace
+		end
+	end)
+	local SUBS = {
+		[CO.first] = "low gravity  •  cosmic eggs  •  the rarest pets",
+		[CO.first + 1] = "WORLD 2  •  ZONE 2",
+		[CO.first + 2] = "WORLD 2  •  ZONE 3",
+	}
+	local lastZone = nil
 	while true do
 		task.wait(0.3)
 		local ch = player.Character
@@ -4178,7 +4208,15 @@ task.spawn(function()
 			enter()
 		elseif inside and not now then
 			inside = false
+			lastZone = nil
 			leave()
+		end
+		if now then -- a big title for every world 2 zone you walk into
+			local zi = C.w2Zone(hrp.Position.Z)
+			if zi ~= lastZone then
+				lastZone = zi
+				title(string.upper(C.ZONES[zi].name), SUBS[zi] or "")
+			end
 		end
 	end
 end)
