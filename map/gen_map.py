@@ -2055,12 +2055,120 @@ def w2_nebula(cr, z0):
         blk(0, 60, ze + 1, H * 2 + 20, 240, 2, WHITE, transparency=1, name='Wall')
 
 
+
+# v121 (user: "details and things on the walls, everything like in world 1, only with a space theme")
+W2_THEMES = [  # (name, c1 = bright, c2 = deep, road, accent glow)
+    ('cosmic', (170, 110, 255), (60, 36, 120), (40, 30, 80), (90, 230, 255)),
+    ('moon', (210, 214, 228), (110, 114, 132), (70, 72, 90), (120, 200, 255)),
+    ('nebula', (255, 110, 220), (22, 70, 100), (20, 46, 70), (90, 240, 230)),
+]
+
+
+def w2_road(z0, z1, road, glow):
+    """the world 1 road, space style: dark road, glowing edges, glowing dashes"""
+    zc, ln = (z0 + z1) / 2, z1 - z0
+    blk(0, 0, zc, ROADW, 0.3, ln, road, 'Slate')
+    for sx in (-1, 1):
+        blk(sx * (ROADW / 2 + 0.6), 0, zc, 1.2, 0.7, ln, glow, 'Neon')
+    for z in range(int(z0) + 10, int(z1), 20):
+        blk(0, 0.3, z, 1.2, 0.06, 9, glow, 'Neon', **NC)
+
+
+def w2_lamp(x, z, glow, dark):
+    blk(x, 0, z, 1.6, 1, 1.6, dark, 'Slate')
+    blk(x, 1, z, 0.8, 9, 0.8, dark, 'Metal')
+    blk(x, 10, z, 2.4, 0.6, 2.4, dark, 'Metal')
+    light(blk(x, 10.6, z, 1.8, 1.8, 1.8, glow, 'Neon', **NC), glow, 18, 1.5)
+
+
+def w2_on_wall(cr, kind, x, z, c1, c2, glow):
+    """one decoration standing on the top of a side wall (wall top at y 34)"""
+    y = 34
+    if kind == 'cosmic':          # crystal cluster
+        for j in range(cr.randint(2, 4)):
+            h = cr.uniform(5, 12)
+            part((cr.uniform(1.8, 3), h, cr.uniform(1.8, 3)), C(x + cr.uniform(-3, 3), y + h / 2, z + cr.uniform(-3, 3)) *
+                 R(cr.uniform(-15, 15), cr.uniform(0, 90), cr.uniform(-15, 15)), cr.choice((c1, glow, (255, 110, 220))), 'Glass',
+                 transparency=0.15)
+    elif kind == 'moon':          # dome / antenna / satellite dish
+        r = cr.random()
+        if r < 0.4:
+            sph(x, y + 2, z, 8, (230, 232, 240), 'SmoothPlastic')
+            blk(x, y, z - 4.2, 2.4, 3, 0.6, glow, 'Neon', **NC)
+        elif r < 0.7:
+            blk(x, y, z, 0.6, 12, 0.6, (200, 204, 216), 'Metal')
+            light(blk(x, y + 12, z, 1.2, 1.2, 1.2, (255, 70, 70), 'Neon', **NC), (255, 70, 70), 10, 1)
+        else:
+            blk(x, y, z, 1.2, 5, 1.2, (150, 154, 170), 'Metal')
+            part((7, 0.6, 7), C(x, y + 6.5, z) * R(35, 0, 0), (225, 228, 238), 'Metal')
+            blk(x, y + 7, z + 1.6, 0.4, 3, 0.4, glow, 'Neon', **NC)
+    else:                         # nebula coral + glowing pod
+        h = 0
+        col = cr.choice((c1, glow, (255, 220, 120)))
+        for j in range(cr.randint(3, 5)):
+            hh = cr.uniform(2, 3.5)
+            blk(x + cr.uniform(-1, 1), y + h, z + cr.uniform(-1, 1), 1.4, hh, 1.4, col, 'Neon')
+            h += hh * 0.9
+        sph(x + 3, y + 1.6, z + 2, 3, cr.choice((c1, glow)), 'Glass', transparency=0.3, **NC)
+
+
+def w2_scenery(cr):
+    """everything world 1 has around and on its zones (scenery()), in space colours"""
+    H = WORLD2['half']
+    for j, (kind, c1, c2, road, glow) in enumerate(W2_THEMES):
+        z0 = j * ZL
+        z_road0 = -56 if j == 0 else z0
+        with group(f'W2Scenery{j + 1}', unique=False):
+            w2_road(z_road0, z0 + ZL, road, glow)
+            # road lamps (not inside the Cosmic Egg ring)
+            for sx in (-1, 1):
+                for k in range(5):
+                    lz = z0 + 14 + k * 28
+                    if j == 0 and abs(lz - 84) < 26:
+                        continue
+                    w2_lamp(sx * 12, lz, glow, shade(c2, 0.7))
+            # things standing on top of both side walls
+            for sx in (-1, 1):
+                for k in range(6):
+                    w2_on_wall(cr, kind, sx * (HALF + 11 + cr.uniform(-5, 5)), z0 + 10 + k * 23 + cr.uniform(-4, 4), c1, c2, glow)
+            # hero egg on a wall platform (world 1: one big egg per zone, sides take turns)
+            hs = 1 if j % 2 == 0 else -1
+            hz, sz = z0 + ZL * 0.72, 15
+            blk(hs * (HALF + 12), 34, hz, 30, 3, 30, c2, 'Plastic')
+            blk(hs * (HALF + 12), 37, hz, 31, 0.4, 31, glow, 'Neon', **NC)
+            egg(hs * (HALF + 12), 37 + 1.5 * sz, hz, sz, c1, glow, n=9, name='HeroEgg')
+            # stepped space rocks behind the walls (world 1: hills), with glowing crystal tops
+            for sx in (-1, 1):
+                for _ in range(2):
+                    x, z = sx * cr.uniform(280, 430), z0 + cr.uniform(15, 125)
+                    w, h = cr.uniform(90, 150), cr.uniform(14, 22)
+                    for k, (f, c) in enumerate(((1, shade(c2, 0.6)), (0.74, shade(c2, 0.8)), (0.5, c2), (0.27, c1))):
+                        blk(x, -24 + k * h, z, w * f, h, w * f, c, 'Slate', **NC)
+                    blk(x, -24 + 4 * h, z, w * 0.12, 6, w * 0.12, glow, 'Neon', **NC)
+            # floating asteroid with a small egg (world 1: floating island)
+            fx, fy, fz = -hs * cr.uniform(240, 300), cr.uniform(55, 90), z0 + cr.uniform(30, 110)
+            blk(fx, fy, fz, 44, 4, 44, c2, 'Slate', **NC)
+            blk(fx, fy + 4, fz, 44.4, 0.4, 44.4, glow, 'Neon', **NC)
+            for k, w in enumerate((36, 26, 14)):
+                blk(fx, fy - 6 * (k + 1), fz, w, 6, w, shade(c2, 0.8 - 0.1 * k), 'Slate', **NC)
+            egg(fx, fy + 10, fz, 4, WHITE, glow, name='Decor')
+            # little rocks and glowing bits along the foot of the walls (fills the edges like world 1 props)
+            for sx in (-1, 1):
+                for k in range(8):
+                    x, z = sx * cr.uniform(H - 30, H - 14), z0 + 8 + k * 17 + cr.uniform(-4, 4)
+                    s2 = cr.uniform(2, 4)
+                    blk(x, 0, z, s2 * 1.3, s2, s2, shade(c2, cr.uniform(0.8, 1.2)), 'Slate', yaw=cr.uniform(0, 90))
+                    if cr.random() < 0.5:
+                        blk(x, s2, z, 0.8, 0.8, 0.8, glow, 'Neon', **NC)
+
+
 def world2():
     cr = random.Random(119)
     start = len(PARTS)
     w2_cosmic(cr, 0)
     w2_moon(cr, 140)
     w2_nebula(cr, 280)
+    w2_scenery(random.Random(121))
     with group('Gates', unique=False):
         gate(140, 'MOON CRATERS', None, (200, 205, 220), (120, 130, 160))
         gate(280, 'NEBULA REEF', None, (255, 110, 220), (90, 240, 230))
