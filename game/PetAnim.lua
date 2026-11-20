@@ -5,6 +5,9 @@
 --   PA.pose(model, clip, t, pivot)   -> moves the parts of a built model to clip time t (seconds, loops) at pivot
 local RS = game:GetService("ReplicatedStorage")
 local PA = {}
+-- if the parts come out mirrored front/back (Roblox turned the import half a turn), set this to true
+PA.FLIP = false
+local Y180 = CFrame.Angles(0, math.pi, 0)
 
 local okData, DATA = pcall(require, RS:WaitForChild("PetAnimData", 10))
 if not okData then
@@ -125,7 +128,8 @@ function PA.build(pet, s, anchored, meshYaw, meshSize)
 			p.CanCollide, p.CanTouch, p.CanQuery, p.Massless, p.CastShadow = false, false, false, true, false
 			p.Anchored = anchored
 			local r = d.rest[j]
-			p.CFrame = base * CFrame.new(r[1] * k, r[2] * k, r[3] * k)
+			local fx = PA.FLIP and -1 or 1
+			p.CFrame = base * CFrame.new(fx * r[1] * k, r[2] * k, fx * r[3] * k)
 			p.Parent = m
 			if not anchored then
 				local w = Instance.new("WeldConstraint")
@@ -162,7 +166,8 @@ local function rig(model)
 			table.insert(r.parts, p)
 			table.insert(r.idx, j)
 			local q = d.rest[j]
-			table.insert(r.rest, CFrame.new(q[1] * k, q[2] * k, q[3] * k))
+			local fx = PA.FLIP and -1 or 1
+			table.insert(r.rest, CFrame.new(fx * q[1] * k, q[2] * k, fx * q[3] * k))
 		end
 	end
 	r.root = model.PrimaryPart
@@ -188,7 +193,11 @@ function PA.pose(model, clip, t, pivot)
 		local p0, p1 = row0[j], row1[j]
 		local rot = p0[4]:Lerp(p1[4], a)
 		local tx, ty, tz = p0[1] + (p1[1] - p0[1]) * a, p0[2] + (p1[2] - p0[2]) * a, p0[3] + (p1[3] - p0[3]) * a
-		cfs[n] = top * CFrame.new(tx * k, ty * k, tz * k) * rot * r.rest[n]
+		local D = CFrame.new(tx * k, ty * k, tz * k) * rot
+		if PA.FLIP then
+			D = Y180 * D * Y180
+		end
+		cfs[n] = top * D * r.rest[n]
 	end
 	workspace:BulkMoveTo(r.parts, cfs, Enum.BulkMoveMode.FireCFrameChanged)
 	if r.root then
