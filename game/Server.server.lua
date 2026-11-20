@@ -281,6 +281,26 @@ local function petList(list)
 	return table.concat(t, ",")
 end
 
+-- v119 equip: d.pets = the EQUIPPED pets (stand in the pen, earn cash, max C.PEN_MAX), d.stored = the other pets you own
+-- (max C.STORAGE_MAX). The client sees one list (PetList = equipped first, then stored) + "Equipped" = how many are equipped,
+-- so "p<i>" (SELL shop) and the PETS menu use one index i into that list.
+local function ownedAt(d, i)
+	if i >= 1 and i <= #d.pets then
+		return d.pets, i
+	end
+	local j = i - #d.pets
+	if j >= 1 and j <= #d.stored then
+		return d.stored, j
+	end
+	return nil
+end
+
+local function byIncome(list)
+	table.sort(list, function(a, b)
+		return C.petIncome(a) > C.petIncome(b)
+	end)
+end
+
 local function income(d)
 	local sum = 0
 	for _, pet in ipairs(d.pets) do
@@ -318,7 +338,12 @@ local function sync(plr)
 	plr:SetAttribute("Combo", d.combo)
 	plr:SetAttribute("ZonesDone", d.zonesDone)
 	plr:SetAttribute("Unlocked", d.unlocked) -- highest zone this player has bought (the client hides those gates)
-	plr:SetAttribute("PetList", petList(d.pets)) -- for the inventory menu
+	local owned = petList(d.pets)
+	if #d.stored > 0 then
+		owned = owned .. (owned ~= "" and "," or "") .. petList(d.stored)
+	end
+	plr:SetAttribute("PetList", owned) -- all your pets for the PETS / SELL menus: the equipped ones first
+	plr:SetAttribute("Equipped", #d.pets)
 	plr:SetAttribute("CarryList", petList(d.carry))
 	plr:SetAttribute("Caught", d.caught)
 	local al = {}
@@ -553,14 +578,23 @@ local function addBasket(plr, char)
 	renderCarry(plr)
 end
 
--- 3 same pets of one tier become 1 pet of the next tier
+-- 3 same pets of one tier become 1 pet of the next tier (equipped and stored pets together;
+-- the new pet is equipped when one of the three was)
 local function fuse(d)
+	local all = {}
+	for _, pet in ipairs(d.pets) do
+		table.insert(all, { pet = pet, eq = true })
+	end
+	for _, pet in ipairs(d.stored) do
+		table.insert(all, { pet = pet, eq = false })
+	end
 	local made = {}
 	local again = true
 	while again do
 		again = false
 		local groups = {}
-		for k, pet in ipairs(d.pets) do
+		for k, e in ipairs(all) do
+			local pet = e.pet
 			if pet.t < #C.TIER then
 				local key = pet.z .. "_" .. pet.i .. "_" .. pet.t
 				groups[key] = groups[key] or {}
@@ -570,11 +604,13 @@ local function fuse(d)
 					table.sort(idxs, function(a, b)
 						return a > b
 					end)
+					local eq = false
 					for _, k2 in ipairs(idxs) do
-						table.remove(d.pets, k2)
+						eq = eq or all[k2].eq
+						table.remove(all, k2)
 					end
 					local new = { z = pet.z, i = pet.i, t = pet.t + 1 }
-					table.insert(d.pets, new)
+					table.insert(all, { pet = new, eq = eq })
 					table.insert(made, new)
 					again = true
 					break
@@ -582,29 +618,31 @@ local function fuse(d)
 			end
 		end
 	end
+	d.pets, d.stored = {}, {}
+	for _, e in ipairs(all) do
+		table.insert((e.eq and #d.pets < C.PEN_MAX) and d.pets or d.stored, e.pet)
+	end
 	return made
 end
 
--- carried pets go into the pen; same pets fuse; a full pen keeps the best ones and sells the rest
+-- carried pets come home: same pets fuse, empty pen places are filled with your best stored pets,
+-- the rest wait in storage (PETS menu: tap to equip, EQUIP BEST); a full storage sells its weakest pets
 local function deposit(plr)
 	local d = data[plr]
 	local n = #d.carry
 	for _, pet in ipairs(d.carry) do
-		table.insert(d.pets, pet)
+		table.insert(d.stored, pet)
 	end
 	d.carry = {}
 	local made = fuse(d)
+	byIncome(d.stored)
+	while #d.pets < C.PEN_MAX and #d.stored > 0 do
+		table.insert(d.pets, table.remove(d.stored, 1))
+	end
 	local sold = 0
-	while #d.pets > C.PEN_MAX do
-		local worst, worstInc = 1, math.huge
-		for k, q in ipairs(d.pets) do
-			local inc = C.petIncome(q)
-			if inc < worstInc then
-				worst, worstInc = k, inc
-			end
-		end
-		table.remove(d.pets, worst)
-		sold = sold + worstInc * C.SELL_MULT
+	while #d.stored > C.STORAGE_MAX do
+		local pet = table.remove(d.stored) -- the weakest (sorted)
+		sold = sold + C.petIncome(pet) * C.SELL_MULT
 	end
 	d.cash = d.cash + sold
 	renderPen(plr)
@@ -613,8 +651,49 @@ local function deposit(plr)
 	if #made > 0 then
 		say(plr, C.FUSE .. " pets fused into " .. C.petName(made[#made]) .. "!", "legend")
 	elseif sold > 0 then
-		say(plr, "Pen is full! Weakest pets sold for $" .. C.fmt(sold), "cash")
+		say(plr, "Storage is full! Weakest pets sold for $" .. C.fmt(sold), "cash")
+	elseif n > 0 and #d.stored > 0 and #d.pets >= C.PEN_MAX then
+		say(plr, "Pen is full! New pets wait in PETS - press EQUIP BEST", "info")
 	end
+end
+
+-- PETS menu: tap a pet = equip / unequip it; EQUIP BEST = your C.PEN_MAX best pets go into the pen
+local function equipPet(plr, i)
+	local d = data[plr]
+	local list, j = ownedAt(d, i)
+	if not list then
+		return
+	end
+	if list == d.pets then
+		table.insert(d.stored, table.remove(d.pets, j))
+		byIncome(d.stored)
+	elseif #d.pets >= C.PEN_MAX then
+		say(plr, "Your pen is full (" .. C.PEN_MAX .. ")! Unequip a pet first", "bad")
+		return
+	else
+		table.insert(d.pets, table.remove(d.stored, j))
+	end
+	renderPen(plr)
+	sync(plr)
+end
+
+local function equipBest(plr)
+	local d = data[plr]
+	local all = {}
+	for _, pet in ipairs(d.pets) do
+		table.insert(all, pet)
+	end
+	for _, pet in ipairs(d.stored) do
+		table.insert(all, pet)
+	end
+	byIncome(all)
+	d.pets, d.stored = {}, {}
+	for k, pet in ipairs(all) do
+		table.insert(k <= C.PEN_MAX and d.pets or d.stored, pet)
+	end
+	renderPen(plr)
+	sync(plr)
+	say(plr, "Equipped your " .. #d.pets .. " best pets!", "good")
 end
 
 local function sellCarry(plr)
@@ -852,6 +931,20 @@ Action.OnServerEvent:Connect(function(plr, what, kind)
 	if not d then
 		return
 	end
+	if what == "equip" or what == "equipbest" then
+		-- PETS menu (v119): "equip", i = equip / unequip pet i of PetList; "equipbest" = the best pets into the pen. Anywhere.
+		local now = os.clock()
+		if now - (d.equipT or 0) < 0.2 then
+			return -- the pen models are rebuilt each time: no spamming
+		end
+		d.equipT = now
+		if what == "equipbest" then
+			equipBest(plr)
+		elseif typeof(kind) == "number" and kind == kind and kind % 1 == 0 then
+			equipPet(plr, kind)
+		end
+		return
+	end
 	if what == "sellpets" then
 		-- the SELL PETS menu: "c3,c1,p2" = pets 3 and 1 of the basket and pet 2 of the pen; only near the SELL shop
 		local pad = shopPads.sell
@@ -872,20 +965,23 @@ Action.OnServerEvent:Connect(function(plr, what, kind)
 		end
 		local sum, n, last = 0, 0, nil
 		for where, set in pairs(pick) do
-			local list = where == "c" and d.carry or d.pets
 			local idx = {}
 			for i in pairs(set) do
-				if list[i] then
-					table.insert(idx, i)
-				end
+				table.insert(idx, i)
 			end
 			table.sort(idx, function(a, b)
-				return a > b
+				return a > b -- highest first: stored pets go before equipped ones, so the other indices stay valid
 			end)
 			for _, i in ipairs(idx) do
-				local pet = table.remove(list, i)
-				sum = sum + C.petIncome(pet) * C.SELL_MULT
-				n, last = n + 1, pet
+				local list, j = d.carry, i
+				if where == "p" then
+					list, j = ownedAt(d, i)
+				end
+				if list and list[j] then
+					local pet = table.remove(list, j)
+					sum = sum + C.petIncome(pet) * C.SELL_MULT
+					n, last = n + 1, pet
+				end
 			end
 		end
 		if n == 0 then
@@ -911,12 +1007,17 @@ Action.OnServerEvent:Connect(function(plr, what, kind)
 		end
 		local where, i = string.match(kind, "^([cp])(%d+)$")
 		i = tonumber(i)
-		local list = where == "c" and d.carry or where == "p" and d.pets or nil
-		local pet = list and list[i]
+		local list, j = nil, i
+		if where == "c" then
+			list = d.carry
+		elseif where == "p" and i then
+			list, j = ownedAt(d, i)
+		end
+		local pet = list and list[j]
 		if not pet then
 			return
 		end
-		table.remove(list, i)
+		table.remove(list, j)
 		local price = C.petIncome(pet) * C.SELL_MULT
 		d.cash = d.cash + price
 		if where == "p" then
@@ -1049,19 +1150,28 @@ local function load(plr)
 		end)
 	end
 	saved = type(saved) == "table" and saved or {}
-	local pets = {}
-	for _, pet in ipairs(type(saved.pets) == "table" and saved.pets or {}) do
-		local t = tonumber(pet.t) or 1
-		if C.ZONES[pet.z] and C.ZONES[pet.z].pets[pet.i] and C.TIER[t] and #pets < C.PEN_MAX then
-			table.insert(pets, { z = pet.z, i = pet.i, t = t })
+	-- equipped pets (saved.pets) and stored pets (saved.stored, v119); an old pen bigger than C.PEN_MAX keeps
+	-- its extra pets in storage instead of losing them
+	local pets, stored = {}, {}
+	local function readPets(list, into)
+		for _, pet in ipairs(type(list) == "table" and list or {}) do
+			local t = type(pet) == "table" and (tonumber(pet.t) or 1)
+			if t and C.ZONES[pet.z] and C.ZONES[pet.z].pets[pet.i] and C.TIER[t] then
+				table.insert((into == pets and #pets < C.PEN_MAX) and pets or stored, { z = pet.z, i = pet.i, t = t })
+			end
 		end
 	end
+	readPets(saved.pets, pets)
+	readPets(saved.stored, stored)
+	byIncome(stored)
 	local index = {}
 	for _, key in ipairs(type(saved.index) == "table" and saved.index or {}) do
 		index[tostring(key)] = true
 	end
-	for _, pet in ipairs(pets) do
-		index[C.petKey(pet)] = true
+	for _, list in ipairs({ pets, stored }) do
+		for _, pet in ipairs(list) do
+			index[C.petKey(pet)] = true
+		end
 	end
 	local bag = {}
 	for _, egg in ipairs(type(saved.eggs) == "table" and saved.eggs or {}) do
@@ -1080,6 +1190,7 @@ local function load(plr)
 		bestOdds = tonumber(saved.bestOdds) or 0,
 		bestName = tostring(saved.bestName or ""),
 		pets = pets,
+		stored = stored,
 		index = index,
 		carry = {},
 		bag = bag, -- caught eggs not hatched yet: { z, kind, luck } (luck = rolled with the luck of the moment it was caught)
@@ -1142,7 +1253,7 @@ local function save(plr)
 	pcall(function()
 		store:SetAsync("u" .. plr.UserId, {
 			cash = d.cash, speed = d.speed, train = d.train, basket = d.basket, luck = d.luck, rebirth = d.rebirth,
-			caught = d.caught, bestOdds = d.bestOdds, bestName = d.bestName, pets = d.pets, index = keys,
+			caught = d.caught, bestOdds = d.bestOdds, bestName = d.bestName, pets = d.pets, stored = d.stored, index = keys,
 			unlocked = d.unlocked, dailyDay = d.dailyDay, dailyLast = d.dailyLast, eggs = d.bag, altar = altarList(d),
 		})
 	end)

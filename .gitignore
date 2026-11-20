@@ -47,3 +47,6 @@ map/patch_*.py
 !codex_pet*/roblox/*.lua
 !codex_pet*/renders/hero.png
 !codex_pet*/renders/preview.mp4
+
+# tools (economy simulator)
+!tools/*.py

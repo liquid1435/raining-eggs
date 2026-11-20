@@ -313,16 +313,25 @@ function M.init(X)
 		return pick
 	end
 
-	-- ============================================================ PETS (inventory, view only)
+	-- ============================================================ PETS (v119: PETS tab = every pet you own; the EQUIPPED ones
+	-- (green frame + tick) stand in your pen and earn cash, max C.PEN_MAX; tap a card to equip / unequip; EQUIP BEST)
 	local petsPanel = panel("MY PETS", "paw", Color3.fromRGB(255, 140, 40), 0.76, 1.75)
 	local pi_ = petsPanel.inner
 	local petsInfo = ink(pi_, UDim2.fromScale(0.45, 0.09), UDim2.fromScale(0.03, 0.04), 44, "", DARK, Enum.Font.LuckiestGuy)
 	local incomeInfo = ink(pi_, UDim2.fromScale(0.3, 0.07), UDim2.fromScale(0.67, 0.05), 34, "", Color3.fromRGB(40, 170, 60), Enum.Font.LuckiestGuy, Enum.TextXAlignment.Right)
-	local petGrid = scroller(pi_, UDim2.fromScale(0.95, 0.75), UDim2.fromScale(0.025, 0.22), 5, 0.82)
+	local petGrid = scroller(pi_, UDim2.fromScale(0.95, 0.62), UDim2.fromScale(0.025, 0.22), 5, 0.82)
+	local equipBestBtn = bigButton(pi_, GREEN, UDim2.fromScale(0.5, 0.12), UDim2.fromScale(0.25, 0.86))
+	equipBestBtn.label.Text = "EQUIP BEST"
 	local petTab = 1
-	local pickPetTab = tabs(pi_, { "PEN", "BASKET" }, UDim2.fromScale(0.03, 0.13), UDim2.fromScale(0.3, 0.075), function(i)
+	local pickPetTab = tabs(pi_, { "PETS", "BASKET" }, UDim2.fromScale(0.03, 0.13), UDim2.fromScale(0.3, 0.075), function(i)
 		petTab = i
 		M.refreshPets()
+	end)
+	equipBestBtn.button.Activated:Connect(function()
+		if sfx then
+			pcall(sfx, "click", 0.4)
+		end
+		Action:FireServer("equipbest")
 	end)
 	function M.refreshPets()
 		if not petsPanel.frame.Visible then
@@ -330,15 +339,39 @@ function M.init(X)
 		end
 		clear(petGrid)
 		local list = parsePets(attr(petTab == 1 and "PetList" or "CarryList", ""))
+		local eqN = petTab == 1 and attr("Equipped", math.min(#list, C.PEN_MAX)) or 0
+		for k, pet in ipairs(list) do
+			pet.idx, pet.eq = k, k <= eqN -- k = place in PetList, sent with "equip"
+		end
 		table.sort(list, function(a, b)
+			if a.eq ~= b.eq then
+				return a.eq -- equipped first
+			end
 			return C.petIncome(a) > C.petIncome(b)
 		end)
-		petsInfo.Text = (petTab == 1 and "PEN " .. #list .. " / " .. C.PEN_MAX) or ("BASKET " .. #list .. " / " .. attr("CarryMax", 3))
+		petsInfo.Text = (petTab == 1 and "EQUIPPED " .. eqN .. " / " .. C.PEN_MAX) or ("BASKET " .. #list .. " / " .. attr("CarryMax", 3))
 		incomeInfo.Text = "+$" .. C.fmt(attr("Income", 0)) .. "/s"
+		equipBestBtn.button.Visible = petTab == 1
 		for n, pet in ipairs(list) do
 			local rar = C.RARITY[pet.i]
 			local c = card(petGrid, rar.color, UDim2.new(), UDim2.new())
 			c.LayoutOrder = n
+			if pet.eq then -- equipped: green frame + round tick (same look as the SELL PETS selection)
+				make("UIStroke", { Color = Color3.fromRGB(60, 230, 90), Thickness = 5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, c)
+				local tick = make("Frame", { Size = UDim2.fromScale(0.26, 0.2), Position = UDim2.fromScale(0.7, 0.03), BackgroundColor3 = Color3.fromRGB(60, 210, 90), ZIndex = 6 }, c)
+				make("UIAspectRatioConstraint", { AspectRatio = 1 }, tick)
+				make("UICorner", { CornerRadius = UDim.new(1, 0) }, tick)
+				make("UIStroke", { Thickness = 3, Color = WHITE }, tick)
+				title(tick, UDim2.fromScale(0.8, 0.8), UDim2.fromScale(0.1, 0.08), 30, "✓").ZIndex = 7
+			end
+			if petTab == 1 then
+				make("TextButton", { BackgroundTransparency = 1, Text = "", Size = UDim2.fromScale(1, 1), ZIndex = 8 }, c).Activated:Connect(function()
+					if sfx then
+						pcall(sfx, "click", 0.4)
+					end
+					Action:FireServer("equip", pet.idx)
+				end)
+			end
 			local v = X.petView(c, pet, UDim2.fromScale(1, 0.6), UDim2.fromScale(0, 0.04))
 			v.ZIndex = 3
 			local nm = title(c, UDim2.fromScale(0.92, 0.13), UDim2.fromScale(0.04, 0.64), 22, C.petName(pet))
@@ -528,7 +561,7 @@ function M.init(X)
 				n, sum = n + 1, sum + priceOf(list[i])
 			end
 		end
-		sellInfo.Text = n > 0 and ("SELECTED " .. n .. "  -  $" .. C.fmt(sum)) or (#list .. (sellTab == 1 and " IN YOUR BASKET" or " IN YOUR PEN"))
+		sellInfo.Text = n > 0 and ("SELECTED " .. n .. "  -  $" .. C.fmt(sum)) or (#list .. (sellTab == 1 and " IN YOUR BASKET" or " PETS YOU OWN"))
 		sellBtn.label.Text = n > 0 and ("SELL " .. n .. " FOR $" .. C.fmt(sum)) or "SELECT PETS TO SELL"
 		sellBtn.color(n > 0 and GREEN or GREY)
 		allBtn.label.Text = (#list > 0 and n == #list) and "CLEAR" or "SELECT ALL"
@@ -590,12 +623,12 @@ function M.init(X)
 			cards[id] = { stroke = stroke, tick = tick, scale = scale }
 		end
 		if #list == 0 then
-			local e = ink(sellGrid, UDim2.new(), UDim2.new(), 36, sellTab == 1 and "Your basket is empty - catch eggs!" or "No pets in your pen yet", SOFT)
+			local e = ink(sellGrid, UDim2.new(), UDim2.new(), 36, sellTab == 1 and "Your basket is empty - catch eggs!" or "No pets yet - catch eggs!", SOFT)
 			e.TextXAlignment = Enum.TextXAlignment.Center
 		end
 		updateSellButtons()
 	end
-	local pickSellTab = tabs(sp, { "BASKET", "PEN" }, UDim2.fromScale(0.03, 0.04), UDim2.fromScale(0.32, 0.08), function(i)
+	local pickSellTab = tabs(sp, { "BASKET", "PETS" }, UDim2.fromScale(0.03, 0.04), UDim2.fromScale(0.32, 0.08), function(i)
 		sellTab = i
 		refreshSell(true)
 	end)
@@ -885,7 +918,7 @@ function M.init(X)
 
 	-- live refresh of the open menus
 	plr.AttributeChanged:Connect(function(a)
-		if a == "PetList" or a == "CarryList" or a == "Income" then
+		if a == "PetList" or a == "CarryList" or a == "Income" or a == "Equipped" then
 			M.refreshPets()
 		end
 		if a == "EggList" or a == "Eggs" or a == "CarryMax" then

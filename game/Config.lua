@@ -4,7 +4,8 @@ local C = {}
 C.ZONE_LEN = 140        -- zone i covers z = (i-1)*140 .. i*140
 C.EGG_X = 150           -- eggs land between x = -150 .. 150
 C.EGG_Y = 105           -- height the eggs start from
-C.PEN_MAX = 12          -- pets in a pen
+C.PEN_MAX = 10          -- equipped pets: they stand in your pen and earn cash (v119, was 12)
+C.STORAGE_MAX = 50      -- your other pets wait in storage (PETS menu: tap to equip, EQUIP BEST); a full storage sells its weakest
 C.SELL_MULT = 30        -- sell price = income per second * this
 C.FUSE = 3              -- same pets needed for the next tier
 
@@ -45,6 +46,7 @@ C.STORM_EGG_LINGER = 5  -- seconds the storm egg waits on the ground
 
 C.INDEX_BONUS = 0.1     -- cash per completed zone
 C.REBIRTH_BONUS = 0.5   -- cash and training per rebirth
+C.REBIRTH_SPEED_SCALE = 1e6 -- v119 balance: rebirth speed = zone speed numbers x this (first rebirth after ~3 h of play, was ~5 min)
 
 C.RARITY = {
 	{ name = "Common", odds = 2, mult = 1, color = Color3.fromRGB(205, 208, 215) },
@@ -199,7 +201,10 @@ C.PET_COUNT = C.NZ * #C.RARITY
 -- ============================================================ ZONE GATES (tweak here)
 -- Cash price to open each zone, in order. Zone 1 is free. Change a number = change the price.
 -- A player must buy them in order (zone 3 can not be bought before zone 2).
-C.ZONE_PRICE = { 0, 1e3, 1e4, 7.5e4, 5e5, 4e6, 3e7, 2.5e8, 2e9, 1.5e10, 0, 2e11, 2e12 } -- 11-13 = world 2 (11 free: the Golden Portal)
+-- v119 balance (tools/sim_economy.py, target between medium and slow): a normal player opens zone 2 after ~4 min,
+-- zone 3 ~14 min, zone 4 ~40 min, zone 5 ~2 h, zone 6 ~3.5 h, zone 7 ~5.5 h, zone 8 ~8 h, zone 9 ~11 h, zone 10 ~15 h of play.
+-- (v118 prices { 0, 1e3, 1e4, 7.5e4, 5e5, 4e6, 3e7, 2.5e8, 2e9, 1.5e10 } let players open all 10 zones in ~15 minutes.)
+C.ZONE_PRICE = { 0, 8e3, 5.5e5, 3.5e7, 3e9, 3e10, 5e11, 6.5e12, 6.5e13, 6.5e14, 0, 7e16, 9e17 } -- 11-13 = world 2 (11 free: the Golden Portal)
 for i, z in ipairs(C.ZONES) do
 	z.price = C.ZONE_PRICE[i] or 0
 end
@@ -319,8 +324,8 @@ function C.rebirthMult(n)
 	return 1 + C.REBIRTH_BONUS * n
 end
 function C.rebirthNeed(n) -- speed needed for rebirth number n + 1
-	local zi = math.min(3 + n, #C.ZONES)
-	return C.ZONES[zi].req * 10 ^ math.max(0, 3 + n - #C.ZONES)
+	local zi = math.min(3 + n, C.NZ) -- the 10 normal zones (world 2 zones have no speed number)
+	return C.ZONES[zi].req * 10 ^ math.max(0, 3 + n - C.NZ) * C.REBIRTH_SPEED_SCALE
 end
 
 local SUF = { "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp" }

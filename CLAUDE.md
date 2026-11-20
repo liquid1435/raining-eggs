@@ -22,12 +22,13 @@ Hatch show: world-space VFX module `HatchVFX` (Config `C.HATCH_STYLE = "vfx"`). 
 4. Publishing to the shared Team Create game overwrites it: agree with your teammate before you publish.
 
 ## Rules
-- Do NOT change RemoteEvent names/arguments (Remotes: EggSpawn, EggGone, Catch, Hatch, Notice, Action, BigEgg, BigEggSwing), DataStore keys or the save format. Action verbs: hatch, hatch1, upgrade, shop, sellpet, sellpets, rebirth, daily, bigegg (Studio only).
+- Do NOT change RemoteEvent names/arguments (Remotes: EggSpawn, EggGone, Catch, Hatch, Notice, Action, BigEgg, BigEggSwing), DataStore keys or the save format. Action verbs: hatch, hatch1, upgrade, shop, sellpet, sellpets, equip (i = place in PetList), equipbest, rebirth, daily, bigegg (Studio only). Save data: pets = the equipped pets (max C.PEN_MAX = 10, in the pen), stored = the other pets (v120, optional key; old saves load).
 - Do NOT change prices or odds in Config unless asked.
 - `Client.client.lua`'s main chunk is near Luau's 200-local limit: new code goes in do-blocks, functions or new ModuleScripts.
 - Collision: map MeshParts loaded from rbxlx collide as ONE big box, so irregular meshes (trees, lollipops, crystals, towers, ...) are `CanCollide=false` with a fitted invisible helper block (e.g. the tree trunk); box-shaped meshes (fences, houses, toy blocks) are solid; small or flat decor (< 3 studs, < 0.4 thick, flowers, lights, water, arches) is soft so players never get stuck. See `soft_mesh()` and `solidify()` in `gen_map.py`.
 - The owner dislikes big UI redesigns: keep the current HUD/menu style and improve things in place. Pets and egg meshes are uploaded assets (ids in `meshes.json`).
 - Test in Studio when you can and say exactly what you tested and what you could not.
+- Economy: `tools/sim_economy.py` (run it with any Python, e.g. Blender's) simulates a normal player and prints how long each zone / rebirth takes with the numbers in Config.lua. Run it after changing prices, incomes or upgrade costs. Target (v120): zone 2 ~4 min, zone 5 ~2 h, zone 10 ~15 h, first rebirth ~3 h.
 
 ## Latest
 v119 (20 Nov 2026): WORLD 2 in space (y 900 above the map, same z layout as world 1): zone 11 COSMIC NEST (free through the Golden Portal = all 10 altars), 12 MOON CRATERS ($200B gate), 13 NEBULA REEF ($2T gate), then a COMING SOON wall. Config: C.ZONES[11..13], C.NZ = 10 normal zones, C.TOTAL = 13, C.COSMIC (heights, exit portal, spawn), C.w2Zone/C.w2Z0. Map: `world2()` in gen_map (built at y 0, lifted by WORLD2.y). Server: world 2 eggs/gates/guard/exit portal (Codex GoldenPortalVFX clone on the client). Client: night sky + low gravity + zone titles up there. Big egg never drops there.
