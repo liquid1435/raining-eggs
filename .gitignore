@@ -36,3 +36,14 @@ map/patch_*.py
 !audio/rainingeggs_hatch2.ogg
 !pets/*.py
 !pets/*.json
+
+# Codex pet models (scripts, FBX + animations, textures, Roblox VFX, preview)
+!codex_pet*/README.md
+!codex_pet*/TASK_CODEX.md
+!codex_pet*/scripts/*.py
+!codex_pet*/models/*.fbx
+!codex_pet*/models/*.png
+!codex_pet*/models/animations/*.fbx
+!codex_pet*/roblox/*.lua
+!codex_pet*/renders/hero.png
+!codex_pet*/renders/preview.mp4
