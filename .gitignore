@@ -5,6 +5,7 @@
 !.gitignore
 !README.md
 !CLAUDE.md
+!AGENTS.md
 
 # game scripts
 !game/*.lua
