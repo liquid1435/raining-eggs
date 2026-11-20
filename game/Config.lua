@@ -377,6 +377,11 @@ function C.buildPet(pet, s, anchored)
 	local def = C.ZONES[pet.z].pets[pet.i]
 	local tier = pet.t or 1
 	local src = C.meshOf("Pet_" .. pet.z .. "_" .. pet.i)
+	-- v127: the Codex pets have their own Gold / Rainbow textures (Pet_z_i_G / Pet_z_i_R); old pets only get a tint
+	local variant = (tier == 2 and C.meshOf("Pet_" .. pet.z .. "_" .. pet.i .. "_G")) or (tier == 3 and C.meshOf("Pet_" .. pet.z .. "_" .. pet.i .. "_R")) or nil
+	if variant then
+		src = variant
+	end
 	if src then
 		local m = Instance.new("Model")
 		m.Name = C.petName(pet)
@@ -389,9 +394,9 @@ function C.buildPet(pet, s, anchored)
 		part.CFrame = CFrame.new(0, -1.75 * s + h / 2, 0) * CFrame.Angles(0, C.MESH_YAW, 0) * rot
 		part.PivotOffset = part.CFrame:Inverse() -- the model pivot stays where the block pet had it (feet 1.75 * s below)
 		-- the mesh has its colours painted in; Color only tints it (white = as painted)
-		part.Color = (tier == 2 and Color3.fromRGB(255, 208, 70)) or (tier == 3 and Color3.fromRGB(255, 150, 235)) or Color3.new(1, 1, 1)
+		part.Color = (variant and Color3.new(1, 1, 1)) or (tier == 2 and Color3.fromRGB(255, 208, 70)) or (tier == 3 and Color3.fromRGB(255, 150, 235)) or Color3.new(1, 1, 1)
 		part.Material = Enum.Material.SmoothPlastic
-		part.Reflectance = tier == 2 and 0.25 or 0
+		part.Reflectance = (tier == 2 and not variant) and 0.25 or (tier == 2 and 0.12 or 0)
 		part.CanCollide = false
 		part.CanTouch = false
 		part.CanQuery = false
