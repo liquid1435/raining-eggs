@@ -8,6 +8,12 @@ local PA = {}
 -- if the parts come out mirrored front/back (Roblox turned the import half a turn), set this to true
 PA.FLIP = false
 local Y180 = CFrame.Angles(0, math.pi, 0)
+-- v139 (user screenshot: you saw the back of the fox's head, paws turned backwards): Studio's importer turns every
+-- part mesh half a turn on its own axis. Each part is turned back here; write false if heads ever look backwards.
+PA.PART_TURN = true
+local function turn()
+	return PA.PART_TURN and Y180 or CFrame.identity
+end
 
 local okData, DATA = pcall(require, RS:WaitForChild("PetAnimData", 10))
 if not okData then
@@ -129,7 +135,7 @@ function PA.build(pet, s, anchored, meshYaw, meshSize)
 			p.Anchored = anchored
 			local r = d.rest[j]
 			local fx = PA.FLIP and -1 or 1
-			p.CFrame = base * CFrame.new(fx * r[1] * k, r[2] * k, fx * r[3] * k)
+			p.CFrame = base * CFrame.new(fx * r[1] * k, r[2] * k, fx * r[3] * k) * turn()
 			p.Parent = m
 			if not anchored then
 				local w = Instance.new("WeldConstraint")
@@ -167,7 +173,7 @@ local function rig(model)
 			table.insert(r.idx, j)
 			local q = d.rest[j]
 			local fx = PA.FLIP and -1 or 1
-			table.insert(r.rest, CFrame.new(fx * q[1] * k, q[2] * k, fx * q[3] * k))
+			table.insert(r.rest, CFrame.new(fx * q[1] * k, q[2] * k, fx * q[3] * k) * turn())
 		end
 	end
 	r.root = model.PrimaryPart
