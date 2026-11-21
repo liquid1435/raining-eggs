@@ -207,87 +207,236 @@ local function incomingCard(pos)
 	gui.IgnoreGuiInset = true
 	gui.DisplayOrder = 20
 	gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+	-- v139 (user: "a nicer, more professional UI"): gold rim + dark glass panel, an egg medallion that pops out on
+	-- the left with turning light rays, LuckiestGuy title with a gold gradient, a pill on the right (arrow + distance)
+	-- and a glossy countdown bar. Same api (update / close) as before.
 	local vp = workspace.CurrentCamera.ViewportSize
-	local w = math.clamp(vp.X * 0.26, 230, 340)
-	local h = math.floor(w * 0.24)
+	local w = math.clamp(vp.X * 0.28, 250, 370)
+	local h = math.floor(w * 0.28)
+	local DARK = Color3.fromRGB(22, 12, 40)
+	local function corner(o, r) Instance.new("UICorner", o).CornerRadius = r or UDim.new(0, math.floor(h * 0.3)) end
+	local function grad(o, c1, c2, rot)
+		local g = Instance.new("UIGradient")
+		g.Rotation = rot or 90
+		g.Color = ColorSequence.new(c1, c2)
+		g.Parent = o
+		return g
+	end
+	local function outline(o, th, col)
+		local st = Instance.new("UIStroke")
+		st.Thickness, st.Color = th, col or DARK
+		st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		st.Parent = o
+		return st
+	end
+	local function text(parent, size, pos, font, col, strokeTh)
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.Size, t.Position = size, pos
+		t.Font, t.TextColor3, t.TextScaled = font, col, true
+		t.TextXAlignment = Enum.TextXAlignment.Left
+		t.Parent = parent
+		local st = Instance.new("UIStroke")
+		st.Thickness, st.Color = strokeTh or 2, DARK
+		st.Parent = t
+		return t
+	end
+	-- the card = gold rim (gradient) with a dark outline
 	local card = Instance.new("Frame")
 	card.Name = "Card"
 	card.Size = UDim2.fromOffset(w, h)
-	card.BackgroundColor3 = FX.plum
-	card.BackgroundTransparency = 0.06
+	card.BackgroundColor3 = Color3.new(1, 1, 1)
+	card.BackgroundTransparency = 0
 	card.Parent = gui
-	Instance.new("UICorner", card).CornerRadius = UDim.new(0, math.floor(h * 0.28))
-	local bg = Instance.new("UIGradient")
-	bg.Rotation = 90
-	bg.Color = ColorSequence.new(Color3.fromRGB(78, 56, 122), Color3.fromRGB(36, 24, 60))
-	bg.Parent = card
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 2.5
-	stroke.Color = FX.gold
-	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Parent = card
+	corner(card)
+	grad(card, Color3.fromRGB(255, 232, 120), Color3.fromRGB(230, 130, 20))
+	local stroke = outline(card, 3, DARK)
 	local scale = Instance.new("UIScale", card)
-	-- egg badge on the left
-	local badge = Instance.new("Frame")
-	badge.AnchorPoint = Vector2.new(0, 0.5)
-	badge.Position = UDim2.new(0, h * 0.14, 0.5, 0)
-	badge.Size = UDim2.fromOffset(h * 0.74, h * 0.74)
-	badge.BackgroundColor3 = FX.gold
-	badge.Parent = card
-	Instance.new("UICorner", badge).CornerRadius = UDim.new(1, 0)
-	local bgr = Instance.new("UIGradient")
-	bgr.Rotation = 90
-	bgr.Color = ColorSequence.new(Color3.fromRGB(255, 220, 110), Color3.fromRGB(240, 140, 30))
-	bgr.Parent = badge
+	-- dark glass panel inside the rim
+	local inner = Instance.new("Frame")
+	inner.Name = "Inner"
+	inner.AnchorPoint = Vector2.new(0.5, 0.5)
+	inner.Position = UDim2.fromScale(0.5, 0.5)
+	inner.Size = UDim2.new(1, -6, 1, -6)
+	inner.BackgroundColor3 = Color3.new(1, 1, 1)
+	inner.ClipsDescendants = true
+	inner.Parent = card
+	corner(inner, UDim.new(0, math.floor(h * 0.27)))
+	grad(inner, Color3.fromRGB(74, 44, 130), Color3.fromRGB(28, 16, 54))
+	local shine = Instance.new("Frame")                           -- glossy top half
+	shine.Size = UDim2.new(1, 0, 0.46, 0)
+	shine.BackgroundColor3 = Color3.new(1, 1, 1)
+	shine.BackgroundTransparency = 0.9
+	shine.BorderSizePixel = 0
+	shine.Parent = inner
+	for k = 0, 5 do                                               -- faint diagonal stripes (like the rest of the HUD)
+		local st = Instance.new("Frame")
+		st.AnchorPoint = Vector2.new(0.5, 0.5)
+		st.Position = UDim2.new(0, h * 1.2 + k * h * 0.55, 0.5, 0)
+		st.Size = UDim2.new(0, h * 0.16, 2, 0)
+		st.Rotation = 28
+		st.BackgroundColor3 = Color3.new(1, 1, 1)
+		st.BackgroundTransparency = 0.95
+		st.BorderSizePixel = 0
+		st.Parent = inner
+	end
+	-- egg medallion popping out on the left: turning rays, gold disc, egg with spots and a shine
+	local mh = h * 1.22
+	local medal = Instance.new("Frame")
+	medal.Name = "Medal"
+	medal.AnchorPoint = Vector2.new(0.5, 0.5)
+	medal.Position = UDim2.new(0, h * 0.42, 0.5, 0)
+	medal.Size = UDim2.fromOffset(mh, mh)
+	medal.BackgroundTransparency = 1
+	medal.ZIndex = 3
+	medal.Parent = card
+	local rays = Instance.new("Frame")
+	rays.AnchorPoint = Vector2.new(0.5, 0.5)
+	rays.Position = UDim2.fromScale(0.5, 0.5)
+	rays.Size = UDim2.fromScale(1.3, 1.3)
+	rays.BackgroundTransparency = 1
+	rays.ZIndex = 3
+	rays.Parent = medal
+	for k = 0, 5 do
+		local r = Instance.new("Frame")
+		r.AnchorPoint = Vector2.new(0.5, 0.5)
+		r.Position = UDim2.fromScale(0.5, 0.5)
+		r.Size = UDim2.fromScale(0.16, 1)
+		r.Rotation = k * 30
+		r.BackgroundColor3 = Color3.fromRGB(255, 236, 140)
+		r.BackgroundTransparency = 0.55
+		r.BorderSizePixel = 0
+		r.ZIndex = 3
+		r.Parent = rays
+		local fade = Instance.new("UIGradient")
+		fade.Rotation = 90
+		fade.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1) })
+		fade.Parent = r
+	end
+	local disc = Instance.new("Frame")
+	disc.AnchorPoint = Vector2.new(0.5, 0.5)
+	disc.Position = UDim2.fromScale(0.5, 0.5)
+	disc.Size = UDim2.fromScale(0.86, 0.86)
+	disc.BackgroundColor3 = Color3.new(1, 1, 1)
+	disc.ZIndex = 4
+	disc.Parent = medal
+	corner(disc, UDim.new(1, 0))
+	grad(disc, Color3.fromRGB(255, 214, 90), Color3.fromRGB(225, 110, 20))
+	outline(disc, 3, DARK)
+	local ring = Instance.new("Frame")                            -- inner ring
+	ring.AnchorPoint = Vector2.new(0.5, 0.5)
+	ring.Position = UDim2.fromScale(0.5, 0.5)
+	ring.Size = UDim2.fromScale(0.78, 0.78)
+	ring.BackgroundColor3 = Color3.fromRGB(110, 50, 170)
+	ring.ZIndex = 4
+	ring.Parent = disc
+	corner(ring, UDim.new(1, 0))
+	grad(ring, Color3.fromRGB(140, 80, 220), Color3.fromRGB(60, 24, 110))
+	outline(ring, 2, Color3.fromRGB(255, 240, 170))
 	local eggIcon = Instance.new("Frame")
-	eggIcon.AnchorPoint = Vector2.new(0.5, 0.5)
-	eggIcon.Position = UDim2.fromScale(0.5, 0.52)
-	eggIcon.Size = UDim2.fromScale(0.46, 0.6)
-	eggIcon.BackgroundColor3 = FX.cream
-	eggIcon.Parent = badge
-	Instance.new("UICorner", eggIcon).CornerRadius = UDim.new(0.5, 0)
-	local es = Instance.new("UIStroke", eggIcon)
-	es.Thickness, es.Color = 2, Color3.fromRGB(120, 70, 20)
-	local textX = h * 0.98
-	local title = FX.label(card, UDim2.new(1, -textX - h * 0.75, 0.46, 0))
-	title.Position = UDim2.new(0, textX, 0.1, 0)
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.TextColor3 = FX.gold
-	title.TextStrokeTransparency = 0.15
-	title.Text = "BIG EGG INCOMING"
-	local sub = FX.label(card, UDim2.new(1, -textX - h * 0.75, 0.3, 0))
-	sub.Position = UDim2.new(0, textX, 0.56, 0)
-	sub.TextXAlignment = Enum.TextXAlignment.Left
-	sub.TextColor3 = FX.cream
-	sub.Font = Enum.Font.GothamBold
+	eggIcon.AnchorPoint = Vector2.new(0.5, 0.55)
+	eggIcon.Position = UDim2.fromScale(0.5, 0.55)
+	eggIcon.Size = UDim2.fromScale(0.52, 0.68)
+	eggIcon.BackgroundColor3 = Color3.new(1, 1, 1)
+	eggIcon.ZIndex = 5
+	eggIcon.Parent = ring
+	corner(eggIcon, UDim.new(0.5, 0))
+	grad(eggIcon, Color3.fromRGB(255, 250, 225), Color3.fromRGB(255, 196, 70))
+	outline(eggIcon, 2, Color3.fromRGB(120, 60, 10))
+	for _, sp in ipairs({ { 0.3, 0.55, 0.22 }, { 0.66, 0.38, 0.16 }, { 0.62, 0.74, 0.14 } }) do
+		local dot = Instance.new("Frame")
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.Position = UDim2.fromScale(sp[1], sp[2])
+		dot.Size = UDim2.fromScale(sp[3], sp[3] * 0.76)
+		dot.BackgroundColor3 = Color3.fromRGB(240, 130, 30)
+		dot.ZIndex = 6
+		dot.Parent = eggIcon
+		corner(dot, UDim.new(1, 0))
+	end
+	local gloss = Instance.new("Frame")
+	gloss.Position = UDim2.fromScale(0.22, 0.14)
+	gloss.Size = UDim2.fromScale(0.18, 0.26)
+	gloss.BackgroundColor3 = Color3.new(1, 1, 1)
+	gloss.BackgroundTransparency = 0.15
+	gloss.ZIndex = 6
+	gloss.Parent = eggIcon
+	corner(gloss, UDim.new(1, 0))
+	-- texts
+	local textX = h * 1.08
+	local pillW = h * 0.92
+	local title = text(inner, UDim2.new(1, -textX - pillW - h * 0.12, 0.42, 0), UDim2.new(0, textX, 0.1, 0), Enum.Font.LuckiestGuy,
+		Color3.new(1, 1, 1), 2.5)
+	title.Text = "BIG EGG INCOMING!"
+	title.ZIndex = 2
+	local tg = grad(title, Color3.fromRGB(255, 250, 200), Color3.fromRGB(255, 186, 40))
+	local sub = text(inner, UDim2.new(1, -textX - pillW - h * 0.12, 0.28, 0), UDim2.new(0, textX, 0.54, 0), Enum.Font.FredokaOne,
+		Color3.new(1, 1, 1), 2)
 	sub.Text = "LANDS IN 10s"
-	-- arrow pointing to where the egg lands (seen from the camera) + distance
-	local arrow = FX.label(card, UDim2.fromOffset(h * 0.42, h * 0.42))
+	sub.ZIndex = 2
+	-- pill on the right: arrow to the landing spot + distance
+	local pill = Instance.new("Frame")
+	pill.AnchorPoint = Vector2.new(1, 0.5)
+	pill.Position = UDim2.new(1, -h * 0.12, 0.44, 0)
+	pill.Size = UDim2.fromOffset(pillW, h * 0.6)
+	pill.BackgroundColor3 = Color3.new(1, 1, 1)
+	pill.ZIndex = 2
+	pill.Parent = inner
+	corner(pill, UDim.new(0, math.floor(h * 0.18)))
+	local pillGrad = grad(pill, Color3.fromRGB(70, 230, 220), Color3.fromRGB(20, 140, 170))
+	outline(pill, 2, DARK)
+	local arrow = text(pill, UDim2.fromScale(0.42, 0.52), UDim2.fromScale(0.5, 0.3), Enum.Font.GothamBlack, Color3.new(1, 1, 1), 1.5)
 	arrow.AnchorPoint = Vector2.new(0.5, 0.5)
-	arrow.Position = UDim2.new(1, -h * 0.36, 0.42, 0)
-	arrow.Font = Enum.Font.GothamBlack
-	arrow.TextColor3 = FX.teal
+	arrow.TextXAlignment = Enum.TextXAlignment.Center
 	arrow.Text = "▲"
-	local dist = FX.label(card, UDim2.fromOffset(h * 0.62, h * 0.2))
-	dist.AnchorPoint = Vector2.new(0.5, 0)
-	dist.Position = UDim2.new(1, -h * 0.36, 0.66, 0)
-	dist.Font = Enum.Font.GothamBold
-	dist.TextColor3 = FX.teal
-	-- countdown bar along the bottom edge
+	arrow.ZIndex = 3
+	local dist = text(pill, UDim2.fromScale(0.9, 0.34), UDim2.fromScale(0.05, 0.6), Enum.Font.FredokaOne, Color3.new(1, 1, 1), 1.5)
+	dist.TextXAlignment = Enum.TextXAlignment.Center
+	dist.ZIndex = 3
+	-- glossy countdown bar along the bottom
 	local track = Instance.new("Frame")
-	track.AnchorPoint = Vector2.new(0.5, 1)
-	track.Position = UDim2.new(0.5, 0, 1, -h * 0.07)
-	track.Size = UDim2.new(1, -h * 0.5, 0, math.max(3, h * 0.07))
-	track.BackgroundColor3 = Color3.fromRGB(20, 12, 36)
+	track.AnchorPoint = Vector2.new(0, 1)
+	track.Position = UDim2.new(0, textX, 1, -h * 0.1)
+	track.Size = UDim2.new(1, -textX - h * 0.12, 0, math.max(5, h * 0.1))
+	track.BackgroundColor3 = Color3.fromRGB(14, 8, 28)
 	track.BorderSizePixel = 0
-	track.Parent = card
-	Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
+	track.ZIndex = 2
+	track.Parent = inner
+	corner(track, UDim.new(1, 0))
+	outline(track, 1.5, Color3.fromRGB(10, 4, 20))
 	local fill = Instance.new("Frame")
 	fill.Size = UDim2.fromScale(1, 1)
-	fill.BackgroundColor3 = FX.teal
+	fill.BackgroundColor3 = Color3.new(1, 1, 1)
 	fill.BorderSizePixel = 0
+	fill.ZIndex = 3
 	fill.Parent = track
-	Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+	corner(fill, UDim.new(1, 0))
+	local fillGrad = grad(fill, Color3.fromRGB(120, 255, 230), Color3.fromRGB(30, 170, 200))
+	local fillShine = Instance.new("Frame")
+	fillShine.Position = UDim2.fromScale(0.02, 0.12)
+	fillShine.Size = UDim2.fromScale(0.96, 0.3)
+	fillShine.BackgroundColor3 = Color3.new(1, 1, 1)
+	fillShine.BackgroundTransparency = 0.45
+	fillShine.BorderSizePixel = 0
+	fillShine.ZIndex = 4
+	fillShine.Parent = fill
+	corner(fillShine, UDim.new(1, 0))
+	local TEAL1, TEAL2 = ColorSequence.new(Color3.fromRGB(120, 255, 230), Color3.fromRGB(30, 170, 200)),
+		ColorSequence.new(Color3.fromRGB(70, 230, 220), Color3.fromRGB(20, 140, 170))
+	local RED1, RED2 = ColorSequence.new(Color3.fromRGB(255, 150, 120), Color3.fromRGB(230, 50, 60)),
+		ColorSequence.new(Color3.fromRGB(255, 120, 110), Color3.fromRGB(200, 40, 60))
+	local t0 = os.clock()
+	local animConn = game:GetService("RunService").RenderStepped:Connect(function()  -- rays turn, the egg wobbles
+		if not rays.Parent then return end
+		local t = os.clock() - t0
+		rays.Rotation = t * 40
+		eggIcon.Rotation = math.sin(t * 7) * 8
+		tg.Offset = Vector2.new(0, math.sin(t * 3) * 0.12)
+	end)
+	gui.Destroying:Connect(function() animConn:Disconnect() end)
+	local function setUrgent(on)
+		fillGrad.Color = on and RED1 or TEAL1
+		pillGrad.Color = on and RED2 or TEAL2
+	end
 	local probe = Instance.new("Frame")                  -- where offset (0, 0) of our ScreenGui is on screen
 	probe.BackgroundTransparency, probe.Size = 1, UDim2.fromOffset(1, 1)
 	probe.Parent = gui
@@ -298,8 +447,9 @@ local function incomingCard(pos)
 	end
 	local x, y = spot()
 	card.Position = UDim2.fromOffset(x, y - h * 0.6)
-	card.BackgroundTransparency = 1
-	FX.tween(card, 0.35, { Position = UDim2.fromOffset(x, y), BackgroundTransparency = 0.06 }, Enum.EasingStyle.Back)
+	scale.Scale = 0.6
+	FX.tween(card, 0.35, { Position = UDim2.fromOffset(x, y) }, Enum.EasingStyle.Back)
+	FX.tween(scale, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
 	local api = {}
 	local nextCheck, lastSec = 0, nil
 	function api.update(t)
@@ -308,9 +458,8 @@ local function incomingCard(pos)
 		sub.Text = "LANDS IN " .. sec .. "s"
 		fill.Size = UDim2.fromScale(left / 10, 1)
 		local urgent = left <= 3
-		stroke.Color = urgent and FX.coral or FX.gold
-		fill.BackgroundColor3 = urgent and FX.coral or FX.teal
-		stroke.Transparency = 0.15 + 0.35 * (0.5 + 0.5 * math.sin(t * (urgent and 12 or 6)))
+		setUrgent(urgent)
+		stroke.Color = urgent and Color3.fromRGB(120, 10, 20) or Color3.fromRGB(22, 12, 40)
 		if sec ~= lastSec then
 			lastSec = sec
 			scale.Scale = urgent and 1.06 or 1.03                  -- small "tick" every second
