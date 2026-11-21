@@ -37,3 +37,14 @@ liked; V2 = real natural colours, real eyes, smooth not pixelated (TASK_CODEX_V2
 Story videos (heists, mysteries). Approved designs so far: documentary case-file, cinematic photoreal stills made
 with your image tool (E:\ytdesign\ai, Dresden). Next story: Antwerp Diamond Heist (2003), new style being chosen
 (samples in E:\ytdesign\antwerp\styles).
+
+## State 21 Nov 2026 (saved by Claude)
+- Game: v135-v137 on GitHub. v138 is committed LOCALLY only (not pushed): the 40 new voxel pets from
+  E:\rainingeggs\codex_pets_v2 replace zones 1-8 (mapping in blender/make_pets_game.py -> codex_pets_game/manifest.json),
+  flowing Gold/Rainbow coats (game/PetCoatFlow.lua + game/PetCoatMaps.rbxmx, client hook by the "Species" attribute).
+- Pets 41-50 (zones 9 Cloud Kingdom and 10 Golden Nest) were built by Claude from your scripts\zone_pets.py
+  (wired into designs.py / batch.py). Your next job is TASK_FINISH_50.md in codex_pets_v2 (fixes + flow maps for all 50).
+  Do not touch E:\rainingeggs\game without the owner's OK; Claude integrates into the game afterwards (v139).
+- Owner's taste: realistic VOXEL animals (not smooth), natural colours, cube eyes; Rainbow/Gold = colour that keeps
+  flowing over the body (approved previews: E:\ytdesign\codex_animals\renders\rainbow_flow.mp4, gold_flow.mp4).
+- Blender rules: E:\ytdesign\blender_guide\BLENDER_GUIDE.md. SAVE CREDITS: contact sheets, no videos unless asked.
