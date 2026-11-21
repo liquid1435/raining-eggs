@@ -1,4 +1,4 @@
--- Client-side coats for the 40 V2 UV atlases. Import PetCoatMaps alongside this module.
+-- Client-side coats for the 50 V2 UV atlases. Import PetCoatMaps alongside this module.
 local AssetService = game:GetService("AssetService")
 local EncodingService = game:GetService("EncodingService")
 local RunService = game:GetService("RunService")
