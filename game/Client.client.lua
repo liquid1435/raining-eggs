@@ -272,23 +272,40 @@ local function stripeSeq(op)
 	table.insert(k, NumberSequenceKeypoint.new(1, 1))
 	return NumberSequence.new(k)
 end
-local STRIPE_SEQ = {}
+local _ = stripeSeq
+-- one continuous set of equal slanted bars (v134): the old version put several gradient frames side by side,
+-- each restarting the pattern, so the stripes did not line up. Now: a clipping frame + thin rotated white bars
+-- with the same width and spacing (in pixels, from the height), rebuilt when the size changes.
 function stripes(parent, radius, transp, z, segs)
 	local op = transp or 0.8
-	STRIPE_SEQ[op] = STRIPE_SEQ[op] or stripeSeq(op)
-	segs = segs or 1
-	-- several frames: no rounded corners on them, so keep them off the rounded ends instead
-	local inset = segs > 1 and ((radius and (radius.Scale or 0) >= 1) and 0.12 or 0.025) or 0
-	local holder = make("Frame", { Name = "Stripes", BackgroundTransparency = 1, Size = UDim2.fromScale(1 - 2 * inset, 1), Position = UDim2.fromScale(inset, 0), ZIndex = z or 2 }, parent)
-	for i = 0, segs - 1 do
-		local f = make("Frame", {
-			Size = UDim2.fromScale(1 / segs, 1), Position = UDim2.fromScale(i / segs, 0), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = z or 2,
-		}, holder)
-		make("UIGradient", { Rotation = 35, Transparency = STRIPE_SEQ[op] }, f)
-		if radius and segs == 1 then
-			make("UICorner", { CornerRadius = radius }, f)
+	local round = radius and (radius.Scale or 0) >= 1
+	local insetX = round and 0.12 or 0.03
+	local holder = make("Frame", {
+		Name = "Stripes", BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = z or 2,
+		Size = UDim2.fromScale(1 - 2 * insetX, 0.84), Position = UDim2.fromScale(insetX, 0.08),
+	}, parent)
+	local lastW, lastH = -1, -1
+	local function build()
+		local w, h = holder.AbsoluteSize.X, holder.AbsoluteSize.Y
+		if w < 2 or h < 2 or (math.abs(w - lastW) < 1 and math.abs(h - lastH) < 1) then
+			return
+		end
+		lastW, lastH = w, h
+		holder:ClearAllChildren()
+		local H = h / 0.84
+		local barW = math.max(3, H * 0.2)
+		local gap = math.max(8, H * 0.55)
+		local n = math.ceil((w + h) / gap) + 2
+		for i = 0, n do
+			make("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, -h * 0.5 + i * gap, 0.5, 0),
+				Size = UDim2.new(0, barW, 0, h * 2.2), Rotation = 35, BackgroundColor3 = WHITE,
+				BackgroundTransparency = op, BorderSizePixel = 0, ZIndex = z or 2,
+			}, holder)
 		end
 	end
+	holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(build)
+	task.defer(build)
 	return holder
 end
 end
