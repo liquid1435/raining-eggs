@@ -50,6 +50,79 @@ def lolli_stick():
 
 
 def lolli_top(k):
+    """v137: one smooth domed candy disc per side, the swirl PAINTED on its own faces (no boxes lying on top =
+    nothing can flicker), 3-colour spiral, a glossy round rim and a soft shine spot."""
+    b = B()
+    bm, col = b.bm, b.col
+    c1, c2 = CS[k], CS[(k + 2) % 6]
+    cols = [lin(c1), lin(WHITE), lin(c2), lin(WHITE)]
+    RINGS, SEGS, RAD, TH = 24, 112, 5.0, 0.8
+
+    def colour(r, a, side):
+        v = (a / math.tau) * 4 - r / 0.95                       # 4 spiral bands
+        c = cols[int(math.floor(v)) % 4]
+        # shine: lighter spot up-left on the front face
+        sx, sy = r * math.cos(a) + 1.7, r * math.sin(a) - 1.9
+        if side < 0 and sx * sx + sy * sy < 1.1:
+            c = tuple(min(1.0, ch * 0.45 + 0.55) for ch in c[:3]) + (1.0,)
+        return c
+
+    # grid laid ALONG the spiral: column v (0..4) is a spiral line, so every band edge is a smooth curve of the mesh
+    K = 16                                                      # columns per band
+    NC = 4 * K
+    for side in (-1, 1):
+        grid = []
+        for i in range(RINGS + 1):
+            r = RAD * i / RINGS
+            z = side * (TH + 0.35 * (1 - (r / RAD) ** 2))       # gently domed
+            row = []
+            for j in range(NC if i else 1):
+                a = math.tau * (j / K + r / 0.95) / 4
+                row.append(bm.verts.new((r * math.cos(a), -z, r * math.sin(a))))
+            grid.append(row)
+        for i in range(RINGS):
+            for j in range(NC):
+                j2 = (j + 1) % NC
+                if i == 0:
+                    vs = [grid[0][0], grid[1][j], grid[1][j2]]
+                else:
+                    vs = [grid[i][j], grid[i + 1][j], grid[i + 1][j2], grid[i][j2]]
+                if side > 0:
+                    vs.reverse()
+                f = bm.faces.new(vs)
+                c = cols[(j // K) % 4]
+                if side < 0:                                    # soft shine spot up-left on the front
+                    cx = sum(v.co.x for v in vs) / len(vs) + 1.7
+                    cy = sum(v.co.z for v in vs) / len(vs) - 1.9
+                    if cx * cx + cy * cy < 1.1:
+                        c = tuple(min(1.0, ch * 0.45 + 0.55) for ch in c[:3]) + (1.0,)
+                for l in f.loops:
+                    l[col] = c
+    # glossy rim: a torus round the edge (hides the seam between the two faces)
+    rim = lin(mix(c1, WHITE, 0.25))
+    RS_, MS = 64, 10
+    ring = []
+    for j in range(RS_):
+        a = j * math.tau / RS_
+        row = []
+        for m in range(MS):
+            t = m * math.tau / MS
+            rr = RAD + 0.05 + 0.5 * math.cos(t)
+            row.append(bm.verts.new((rr * math.cos(a), 1.0 * math.sin(t), rr * math.sin(a))))
+        ring.append(row)
+    for j in range(RS_):
+        for m in range(MS):
+            f = bm.faces.new([ring[j][m], ring[(j + 1) % RS_][m], ring[(j + 1) % RS_][(m + 1) % MS], ring[j][(m + 1) % MS]])
+            for l in f.loops:
+                l[col] = rim
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    for f in bm.faces:
+        f.smooth = True
+    b.n += 1
+    return b.finish(f'Map_LolliTop{k + 1}', (0, 0, 0), MAT)
+
+
+def lolli_top_old(k):
     b = B()
     c1, c2 = CS[k], CS[(k + 2) % 6]
     rcyl(b, (0, 0, 0), 5, 1.6, c1, axis='Z', segs=28)
@@ -125,7 +198,76 @@ def ice_cream(k):
 
 
 # ---------------------------------------------------------------- giant cake
+def torus(b, y, R, r, c, segs=48, msegs=8, sy=1.0):
+    """horizontal ring round the Y axis at height y (Roblox axes)"""
+    bm, col, cl = b.bm, b.col, lin(c)
+    ring = []
+    for j in range(segs):
+        a = j * math.tau / segs
+        row = []
+        for m in range(msegs):
+            t = m * math.tau / msegs
+            rr = R + r * math.cos(t)
+            row.append(bm.verts.new((rr * math.cos(a), -rr * math.sin(a), y + r * sy * math.sin(t))))
+        ring.append(row)
+    for j in range(segs):
+        for m in range(msegs):
+            f = bm.faces.new([ring[j][m], ring[j][(m + 1) % msegs], ring[(j + 1) % segs][(m + 1) % msegs], ring[(j + 1) % segs][m]])
+            f.smooth = True
+            for l in f.loops:
+                l[col] = cl
+    b.n += 1
+
+
 def cake():
+    """v137: smoother professional cake - round tier edges, glossy glaze with real drips, piped cream rosettes,
+    strawberries, sprinkles, striped candles with teardrop flames. Same footprint (44/34/24 wide, tiers 9 high)."""
+    b, n = B(), B()
+    rng = random.Random(9)
+    GLAZE = [(122, 66, 38), (255, 120, 160), (122, 66, 38)]
+    rcyl(b, (0, 0.2, 0), 25.5, 0.4, (250, 250, 255), segs=56)                     # plate
+    torus(b, 0.4, 25.5, 0.45, (235, 238, 250), 40, 6)
+    for k, (d, c) in enumerate(((44, CREAMY), (34, PINK), (24, CREAMY))):
+        y, R = k * 9, d / 2
+        rcyl(b, (0, y + 4.4, 0), R, 8.6, c, segs=56)                                # sponge + icing
+        torus(b, y + 8.6, R - 0.6, 0.6, c, 40, 6)                                   # rounded top edge
+        g = GLAZE[k]
+        rcyl(b, (0, y + 9.15, 0), R - 0.7, 0.3, g, segs=56)                         # glaze on top (above the edge)
+        torus(b, y + 8.85, R - 0.2, 0.45, g, 40, 5, 0.8)                            # glaze lip
+        for j in range(14):                                                         # drips: different lengths
+            a = j * math.tau / 14 + k * 0.13
+            ln = rng.uniform(1.2, 3.6)
+            x, z = (R + 0.05) * math.cos(a), (R + 0.05) * math.sin(a)
+            rball(b, (x, y + 8.6 - ln * 0.5, z), 0.55, g, (1, ln, 1), 6, 4)
+            rball(b, (x, y + 8.6 - ln * 0.95, z), 0.62, g, (1, 1, 1), 6, 4)
+        for j in range(20 - k * 4):                                                # piped cream rosettes on the base
+            a = j * math.tau / (20 - k * 4)
+            rball(b, ((R + 0.2) * math.cos(a), y + 0.7, (R + 0.2) * math.sin(a)), 0.85, WHITE, (1, 0.8, 1), 6, 4)
+            rball(b, ((R + 0.2) * math.cos(a), y + 1.35, (R + 0.2) * math.sin(a)), 0.45, WHITE, (1, 1.2, 1), 5, 3)
+        for j in range(10):                                                         # strawberries round the top
+            a = j * math.tau / 10 + k * 0.3
+            sx, sz = (R - 2.0) * math.cos(a), (R - 2.0) * math.sin(a)
+            if k < 2 and R - 2.0 < d / 2 - 0.1:
+                rball(b, (sx, y + 10.2, sz), 1.05, (226, 34, 52), (1, 1.25, 1), 8, 5)
+                for q in range(4):
+                    rbox(b, (sx + 0.5 * math.cos(q * 1.57), y + 11.45, sz + 0.5 * math.sin(q * 1.57)), (0.9, 0.12, 0.35), (70, 160, 60), 0, yaw=q * 90)
+        for j in range(30 + k * 5):                                                # sprinkles on the glaze
+            r, a = rng.uniform(1.5, R - 3.2), rng.uniform(0, math.tau)
+            rbox(b, (r * math.cos(a), y + 9.33, r * math.sin(a)), (0.55, 0.14, 0.18), rng.choice(CS + [WHITE]), 0.04, yaw=rng.uniform(0, 180))
+    rball(b, (0, 30.2, 0), 3, (236, 40, 60), segs=18, rings=12)                     # cherry
+    rbeam(b, (0, 32.8, 0), (1.2, 35.5, 0.4), 0.3, (60, 140, 50), 0.04)
+    for a in range(0, 360, 60):                                                     # striped candles + flames
+        x, z = 8 * math.cos(math.radians(a)), 8 * math.sin(math.radians(a))
+        c = CS[a // 60]
+        for j in range(6):
+            rcyl(b, (x, 27.6 + j * 0.8, z), 0.45, 0.8, c if j % 2 == 0 else WHITE, segs=8)
+        rcyl(b, (x, 32.35, z), 0.06, 0.7, INK, segs=4)
+        rball(n, (x, 33.2, z), 0.5, (255, 200, 80), (1, 1.7, 1), 10, 7)
+        rball(n, (x, 33.85, z), 0.22, (255, 235, 150), (1, 1.6, 1), 6, 4)
+    return [b.finish('Map_Cake', (0, 0, 0), MAT), n.finish('Map_CakeNeon', (0, 0, 0), MAT)]
+
+
+def cake_old():
     b, n = B(), B()
     rng = random.Random(9)
     for k, (d, c) in enumerate(((44, CREAMY), (34, PINK), (24, CREAMY))):

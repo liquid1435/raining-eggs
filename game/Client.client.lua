@@ -4548,3 +4548,96 @@ task.spawn(function()
 		end)
 	end)
 end)
+
+-- ============================================================ LIVING PROPS (client, v137)
+-- Neon City hover cars really fly: each one loops around the city on its own lane and height (they used to hang still).
+-- Candy Canyon lollipop tops turn slowly so the swirl moves; the cake candle flames flicker.
+task.spawn(function()
+	local Map = workspace:WaitForChild("Map")
+	task.wait(3)
+	local RunS = game:GetService("RunService")
+	local cars, lollis, flames = {}, {}, {}
+	local neons = {}
+	for _, d in ipairs(Map:GetDescendants()) do
+		if d:IsA("BasePart") then
+			if d.Name == "HoverCar" then
+				table.insert(cars, { part = d })
+			elseif d.Name:match("^HoverCarNeon%d") then
+				table.insert(neons, d)
+			elseif d.Name:match("^LolliTop%d") then
+				table.insert(lollis, { part = d, base = d.CFrame, speed = (0.25 + math.random() * 0.3) * (math.random() < 0.5 and -1 or 1) })
+			elseif d.Name == "CakeNeon" then
+				table.insert(flames, { part = d, col = d.Color })
+			end
+		end
+	end
+	-- each neon strip belongs to the car at the same spot
+	for _, n in ipairs(neons) do
+		local best, bd = nil, 8
+		for _, c in ipairs(cars) do
+			local dist = (Vector3.new(c.part.Position.X, 0, c.part.Position.Z) - Vector3.new(n.Position.X, 0, n.Position.Z)).Magnitude
+			if dist < bd then
+				best, bd = c, dist
+			end
+		end
+		if best then
+			best.neon = n
+			best.rel = best.part.CFrame:ToObjectSpace(n.CFrame)
+		end
+	end
+	-- the city centre = middle of all cars; lanes are ovals around it
+	local cx, cz = 0, 0
+	for _, c in ipairs(cars) do
+		cz = cz + c.part.Position.Z
+	end
+	cz = #cars > 0 and cz / #cars or 0
+	local half = (C.ZONE_LEN or 140) * 0.42
+	for i, c in ipairs(cars) do
+		local p = c.part.Position
+		c.rx = math.clamp(math.abs(p.X), 45, 150) -- wide lanes over the buildings on both sides
+		c.rz = half
+		c.y = p.Y
+		c.ang = math.atan2((p.Z - cz) / c.rz, p.X / c.rx)
+		c.dir = (i % 2 == 0) and 1 or -1 -- half the cars go one way, half the other
+		c.speed = 28 + math.random() * 18 -- studs per second
+		c.bob = math.random() * 6
+		c.part.CanCollide = false
+		if c.neon then
+			c.neon.CanCollide = false
+		end
+	end
+	local TURN = CFrame.Angles(0, math.pi, 0) -- the meshes are placed turned 180 degrees (see mpart in gen_map.py)
+	local t = 0
+	RunS.Heartbeat:Connect(function(dt)
+		t = t + dt
+		local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+		local near = hrp and math.abs(hrp.Position.Z - cz) < 420 and hrp.Position.Y < 300
+		if near then
+			for _, c in ipairs(cars) do
+				if c.part.Parent then
+					local per = 2 * math.pi * math.sqrt((c.rx * c.rx + c.rz * c.rz) / 2)
+					c.ang = c.ang + c.dir * dt * c.speed / per * 2 * math.pi
+					local y = c.y + math.sin(t * 1.3 + c.bob) * 1.2
+					local pos = Vector3.new(cx + math.cos(c.ang) * c.rx, y, cz + math.sin(c.ang) * c.rz)
+					local tang = Vector3.new(-math.sin(c.ang) * c.rx, 0, math.cos(c.ang) * c.rz).Unit * c.dir
+					local bank = CFrame.Angles(0, 0, -c.dir * 0.12) -- lean into the curve
+					local cf = CFrame.lookAt(pos, pos + tang) * bank * TURN
+					c.part.CFrame = cf
+					if c.neon then
+						c.neon.CFrame = cf * c.rel
+					end
+				end
+			end
+		end
+		for _, l in ipairs(lollis) do -- the disc turns about its own axis (local Z of the placed mesh)
+			if l.part.Parent then
+				l.part.CFrame = l.base * CFrame.Angles(0, 0, t * l.speed)
+			end
+		end
+		for i, f in ipairs(flames) do
+			local k = 0.5 + 0.5 * math.sin(t * 9 + i) * math.sin(t * 5.3 + i * 2)
+			f.part.Color = f.col:Lerp(Color3.fromRGB(255, 120, 40), 0.35 * k)
+			f.part.Transparency = 0.05 + 0.2 * k
+		end
+	end)
+end)
