@@ -4237,6 +4237,36 @@ task.spawn(function()
 		end
 	end
 	local w2shown = true
+	-- v136: things made at run time up there (exit portal VFX + its beams, portal extras, server props) are not in
+	-- Map, so they still hung in the sky of world 1. Anything directly in workspace above y 300 is hidden too.
+	local w2loose = {}
+	local function sweepLoose()
+		local list = workspace:GetChildren()
+		local gates = workspace:FindFirstChild("ZoneGates") -- world 2 gates: thin glowing walls = long lines from below
+		if gates then
+			for _, g in ipairs(gates:GetChildren()) do
+				table.insert(list, g)
+			end
+		end
+		for _, o in ipairs(list) do
+			if o ~= Map and o ~= workspace.CurrentCamera and not o:IsA("Terrain") and not Players:GetPlayerFromCharacter(o) then
+				local y
+				if o:IsA("BasePart") then
+					y = o.Position.Y
+				elseif o:IsA("Model") then
+					local okP, cf = pcall(o.GetPivot, o)
+					y = okP and cf.Position.Y or nil
+				elseif o:IsA("Folder") and o.Name == "GoldenNest_ClientFX" then -- each portal copy has its own folder
+					local bp = o:FindFirstChildWhichIsA("BasePart", true)
+					y = bp and bp.Position.Y or nil
+				end -- other folders are left alone (e.g. the eggs folder holds both worlds)
+				if y and y > 300 then
+					table.insert(w2loose, { o, o.Parent })
+					o.Parent = hideBox
+				end
+			end
+		end
+	end
 	local function showWorld2(on)
 		if on == w2shown then
 			return
@@ -4245,7 +4275,25 @@ task.spawn(function()
 		for _, m in ipairs(w2models) do
 			m.Parent = on and Map or hideBox
 		end
+		if on then
+			for _, e in ipairs(w2loose) do
+				if e[1].Parent == hideBox then
+					e[1].Parent = e[2]
+				end
+			end
+			table.clear(w2loose)
+		else
+			sweepLoose()
+		end
 	end
+	task.spawn(function() -- new things keep appearing (VFX, eggs up there): sweep again every few seconds
+		while true do
+			task.wait(3)
+			if not w2shown then
+				sweepLoose()
+			end
+		end
+	end)
 	-- Saturn's ring: tilted, slowly turning
 	local ring = Map:FindFirstChild("SaturnRing")
 	local sat = CO.saturn
