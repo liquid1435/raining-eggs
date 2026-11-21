@@ -1953,6 +1953,22 @@ def w2_dots(cr, z0, z1, cols, n=60):
         blk(cr.uniform(-H + 4, H - 4), 0, cr.uniform(z0 + 2, z1 - 2), 1, 0.15, 1, cr.choice(cols), 'Neon', **NC)
 
 
+def space_rock(cr, x, z, s, col, glow=None):
+    """v139 (user: no mossy world 1 stones in space): a voxel moon rock - 3 tilted stacked blocks, crater pits,
+    sometimes a glowing ore cube"""
+    yaw = cr.uniform(0, 90)
+    h = 0
+    for k, f in enumerate((1.0, 0.72, 0.42)):
+        w, hh = 3.2 * s * f, 1.3 * s * (1.1 - 0.2 * k)
+        part((w, hh, w * cr.uniform(0.75, 1.0)), C(x + cr.uniform(-0.3, 0.3) * s, h + hh / 2, z + cr.uniform(-0.3, 0.3) * s) *
+             R(cr.uniform(-6, 6), yaw + k * 17, cr.uniform(-6, 6)), shade(col, 1.0 + 0.07 * k), 'Slate')
+        h += hh * 0.9
+    for _ in range(2):                                        # crater pits on the side
+        blk(x + cr.uniform(-1, 1) * s, h * cr.uniform(0.2, 0.6), z - 1.55 * s, 0.7 * s, 0.7 * s, 0.25, shade(col, 0.6), 'Slate', **NC)
+    if glow:
+        blk(x, h - 0.2, z, 0.8 * s, 0.8 * s, 0.8 * s, glow, 'Neon', yaw=yaw, **NC)
+
+
 def w2_cosmic(cr, z0):
     CYAN, PINK, VIO, DARK = (90, 230, 255), (255, 110, 220), (170, 110, 255), (30, 22, 58)
     H = WORLD2['half']
@@ -2009,7 +2025,7 @@ def w2_moon(cr, z0):
                 blk(x + math.cos(a) * r, 0, z + math.sin(a) * r, 4, cr.uniform(1.2, 2.6), 4, GREY2, 'Slate', yaw=-math.degrees(a))
         for _ in range(26):                                   # moon rocks (v131: Blender rock meshes over the whole zone)
             x, z = cr.choice((-1, 1)) * cr.uniform(20, H - 14), cr.uniform(z0 + 6, z0 + 134)
-            mpart(f'Map_Rock{cr.randint(1, 2)}', x, 0, z, cr.uniform(0, 360), cr.uniform(0.6, 1.8))
+            space_rock(cr, x, z, cr.uniform(0.8, 2.0), cr.choice((GREY, GREY2, (160, 164, 180))), (120, 200, 255) if cr.random() < 0.25 else None)
         for _ in range(6):                                    # moon base domes with a glowing ring
             x, z = cr.choice((-1, 1)) * cr.uniform(40, H - 30), cr.uniform(z0 + 20, z0 + 120)
             sph(x, 2, z, cr.uniform(10, 16), (226, 230, 240), 'SmoothPlastic')
@@ -2068,7 +2084,7 @@ def w2_asteroid(cr, z0):
         w2_dots(cr, z0, z0 + 140, (ORE, (255, 210, 120)), 50)
         for _ in range(30):                                   # rocks on the ground
             x, z = cr.choice((-1, 1)) * cr.uniform(18, H - 14), cr.uniform(z0 + 6, z0 + 134)
-            mpart(f'Map_Rock{cr.randint(1, 2)}', x, 0, z, cr.uniform(0, 360), cr.uniform(0.7, 2.0))
+            space_rock(cr, x, z, cr.uniform(0.9, 2.2), cr.choice((DUST, DUST2, (120, 104, 96))), ORE if cr.random() < 0.4 else None)
         for _ in range(16):                                   # glowing ore veins
             x, z = cr.choice((-1, 1)) * cr.uniform(24, H - 20), cr.uniform(z0 + 10, z0 + 130)
             for j in range(3):

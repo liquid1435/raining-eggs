@@ -151,6 +151,12 @@ for o in list(bpy.data.objects):
     if o.get('cut') is None:
         bpy.data.objects.remove(o, do_unlink=True)
 bpy.ops.object.select_all(action='SELECT')
+ZMIN = int(os.environ.get('FBX_ZONE_MIN', '0'))      # v139: export only the parts of zones >= ZMIN (Lua keeps all)
+if ZMIN:
+    for o in bpy.data.objects:
+        if int(o.name.split('_')[1]) < ZMIN:
+            o.select_set(False)
+    OUT_FBX = OUT_FBX.with_name(OUT_FBX.stem + f'_z{ZMIN}.fbx')
 OUT_FBX.parent.mkdir(exist_ok=True)
 bpy.ops.export_scene.fbx(filepath=str(OUT_FBX), use_selection=True, apply_scale_options='FBX_SCALE_ALL',
                          mesh_smooth_type='FACE', add_leaf_bones=False, bake_anim=False)

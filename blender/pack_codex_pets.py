@@ -10,7 +10,7 @@ After the import + save: py blender\harvest_meshes.py "<saved .rbxlx>" -> game\m
 import bpy, json, math, pathlib
 
 SRC = pathlib.Path(os.environ.get('PETS_SRC', r'E:\rainingeggs\codex_pets_all'))
-OUT = pathlib.Path(__file__).resolve().parent / 'out' / 'RainingEggsPets3.fbx'
+OUT = pathlib.Path(__file__).resolve().parent / 'out' / os.environ.get('PETS_OUT', 'RainingEggsPets3.fbx')
 RARITY = {'Common': 1, 'Uncommon': 2, 'Rare': 3, 'Epic': 4, 'Legendary': 5}
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
