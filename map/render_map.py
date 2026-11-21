@@ -312,6 +312,9 @@ VIEWS['w2d'] = ((-120, 960, 40), (120, 925, 160), 20)
 VIEWS['w2e'] = ((60, 1010, -20), (380, 1040, 120), 22)
 VIEWS['w2b'] = ((0, 912, 110), (0, 905, 300), 20)
 VIEWS['w2c'] = ((60, 925, 300), (0, 905, 420), 20)
+for _i in range(3, 10):   # v139: world 2 zones 14-20
+    _sx = -1 if _i % 2 == 0 else 1
+    VIEWS[f'w2z{_i + 11}'] = ((_sx * 70, 960, _i * 140 - 30), (-_sx * 14, 908, _i * 140 + 84), 19)
 todo = list(VIEWS) if args == ['all'] else args
 cam_data = bpy.data.cameras.new('Cam')
 cam = bpy.data.objects.new('Cam', cam_data)

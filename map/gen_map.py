@@ -1915,10 +1915,15 @@ def scenery():
 
 
 # ------------------------------------------------------------------ v119: WORLD 2 (space, high above the map)
-# Cosmic Nest (free through the Golden Portal), Moon Craters, Nebula Reef, then a COMING SOON wall.
+# Cosmic Nest (free through the Golden Portal), Moon Craters, Nebula Reef, ... (v139: 10 zones) Galaxy Throne, then the end wall.
 # Built at height 0 like world 1 and lifted by WORLD2['y'] at the end. Keep in sync with C.COSMIC in game/Config.lua
 # (y 900, half width 130, exit portal at z -28, zone k of world 2 = z (k-1)*140 .. k*140).
-WORLD2 = dict(y=900, half=HALF, zones=3)   # v120: same width as world 1
+WORLD2 = dict(y=900, half=HALF, zones=10)   # v139: 10 zones (11-20)
+W2_GATES = [('MOON CRATERS', (200, 205, 220), (120, 130, 160)), ('NEBULA REEF', (255, 110, 220), (90, 240, 230)),
+            ('ASTEROID BELT', (150, 120, 100), (255, 150, 60)), ('SOLAR FORGE', (255, 120, 40), (255, 230, 90)),
+            ('COMET GLACIER', (200, 235, 255), (90, 170, 255)), ('ALIEN JUNGLE', (130, 255, 120), (190, 90, 255)),
+            ('BLACK HOLE', (60, 40, 100), (200, 120, 255)), ('STAR STATION', (200, 210, 225), (80, 220, 255)),
+            ('GALAXY THRONE', (255, 214, 80), (170, 110, 255))]   # v120: same width as world 1
 W2_UNDER = ((8, 10), (30, 14), (58, 16), (88, 20))
 
 
@@ -2051,15 +2056,219 @@ def w2_nebula(cr, z0):
             sph(cr.uniform(-H + 6, H - 6), cr.uniform(4, 50), cr.uniform(z0 + 4, z0 + 136), cr.uniform(1, 2.2), (200, 250, 255), 'Glass',
                 transparency=0.5, **NC)
         egg(92, 8, z0 + 40, 2.2, PINK, CYAN, beam=True, name='Decor')
-        # end of world 2 for now: a solid wall with COMING SOON
-        ze = z0 + 140
-        b = blk(0, 0, ze + 1, H * 2 + 20, 60, 2, (40, 24, 80), 'Slate', name='Wall')
-        sign(b, 'Front', 'COMING SOON', 'new zones are on the way', fg=(255, 236, 90), bg1=(120, 70, 230), bg2=(40, 20, 100), pps=8)
+
+
+# ------------------------------------------------------------------ v139: world 2 zones 14-20 (world 2 now has 10 zones)
+def w2_asteroid(cr, z0):
+    DUST, DUST2, DEEP, ORE = (96, 84, 78), (110, 96, 88), (50, 42, 40), (255, 140, 40)
+    H = WORLD2['half']
+    with group('Zone14_AsteroidBelt', unique=False):
+        w2_floor(z0, z0 + 140, DUST, DUST2, DEEP)
+        w2_walls(z0, z0 + 140, (150, 130, 118), (70, 60, 56))
+        w2_dots(cr, z0, z0 + 140, (ORE, (255, 210, 120)), 50)
+        for _ in range(30):                                   # rocks on the ground
+            x, z = cr.choice((-1, 1)) * cr.uniform(18, H - 14), cr.uniform(z0 + 6, z0 + 134)
+            mpart(f'Map_Rock{cr.randint(1, 2)}', x, 0, z, cr.uniform(0, 360), cr.uniform(0.7, 2.0))
+        for _ in range(16):                                   # glowing ore veins
+            x, z = cr.choice((-1, 1)) * cr.uniform(24, H - 20), cr.uniform(z0 + 10, z0 + 130)
+            for j in range(3):
+                blk(x + j * 2.2, 0, z + cr.uniform(-1, 1), 2.4, cr.uniform(0.6, 2.2), 1.6, ORE, 'Neon', yaw=cr.uniform(0, 90))
+        for _ in range(14):                                   # floating asteroids (soft, high up)
+            x, y, z = cr.uniform(-H + 16, H - 16), cr.uniform(24, 60), cr.uniform(z0 + 10, z0 + 130)
+            s2 = cr.uniform(4, 9)
+            part((s2 * 1.3, s2, s2 * 1.1), C(x, y, z) * R(cr.uniform(0, 40), cr.uniform(0, 90), cr.uniform(0, 40)),
+                 shade(DUST, cr.uniform(0.8, 1.2)), 'Slate', **NC)
+            blk(x, y + s2 / 2, z, 1, 1, 1, ORE, 'Neon', **NC)
+        for sx in (-1, 1):                                    # mining drill towers
+            x, z = sx * 70, z0 + 50 + sx * 20
+            for k in range(4):
+                blk(x, k * 6, z, 7 - k, 6, 7 - k, (70, 74, 84) if k % 2 else (230, 170, 40), 'Metal')
+            blk(x, 24, z, 1, 10, 1, (200, 200, 210), 'Metal')
+            light(blk(x, 34, z, 1.6, 1.6, 1.6, (255, 70, 70), 'Neon', **NC), (255, 70, 70), 14, 1.4)
+        egg(-92, 8, z0 + 92, 2.2, (150, 120, 100), ORE, beam=True, name='Decor')
+
+
+def w2_solar(cr, z0):
+    ROCK, ROCK2, DEEP, LAVA, GOLDS = (52, 30, 28), (66, 36, 30), (30, 16, 14), (255, 110, 30), (255, 220, 90)
+    H = WORLD2['half']
+    with group('Zone15_SolarForge', unique=False):
+        w2_floor(z0, z0 + 140, ROCK, ROCK2, DEEP)
+        w2_walls(z0, z0 + 140, (120, 60, 40), (60, 28, 22))
+        for k in range(5):                                    # lava rivers across the zone (soft glow strips)
+            z = z0 + 14 + k * 28 + cr.uniform(-4, 4)
+            for sx in (-1, 1):
+                blk(sx * (H / 2 + 6), 0, z, H - 28, 0.25, 3.5, LAVA, 'Neon', yaw=cr.uniform(-8, 8), **NC)
+        for _ in range(12):                                   # magma pillars with a glowing top
+            x, z = cr.choice((-1, 1)) * cr.uniform(26, H - 18), cr.uniform(z0 + 10, z0 + 130)
+            h = cr.uniform(8, 20)
+            blk(x, 0, z, 5, h, 5, ROCK2, 'Basalt')
+            light(blk(x, h, z, 5.4, 1.4, 5.4, LAVA, 'Neon'), LAVA, 20, 1.6)
+        for sx in (-1, 1):                                    # anvils of the forge
+            x, z = sx * 64, z0 + 96
+            blk(x, 0, z, 10, 4, 6, (60, 60, 70), 'Metal')
+            blk(x, 4, z, 6, 3, 4, (80, 80, 92), 'Metal')
+            blk(x, 7, z, 14, 2.4, 5, (90, 90, 104), 'Metal')
+            light(blk(x, 9.4, z, 4, 0.6, 2, GOLDS, 'Neon', **NC), GOLDS, 16, 1.5)
+        for _ in range(26):                                   # embers in the air
+            blk(cr.uniform(-H + 10, H - 10), cr.uniform(5, 40), cr.uniform(z0 + 4, z0 + 136), 0.6, 0.6, 0.6, cr.choice((LAVA, GOLDS)), 'Neon', **NC)
+        light(sph(0, 140, z0 + 70, 60, (255, 170, 50), 'Neon', **NC), (255, 170, 60), 60, 2)   # the sun overhead
+        egg(92, 8, z0 + 40, 2.2, LAVA, GOLDS, beam=True, name='Decor')
+
+
+def w2_ice(cr, z0):
+    ICE, ICE2, DEEP, GLOW = (196, 226, 246), (214, 238, 252), (90, 130, 170), (120, 200, 255)
+    H = WORLD2['half']
+    with group('Zone16_CometGlacier', unique=False):
+        w2_floor(z0, z0 + 140, ICE, ICE2, DEEP)
+        w2_walls(z0, z0 + 140, (230, 244, 255), (120, 160, 200))
+        w2_dots(cr, z0, z0 + 140, (WHITE, GLOW), 60)
+        for _ in range(22):                                   # ice spikes
+            x, z = cr.choice((-1, 1)) * cr.uniform(22, H - 14), cr.uniform(z0 + 6, z0 + 134)
+            for j in range(cr.randint(1, 3)):
+                h = cr.uniform(6, 16)
+                part((cr.uniform(2, 3.4), h, cr.uniform(2, 3.4)), C(x + cr.uniform(-3, 3), h / 2 - 1, z + cr.uniform(-3, 3)) *
+                     R(cr.uniform(-12, 12), cr.uniform(0, 90), cr.uniform(-12, 12)), cr.choice((GLOW, (180, 230, 255), WHITE)), 'Glass',
+                     transparency=0.2)
+        for _ in range(10):                                   # snow mounds
+            x, z = cr.choice((-1, 1)) * cr.uniform(30, H - 24), cr.uniform(z0 + 10, z0 + 130)
+            sph(x, -1, z, cr.uniform(8, 14), WHITE, 'Snow')
+        cx, cy, cz = -60, 70, z0 + 60                         # a comet flying over the zone, with its tail
+        light(sph(cx, cy, cz, 12, (220, 245, 255), 'Neon', **NC), GLOW, 40, 2)
+        for j in range(1, 12):
+            sph(cx + j * 7, cy + j * 2.2, cz - j * 3, 11 - j * 0.8, GLOW, 'Glass', transparency=0.2 + j * 0.06, **NC)
+        egg(-92, 8, z0 + 100, 2.2, (200, 235, 255), GLOW, beam=True, name='Decor')
+
+
+def w2_jungle(cr, z0):
+    MOSS, MOSS2, DEEP = (40, 80, 60), (48, 96, 70), (20, 40, 34)
+    LIME, VIO, PINK = (150, 255, 90), (190, 90, 255), (255, 110, 220)
+    H = WORLD2['half']
+    with group('Zone17_AlienJungle', unique=False):
+        w2_floor(z0, z0 + 140, MOSS, MOSS2, DEEP)
+        w2_walls(z0, z0 + 140, (90, 170, 110), (30, 64, 50))
+        w2_dots(cr, z0, z0 + 140, (LIME, VIO, PINK), 80)
+        for _ in range(16):                                   # alien stalks with glowing bulbs
+            x, z = cr.choice((-1, 1)) * cr.uniform(20, H - 12), cr.uniform(z0 + 8, z0 + 132)
+            h = cr.uniform(10, 22)
+            blk(x, 0, z, 1.4, h, 1.4, (60, 120, 80), 'Grass')
+            col = cr.choice((LIME, VIO, PINK))
+            light(sph(x, h + 1.5, z, cr.uniform(3, 5), col, 'Neon'), col, 16, 1.3)
+        for _ in range(8):                                    # giant alien mushrooms
+            x, z = cr.choice((-1, 1)) * cr.uniform(30, H - 24), cr.uniform(z0 + 12, z0 + 128)
+            mushroom(x, z, cr.uniform(8, 14), cr.uniform(10, 16), cr.choice((VIO, (90, 230, 200), PINK)), LIME, glow=True)
+        ux, uz = 66, z0 + 100                                 # a crashed UFO
+        part((26, 3, 26), C(ux, 3, uz) * R(14, 0, 8), (180, 186, 200), 'Metal')
+        sph(ux, 5, uz, 11, (140, 230, 255), 'Glass', transparency=0.3)
+        for j in range(8):
+            a = j * 0.785
+            blk(ux + math.cos(a) * 12, 3, uz + math.sin(a) * 12, 1.4, 1, 1.4, LIME, 'Neon', **NC)
+        egg(-92, 8, z0 + 40, 2.2, LIME, VIO, beam=True, name='Decor')
+
+
+def w2_blackhole(cr, z0):
+    VOID, VOID2, DEEP, VIO, PINK, GOLDS = (18, 14, 28), (26, 20, 40), (10, 8, 16), (170, 100, 255), (255, 110, 220), (255, 200, 100)
+    H = WORLD2['half']
+    with group('Zone18_BlackHole', unique=False):
+        w2_floor(z0, z0 + 140, VOID, VOID2, DEEP)
+        w2_walls(z0, z0 + 140, (60, 40, 100), (24, 18, 40))
+        for z in range(int(z0) + 10, int(z0) + 140, 20):     # glowing grid on the floor (the warped space)
+            blk(0, 0.02, z, H * 2 - 20, 0.1, 0.4, VIO, 'Neon', **NC)
+        for x in range(-150, 151, 30):
+            blk(x, 0.02, z0 + 70, 0.4, 0.1, 136, VIO, 'Neon', **NC)
+        for _ in range(24):                                   # debris being pulled in, tilted, floating
+            x, y, z = cr.uniform(-H + 14, H - 14), cr.uniform(10, 55), cr.uniform(z0 + 8, z0 + 132)
+            s2 = cr.uniform(1.5, 4)
+            part((s2, s2, s2), C(x, y, z) * R(cr.uniform(0, 90), cr.uniform(0, 90), cr.uniform(0, 90)), cr.choice((VOID2, (70, 60, 90))), 'Slate', **NC)
+        for sx in (-1, 1):                                    # gravity pillars
+            for k in range(3):
+                x, z = sx * 56, z0 + 25 + k * 45
+                blk(x, 0, z, 4, 26, 4, (40, 30, 64), 'Slate')
+                for j in range(3):
+                    blk(x, 6 + j * 8, z, 5.2, 0.8, 5.2, PINK if j % 2 else VIO, 'Neon', **NC)
+        bx, by, bz = 0, 150, z0 + 70                          # the black hole in the sky + its glowing disk
+        sph(bx, by, bz, 50, (0, 0, 0), 'SmoothPlastic', **NC)
+        for r0, col, tr in ((34, GOLDS, 0.1), (42, (255, 140, 60), 0.3), (52, VIO, 0.5)):
+            n = 56
+            for j in range(n):
+                a = j * 2 * math.pi / n
+                part((2 * math.pi * r0 / n * 1.1, 1, 8), C(bx + math.cos(a) * r0, by, bz + math.sin(a) * r0) * R(0, -math.degrees(a) - 90, 0) *
+                     R(0, 0, 0), col, 'Neon', transparency=tr, **NC)
+        egg(92, 8, z0 + 100, 2.2, VOID2, VIO, beam=True, name='Decor')
+
+
+def w2_station(cr, z0):
+    PLATE, PLATE2, DEEP, CYAN, RED, YEL = (120, 126, 140), (136, 142, 156), (60, 64, 76), (80, 220, 255), (255, 70, 70), (255, 210, 60)
+    H = WORLD2['half']
+    with group('Zone19_StarStation', unique=False):
+        w2_floor(z0, z0 + 140, PLATE, PLATE2, DEEP)
+        w2_walls(z0, z0 + 140, (190, 196, 210), (80, 86, 100))
+        for z in range(int(z0) + 7, int(z0) + 140, 14):      # neon conduits on the floor
+            for sx in (-1, 1):
+                blk(sx * (H / 2 + 8), 0.02, z, H - 40, 0.12, 0.5, CYAN, 'Neon', **NC)
+        for _ in range(18):                                   # cargo crates
+            x, z = cr.choice((-1, 1)) * cr.uniform(26, H - 16), cr.uniform(z0 + 8, z0 + 132)
+            s2 = cr.uniform(4, 7)
+            blk(x, 0, z, s2, s2, s2, cr.choice(((230, 150, 50), (90, 110, 140), (200, 60, 60))), 'DiamondPlate', yaw=cr.choice((0, 15, 45)))
+            blk(x, s2, z, s2 * 0.6, 0.2, 0.4, YEL, 'Neon', **NC)
+        for sx in (-1, 1):                                    # antenna towers with blinking tips
+            for k in range(2):
+                x, z = sx * 110, z0 + 30 + k * 70
+                blk(x, 0, z, 6, 4, 6, (70, 74, 86), 'Metal')
+                blk(x, 4, z, 1.2, 26, 1.2, (200, 204, 216), 'Metal')
+                part((10, 0.6, 10), C(x, 26, z) * R(30, 0, 0), (225, 228, 238), 'Metal')
+                light(blk(x, 30, z, 1.4, 1.4, 1.4, RED, 'Neon', **NC), RED, 12, 1.2)
+        for sx in (-1, 1):                                    # robot arms
+            x, z = sx * 60, z0 + 70
+            blk(x, 0, z, 5, 3, 5, (60, 64, 76), 'Metal')
+            part((2, 14, 2), C(x, 9, z) * R(0, 0, sx * 25), YEL, 'Metal')
+            part((2, 10, 2), C(x - sx * 6, 17, z) * R(0, 0, -sx * 60), YEL, 'Metal')
+            light(blk(x - sx * 10, 19, z, 2, 2, 2, CYAN, 'Neon', **NC), CYAN, 14, 1.4)
+        light(sph(-70, 24, z0 + 110, 16, CYAN, 'Glass', transparency=0.45, **NC), CYAN, 30, 1.5)   # hologram planet
+        blk(-70, 0, z0 + 110, 8, 1.2, 8, (60, 64, 76), 'Metal')
+        egg(92, 8, z0 + 40, 2.2, PLATE2, CYAN, beam=True, name='Decor')
+
+
+def w2_throne(cr, z0):
+    GOLD1, GOLD2, DEEP, VIO, PINK, CYAN = (220, 176, 60), (240, 200, 80), (60, 36, 110), (170, 110, 255), (255, 140, 230), (120, 230, 255)
+    H = WORLD2['half']
+    with group('Zone20_GalaxyThrone', unique=False):
+        w2_floor(z0, z0 + 140, (70, 44, 130), (86, 56, 156), DEEP)
+        w2_walls(z0, z0 + 140, GOLD2, (90, 60, 150))
+        w2_dots(cr, z0, z0 + 140, (GOLD2, PINK, CYAN, WHITE), 120)
+        blk(0, 0.05, z0 + 70, 30, 0.2, 136, (200, 40, 70), 'Fabric', **NC)          # royal carpet to the throne
         for sx in (-1, 1):
-            blk(sx * (H - 14), 0, ze - 2, 8, 64, 8, (60, 40, 120), 'Slate')
+            blk(sx * 15.5, 0.06, z0 + 70, 1, 0.22, 136, GOLD2, 'Neon', **NC)
+        for sx in (-1, 1):                                    # golden pillars with orbiting rings
+            for k in range(4):
+                x, z = sx * 36, z0 + 15 + k * 30
+                blk(x, 0, z, 5, 24, 5, GOLD1, 'Metal')
+                blk(x, 24, z, 7, 2, 7, GOLD2, 'Metal')
+                light(sph(x, 28, z, 4, cr.choice((VIO, PINK, CYAN)), 'Neon'), VIO, 18, 1.4)
+                for j in range(10):
+                    a = j * 0.628
+                    blk(x + math.cos(a) * 5, 14, z + math.sin(a) * 5, 1.2, 0.5, 1.2, PINK, 'Neon', **NC)
+        tz = z0 + 124                                         # the throne of stars at the end of the road
+        blk(0, 0, tz, 40, 2, 20, GOLD1, 'Metal')
+        blk(0, 2, tz, 34, 2, 16, GOLD2, 'Metal')
+        blk(0, 4, tz + 2, 12, 6, 8, (120, 40, 160), 'Fabric')
+        blk(0, 10, tz + 5, 12, 22, 2, GOLD1, 'Metal')
+        for sx in (-1, 1):
+            blk(sx * 7, 4, tz + 2, 2, 10, 8, GOLD2, 'Metal')
+        for j in range(7):                                    # star crown on the back of the throne
+            a = math.radians(-60 + j * 20)
+            part((1.4, 7, 1.4), C(math.sin(a) * 7, 34 + math.cos(a) * 3, tz + 5) * R(0, 0, -math.degrees(a)), GOLD2, 'Neon', **NC)
+        light(sph(0, 42, tz + 5, 6, (255, 240, 170), 'Neon', **NC), (255, 230, 150), 50, 2.4)
+        egg(-26, 4, tz, 4, GOLD2, VIO, beam=True, name='Decor')
+        egg(26, 4, tz, 4, VIO, GOLD2, beam=True, name='Decor')
+        # end of world 2: a golden wall (more worlds later)
+        ze = z0 + 140
+        b = blk(0, 0, ze + 1, H * 2 + 20, 60, 2, (50, 30, 100), 'Slate', name='Wall')
+        sign(b, 'Front', 'THE END OF THE UNIVERSE', 'world 3 is coming soon', fg=(255, 230, 110),
+             bg1=(150, 90, 240), bg2=(50, 24, 120), pps=8)
+        for sx in (-1, 1):
+            blk(sx * (H - 14), 0, ze - 2, 8, 64, 8, GOLD1, 'Metal')
             blk(sx * (H - 14), 64, ze - 2, 9, 3, 9, PINK, 'Neon')
         blk(0, 60, ze + 1, H * 2 + 20, 240, 2, WHITE, transparency=1, name='Wall')
-
 
 
 # v121 (user: "details and things on the walls, everything like in world 1, only with a space theme")
@@ -2067,6 +2276,14 @@ W2_THEMES = [  # (name, c1 = bright, c2 = deep, road, accent glow)
     ('cosmic', (170, 110, 255), (60, 36, 120), (40, 30, 80), (90, 230, 255)),
     ('moon', (210, 214, 228), (110, 114, 132), (70, 72, 90), (120, 200, 255)),
     ('nebula', (255, 110, 220), (22, 70, 100), (20, 46, 70), (90, 240, 230)),
+    # v139: zones 14-20 (the wall decoration kind of each: moon = domes/antennas, cosmic = crystals, nebula = coral)
+    ('moon', (255, 150, 60), (70, 60, 56), (44, 38, 36), (255, 140, 40)),        # Asteroid Belt
+    ('cosmic', (255, 120, 40), (60, 28, 22), (36, 20, 18), (255, 200, 80)),      # Solar Forge
+    ('cosmic', (200, 235, 255), (90, 130, 170), (60, 80, 110), (120, 200, 255)), # Comet Glacier
+    ('nebula', (150, 255, 90), (30, 64, 50), (20, 40, 34), (190, 90, 255)),     # Alien Jungle
+    ('cosmic', (170, 100, 255), (24, 18, 40), (14, 10, 24), (255, 110, 220)),    # Black Hole
+    ('moon', (200, 210, 225), (80, 86, 100), (50, 54, 64), (80, 220, 255)),      # Star Station
+    ('cosmic', (255, 214, 80), (90, 60, 150), (50, 30, 90), (255, 140, 230)),    # Galaxy Throne
 ]
 
 
@@ -2172,10 +2389,12 @@ def world2():
     w2_cosmic(cr, 0)
     w2_moon(cr, 140)
     w2_nebula(cr, 280)
+    for k, fn in enumerate((w2_asteroid, w2_solar, w2_ice, w2_jungle, w2_blackhole, w2_station, w2_throne)):   # v139
+        fn(cr, 420 + k * 140)
     w2_scenery(random.Random(121))
     with group('W2Gates', unique=False):
-        gate(140, 'MOON CRATERS', None, (200, 205, 220), (120, 130, 160))
-        gate(280, 'NEBULA REEF', None, (255, 110, 220), (90, 240, 230))
+        for k, (title, c1, c2) in enumerate(W2_GATES):
+            gate(140 * (k + 1), title, None, c1, c2)
     keep = [q for q in PARTS[start:] if not ('W2Gates' in q['g'] and abs(q['p'][0]) > WORLD2['half'])]   # no flags in the void
     PARTS[start:] = keep
     with group('Zone11_CosmicNest', unique=False):           # sky: planets, a ringed giant, a moon and stars (far away)

@@ -4232,7 +4232,7 @@ task.spawn(function()
 	local w2models = {}
 	for _, m in ipairs(Map:GetChildren()) do
 		local n = m.Name
-		if n:match("^Zone1[1-9]_") or n:match("^W2") or n == "SaturnRing" then
+		if n:match("^Zone1[1-9]_") or n:match("^Zone20_") or n:match("^W2") or n == "SaturnRing" then
 			table.insert(w2models, m)
 		end
 	end
@@ -4396,9 +4396,11 @@ task.spawn(function()
 	end)
 	local SUBS = {
 		[CO.first] = "low gravity  •  cosmic eggs  •  the rarest pets",
-		[CO.first + 1] = "WORLD 2  •  ZONE 2",
-		[CO.first + 2] = "WORLD 2  •  ZONE 3",
 	}
+	for k = CO.first + 1, CO.last do
+		SUBS[k] = "WORLD 2  •  ZONE " .. (k - CO.first + 1)
+	end
+	SUBS[CO.last] = "THE FINAL ZONE  •  the rarest pets in the universe"
 	local lastZone = nil
 	while true do
 		task.wait(0.3)

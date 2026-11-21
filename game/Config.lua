@@ -146,7 +146,7 @@ C.ZONES = {
 -- v116: the 10 normal zones (gates, unlocks, index, altars). Zone 11 below is the secret one.
 C.NZ = #C.ZONES
 
--- ============================================================ WORLD 2 (v119): COSMIC NEST + 2 zones, then COMING SOON
+-- ============================================================ WORLD 2 (v119, v139: 10 zones): COSMIC NEST .. GALAXY THRONE, then the end wall
 -- A strip of floating zones in space high above the map (same layout as world 1: zone k of world 2 covers
 -- z = (k-1)*140 .. k*140, at height C.COSMIC.y). The only way in: the Golden Portal (all 10 altars) -> Cosmic Nest is
 -- free, the next zones are bought at their gates like in world 1. Low gravity + night sky (client).
@@ -173,7 +173,56 @@ C.ZONES[C.NZ + 3] = zone("Nebula Reef", HUGE, 1e11, { 255, 110, 220 }, { 90, 240
 	{ "Void Shark", { 40, 34, 80 }, { 160, 110, 255 }, 0, "o" },
 	{ "Galaxy Kraken", { 120, 40, 160 }, { 90, 240, 230 }, 0, "o" },
 })
-C.TOTAL = #C.ZONES -- 13: the last zone a player can open
+C.ZONES[C.NZ + 4] = zone("Asteroid Belt", HUGE, 1e12, { 150, 120, 100 }, { 255, 150, 60 }, {
+	{ "Meteor Mole", { 120, 100, 90 }, { 255, 150, 60 }, 1, "q" },
+	{ "Rock Golem Pup", { 140, 130, 125 }, { 255, 190, 90 }, 1, "q" },
+	{ "Orbit Owl", { 110, 96, 88 }, { 255, 210, 120 }, 1, "b" },
+	{ "Asteroid Armadillo", { 160, 140, 120 }, { 255, 120, 40 }, 1, "q" },
+	{ "Meteor Rhino", { 90, 80, 76 }, { 255, 100, 30 }, 1, "q" },
+})
+C.ZONES[C.NZ + 5] = zone("Solar Forge", HUGE, 1e13, { 255, 120, 40 }, { 255, 230, 90 }, {
+	{ "Ember Cat", { 230, 90, 40 }, { 255, 220, 90 }, 1, "q" },
+	{ "Flare Fox", { 255, 120, 30 }, W, 2, "q" },
+	{ "Magma Turtle", { 70, 40, 36 }, { 255, 110, 30 }, 0, "o" },
+	{ "Solar Phoenix", { 255, 150, 40 }, { 255, 240, 140 }, 0, "b" },
+	{ "Sun Lion", { 255, 190, 60 }, { 255, 90, 30 }, 1, "q" },
+})
+C.ZONES[C.NZ + 6] = zone("Comet Glacier", HUGE, 1e14, { 200, 235, 255 }, { 90, 170, 255 }, {
+	{ "Frost Penguin", { 40, 50, 70 }, W, 0, "b" },
+	{ "Comet Seal", { 220, 235, 245 }, { 120, 190, 255 }, 0, "o" },
+	{ "Ice Yeti Cub", W, { 120, 200, 255 }, 1, "q" },
+	{ "Glacier Mammoth", { 160, 190, 220 }, W, 1, "q" },
+	{ "Aurora Stag", { 210, 240, 255 }, { 120, 255, 200 }, 1, "q" },
+})
+C.ZONES[C.NZ + 7] = zone("Alien Jungle", HUGE, 1e15, { 130, 255, 120 }, { 190, 90, 255 }, {
+	{ "Glow Gecko", { 110, 230, 120 }, { 255, 120, 220 }, 0, "q" },
+	{ "Alien Frog", { 150, 255, 90 }, { 160, 80, 255 }, 0, "o" },
+	{ "Tentacle Pup", { 170, 110, 255 }, { 120, 255, 160 }, 1, "q" },
+	{ "Three-Eyed Monkey", { 90, 200, 160 }, { 255, 240, 120 }, 1, "q" },
+	{ "Xeno Raptor", { 40, 90, 60 }, { 190, 255, 90 }, 0, "q" },
+})
+C.ZONES[C.NZ + 8] = zone("Black Hole", HUGE, 1e16, { 40, 30, 60 }, { 200, 120, 255 }, {
+	{ "Void Cat", { 30, 26, 44 }, { 200, 120, 255 }, 1, "q" },
+	{ "Shadow Bat", { 44, 36, 64 }, { 255, 90, 160 }, 2, "b" },
+	{ "Eclipse Wolf", { 24, 22, 34 }, { 255, 200, 90 }, 1, "q" },
+	{ "Gravity Bear", { 50, 40, 80 }, { 140, 110, 255 }, 1, "q" },
+	{ "Singularity Serpent", { 16, 12, 28 }, { 255, 140, 255 }, 0, "o" },
+})
+C.ZONES[C.NZ + 9] = zone("Star Station", HUGE, 1e17, { 200, 210, 225 }, { 80, 220, 255 }, {
+	{ "Robo Dog", { 190, 196, 210 }, { 80, 220, 255 }, 1, "q" },
+	{ "Mecha Bunny", W, { 255, 90, 120 }, 2, "q" },
+	{ "Laser Owl", { 120, 130, 150 }, { 255, 70, 70 }, 1, "b" },
+	{ "Drone Fox", { 230, 140, 60 }, { 80, 220, 255 }, 1, "q" },
+	{ "Titan Mech Lion", { 90, 96, 110 }, { 255, 210, 60 }, 1, "q" },
+})
+C.ZONES[C.NZ + 10] = zone("Galaxy Throne", HUGE, 1e18, { 255, 214, 80 }, { 170, 110, 255 }, {
+	{ "Star Unicorn", W, { 255, 140, 230 }, 1, "q" },
+	{ "Cosmic Pegasus", { 120, 90, 255 }, { 255, 230, 140 }, 1, "q" },
+	{ "Celestial Tiger", { 255, 200, 90 }, { 60, 30, 120 }, 1, "q" },
+	{ "Astral Griffin", { 255, 220, 120 }, { 140, 100, 255 }, 1, "b" },
+	{ "Universe Dragon", { 20, 14, 50 }, { 255, 220, 100 }, 1, "q" },
+})
+C.TOTAL = #C.ZONES -- 20: the last zone a player can open (v139: world 2 has 10 zones like world 1)
 C.COSMIC = {
 	first = C.NZ + 1, last = C.TOTAL,
 	y = 900,                       -- height of the world 2 ground (top)
@@ -205,7 +254,7 @@ C.PET_COUNT = C.NZ * #C.RARITY
 -- v119 balance (tools/sim_economy.py, target between medium and slow): a normal player opens zone 2 after ~4 min,
 -- zone 3 ~14 min, zone 4 ~40 min, zone 5 ~2 h, zone 6 ~3.5 h, zone 7 ~5.5 h, zone 8 ~8 h, zone 9 ~11 h, zone 10 ~15 h of play.
 -- (v118 prices { 0, 1e3, 1e4, 7.5e4, 5e5, 4e6, 3e7, 2.5e8, 2e9, 1.5e10 } let players open all 10 zones in ~15 minutes.)
-C.ZONE_PRICE = { 0, 8e3, 5.5e5, 3.5e7, 3e9, 3e10, 5e11, 6.5e12, 6.5e13, 6.5e14, 0, 7e16, 9e17 } -- 11-13 = world 2 (11 free: the Golden Portal)
+C.ZONE_PRICE = { 0, 8e3, 5.5e5, 3.5e7, 3e9, 3e10, 5e11, 6.5e12, 6.5e13, 6.5e14, 0, 7e16, 9e17, 1e19, 1.1e20, 1.2e21, 1.3e22, 1.4e23, 1.5e24, 1.7e25 } -- 11-20 = world 2 (11 free: the Golden Portal)
 for i, z in ipairs(C.ZONES) do
 	z.price = C.ZONE_PRICE[i] or 0
 end
@@ -329,7 +378,7 @@ function C.rebirthNeed(n) -- speed needed for rebirth number n + 1
 	return C.ZONES[zi].req * 10 ^ math.max(0, 3 + n - C.NZ) * C.REBIRTH_SPEED_SCALE
 end
 
-local SUF = { "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp" }
+local SUF = { "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc" }
 function C.fmt(n)
 	n = math.floor(n)
 	if n < 1000 then

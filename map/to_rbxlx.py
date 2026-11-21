@@ -14,7 +14,7 @@ data = json.loads((HERE / 'map.json').read_text(encoding='utf-8'))
 
 MAT = {'Plastic': 256, 'SmoothPlastic': 272, 'Neon': 288, 'Wood': 512, 'WoodPlanks': 528, 'Marble': 784, 'Concrete': 816,
        'Pavement': 836, 'Rock': 896, 'DiamondPlate': 1056, 'Foil': 1072, 'Metal': 1088, 'Grass': 1280, 'Fabric': 1312,
-       'Glass': 1568, 'Sand': 1296, 'Slate': 800}
+       'Glass': 1568, 'Sand': 1296, 'Slate': 800, 'Basalt': 788, 'Snow': 1328}
 SHAPE = {'Ball': 0, 'Block': 1, 'Cylinder': 2}
 _mj = HERE.parent / 'game' / 'meshes.json'
 MESH_IDS = json.loads(_mj.read_text(encoding='utf-8')) if _mj.exists() else {}      # Blender meshes the user imported: name -> id, size
