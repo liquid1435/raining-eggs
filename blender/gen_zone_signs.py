@@ -60,15 +60,15 @@ NUM0 = 1
 if 'w2' in ARGS:
     NUM0 = 12
     ZONES = [
-        ('MoonCraters', (200, 205, 220), (120, 130, 160), 'cloud'),
-        ('NebulaReef', (255, 110, 220), (40, 150, 170), 'neon'),
-        ('AsteroidBelt', (255, 150, 60), (120, 100, 90), 'crystal'),
-        ('SolarForge', (255, 140, 40), (200, 60, 30), 'thunder'),
-        ('CometGlacier', (170, 225, 255), (70, 140, 230), 'crystal'),
-        ('AlienJungle', (130, 255, 120), (150, 70, 230), 'mushroom'),
-        ('BlackHole', (200, 120, 255), (50, 34, 90), 'neon'),
-        ('StarStation', (80, 220, 255), (90, 100, 130), 'toy'),
-        ('GalaxyThrone', (255, 214, 80), (150, 90, 240), 'golden'),
+        ('MoonCraters', (200, 205, 220), (120, 130, 160), 'moon'),
+        ('NebulaReef', (255, 110, 220), (40, 150, 170), 'jelly'),
+        ('AsteroidBelt', (255, 150, 60), (120, 100, 90), 'asteroid'),
+        ('SolarForge', (255, 140, 40), (200, 60, 30), 'sun'),
+        ('CometGlacier', (170, 225, 255), (70, 140, 230), 'comet'),
+        ('AlienJungle', (130, 255, 120), (150, 70, 230), 'alien'),
+        ('BlackHole', (200, 120, 255), (50, 34, 90), 'blackhole'),
+        ('StarStation', (80, 220, 255), (90, 100, 130), 'satellite'),
+        ('GalaxyThrone', (255, 214, 80), (150, 90, 240), 'crown'),
     ]
 
 
@@ -285,6 +285,137 @@ ORN = {'meadow': o_meadow, 'mushroom': o_mushroom, 'candy': o_candy, 'toy': o_to
 
 
 # ---------------------------------------------------------------- one arch
+
+
+# ---------------------------------------------------------------- v139: world 2 ornaments (one theme per zone)
+def o_moon(b, n, pos, s, c1, c2):
+    """crescent moon on a stick + a little flag"""
+    x, y, z = pos
+    rcyl(b, (x, y + 0.9 * s, z), 0.14 * s, 1.8 * s, (200, 204, 216), segs=6)
+    cy = y + 2.8 * s
+    for k in range(9):                                     # crescent = arc of balls, thick in the middle
+        a = math.radians(-120 + k * 30)
+        r = (0.32 + 0.22 * math.sin(math.radians(k * 22.5))) * s
+        rball(b, (x + math.cos(a) * 1.0 * s, cy + math.sin(a) * 1.0 * s, z), r, (236, 238, 248), segs=8, rings=5)
+    for dx, dy in ((0.55, 0.2), (0.85, -0.3)):              # craters
+        rball(b, (x + dx * s, cy + dy * s, z), 0.14 * s, (170, 174, 190), segs=6, rings=4)
+    rball(n, (x - 0.5 * s, cy + 0.9 * s, z), 0.16 * s, (170, 220, 255), segs=6, rings=4)
+    rcyl(b, (x - 0.9 * s, y + 0.9 * s, z), 0.06 * s, 1.8 * s, WHITE, segs=5)
+    rbox(b, (x - 1.25 * s, y + 1.55 * s, z), (0.7 * s, 0.45 * s, 0.06 * s), (240, 70, 70), 0.02)
+
+
+def o_jelly(b, n, pos, s, c1, c2):
+    """glowing space jellyfish over a coral"""
+    x, y, z = pos
+    for dx, h, c in ((-0.35, 1.2, (255, 110, 220)), (0.3, 0.9, (90, 240, 230)), (0, 1.5, (190, 120, 255))):
+        rcyl(n, (x + dx * s, y + h * s / 2, z), 0.16 * s, h * s, c, segs=6)
+    cy = y + 2.9 * s
+    rball(n, (x, cy, z), 1.0 * s, mix(c1, WHITE, 0.25), (1, 0.7, 1), 10, 6)
+    rball(b, (x, cy - 0.15 * s, z), 1.04 * s, mix(c1, (255, 255, 255), 0.6), (1, 0.35, 1), 10, 4)
+    for k in range(5):
+        a = k * 2 * math.pi / 5
+        rcyl(n, (x + math.cos(a) * 0.55 * s, cy - 1.05 * s, z + math.sin(a) * 0.55 * s), 0.08 * s, 1.1 * s, (90, 240, 230), segs=5,
+             rz=math.cos(a) * 12)
+
+
+def o_asteroid(b, n, pos, s, c1, c2):
+    """floating rock with glowing ore and a small orbiting rock"""
+    x, y, z = pos
+    rcyl(b, (x, y + 0.6 * s, z), 0.12 * s, 1.2 * s, (90, 80, 76), segs=5)
+    cy = y + 2.2 * s
+    for dx, dy, r in ((0, 0, 1.0), (-0.55, 0.35, 0.65), (0.6, -0.25, 0.7), (0.2, 0.6, 0.55)):
+        rball(b, (x + dx * s, cy + dy * s, z), r * s, (120, 104, 96), (1, 0.85, 0.9), 7, 5)
+    for dx, dy in ((0.35, 0.1), (-0.4, -0.3), (0.0, 0.75), (0.85, 0.2)):
+        rbox(n, (x + dx * s, cy + dy * s, z + 0.8 * s), (0.28 * s, 0.28 * s, 0.28 * s), (255, 140, 40), 0.03, yaw=30)
+    rball(b, (x + 1.5 * s, cy + 0.9 * s, z), 0.3 * s, (150, 130, 118), segs=6, rings=4)
+
+
+def o_sun(b, n, pos, s, c1, c2):
+    """a little sun with flame rays"""
+    x, y, z = pos
+    rcyl(b, (x, y + 0.6 * s, z), 0.6 * s, 1.2 * s, (70, 40, 34), segs=8, r2=0.4 * s)
+    cy = y + 2.6 * s
+    rball(n, (x, cy, z), 0.95 * s, (255, 200, 60), segs=10, rings=7)
+    for k in range(10):
+        a = k * math.pi / 5
+        rcyl(n, (x + math.cos(a) * 1.25 * s, cy + math.sin(a) * 1.25 * s, z), 0.24 * s, 0.6 * s, (255, 110, 30) if k % 2 else (255, 160, 40),
+             segs=5, r2=0.0, rz=math.degrees(a) - 90)
+
+
+def o_comet(b, n, pos, s, c1, c2):
+    """icy comet with a glowing tail + ice crystals at its foot"""
+    x, y, z = pos
+    for dx, h, tilt in ((0, 1.6, 0), (-0.45, 1.0, -20), (0.45, 1.1, 18)):
+        rcyl(b, (x + dx * s, y + h * s / 2, z), 0.3 * s, h * s, (170, 225, 255), segs=6, r2=0.0, rz=tilt)
+    cy = y + 2.8 * s
+    rball(n, (x + 0.6 * s, cy + 0.5 * s, z), 0.6 * s, (235, 250, 255), segs=8, rings=6)
+    for k in range(5):
+        rball(n, (x + (0.1 - k * 0.42) * s, cy + (0.3 - k * 0.22) * s, z), (0.48 - k * 0.07) * s, mix((120, 200, 255), WHITE, 0.15 * k),
+              segs=6, rings=4)
+
+
+def o_alien(b, n, pos, s, c1, c2):
+    """alien plant: curly stalks with glowing bulbs + a tiny UFO"""
+    x, y, z = pos
+    rball(b, (x, y + 0.3 * s, z), 0.6 * s, (60, 120, 80), (1, 0.5, 1), 8, 4)
+    for k, (dx, h, c) in enumerate(((-0.45, 2.0, (150, 255, 90)), (0.1, 2.8, (190, 90, 255)), (0.55, 1.6, (255, 110, 220)))):
+        rcyl(b, (x + dx * s, y + h * s / 2, z), 0.1 * s, h * s, (70, 150, 90), segs=5, rz=(k - 1) * 10)
+        rball(n, (x + dx * s + (k - 1) * 0.18 * h * s, y + h * s + 0.2 * s, z), 0.32 * s, c, segs=8, rings=5)
+    uy = y + 3.6 * s
+    rcyl(b, (x, uy, z), 0.85 * s, 0.22 * s, (190, 196, 210), segs=12, r2=0.6 * s)
+    rball(n, (x, uy + 0.2 * s, z), 0.38 * s, (140, 230, 255), (1, 0.8, 1), 8, 5)
+
+
+def o_blackhole(b, n, pos, s, c1, c2):
+    """black sphere with a glowing tilted accretion disk"""
+    x, y, z = pos
+    rbox(b, (x, y + 0.3 * s, z), (1.0 * s, 0.6 * s, 1.0 * s), (40, 30, 64), 0.08)
+    rcyl(b, (x, y + 1.0 * s, z), 0.1 * s, 1.0 * s, (40, 30, 64), segs=6)
+    cy = y + 2.5 * s
+    rball(b, (x, cy, z), 0.7 * s, (8, 6, 14), segs=10, rings=7)
+    for k in range(16):
+        a = k * math.pi / 8
+        c = (255, 200, 100) if k % 4 == 0 else ((255, 110, 220) if k % 2 else (190, 120, 255))
+        rbox(n, (x + math.cos(a) * 1.25 * s, cy + math.sin(a) * 0.3 * s, z + math.sin(a) * 0.5 * s), (0.42 * s, 0.12 * s, 0.22 * s), c, 0.02,
+             yaw=-math.degrees(a), rz=14)
+
+
+def o_satellite(b, n, pos, s, c1, c2):
+    """satellite: body, solar panels, dish and a blinking antenna"""
+    x, y, z = pos
+    rcyl(b, (x, y + 0.7 * s, z), 0.12 * s, 1.4 * s, (200, 204, 216), segs=6)
+    cy = y + 2.2 * s
+    rbox(b, (x, cy, z), (0.8 * s, 0.8 * s, 0.8 * s), (230, 180, 40), 0.06)
+    for sx in (-1, 1):
+        rbox(b, (x + sx * 1.35 * s, cy, z), (1.6 * s, 0.7 * s, 0.08 * s), (60, 90, 170), 0.02)
+        for k in range(3):
+            rbox(n, (x + sx * (0.85 + k * 0.5) * s, cy, z + 0.06 * s), (0.06 * s, 0.66 * s, 0.04 * s), (80, 220, 255), 0.0)
+    rcyl(b, (x, cy + 0.65 * s, z), 0.55 * s, 0.18 * s, (225, 228, 238), segs=10, r2=0.2 * s, rx=25)
+    rcyl(b, (x, cy + 1.15 * s, z), 0.04 * s, 0.7 * s, (200, 204, 216), segs=4)
+    rball(n, (x, cy + 1.55 * s, z), 0.14 * s, (255, 70, 70), segs=6, rings=4)
+
+
+def o_crown(b, n, pos, s, c1, c2):
+    """golden crown with gems + a star above it"""
+    x, y, z = pos
+    rcyl(b, (x, y + 0.3 * s, z), 0.9 * s, 0.6 * s, (150, 90, 240), segs=8)
+    cy = y + 1.2 * s
+    rcyl(b, (x, cy, z), 1.0 * s, 0.6 * s, GOLD, segs=12)
+    for k in range(5):
+        a = k * 2 * math.pi / 5
+        px, pz = x + math.cos(a) * 0.85 * s, z + math.sin(a) * 0.85 * s
+        rcyl(b, (px, cy + 0.65 * s, pz), 0.22 * s, 0.8 * s, GOLD, segs=5, r2=0.0)
+        rball(n, (px, cy + 0.1 * s, pz), 0.14 * s, ((255, 70, 110), (90, 230, 255), (150, 255, 120), (255, 140, 230), (120, 120, 255))[k],
+              segs=6, rings=4)
+    sy = cy + 2.0 * s
+    for k in range(5):
+        a = math.pi / 2 + k * 2 * math.pi / 5
+        rbox(n, (x + math.cos(a) * 0.3 * s, sy + math.sin(a) * 0.3 * s, z), (0.22 * s, 0.6 * s, 0.22 * s), (255, 240, 150), 0.03,
+             rz=math.degrees(a) - 90)
+
+
+ORN.update({'moon': o_moon, 'jelly': o_jelly, 'asteroid': o_asteroid, 'sun': o_sun, 'comet': o_comet, 'alien': o_alien,
+            'blackhole': o_blackhole, 'satellite': o_satellite, 'crown': o_crown})
 def arch(num, c1, c2, theme):
     body, neon = B(), B()
     P, Y0, H = arch_layout(num)
