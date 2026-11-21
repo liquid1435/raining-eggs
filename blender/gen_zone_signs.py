@@ -54,6 +54,24 @@ ZONES = [
 ]
 
 
+# v139: world 2 arches (zones 12-20, same design as world 1): blender -b -P gen_zone_signs.py -- w2 norender
+#   -> out/RainingEggsZoneSignsW2.fbx (+ copy in Desktop/RAINING EGGS NOU), meshes Map_ZoneArch_12.._20
+NUM0 = 1
+if 'w2' in ARGS:
+    NUM0 = 12
+    ZONES = [
+        ('MoonCraters', (200, 205, 220), (120, 130, 160), 'cloud'),
+        ('NebulaReef', (255, 110, 220), (40, 150, 170), 'neon'),
+        ('AsteroidBelt', (255, 150, 60), (120, 100, 90), 'crystal'),
+        ('SolarForge', (255, 140, 40), (200, 60, 30), 'thunder'),
+        ('CometGlacier', (170, 225, 255), (70, 140, 230), 'crystal'),
+        ('AlienJungle', (130, 255, 120), (150, 70, 230), 'mushroom'),
+        ('BlackHole', (200, 120, 255), (50, 34, 90), 'neon'),
+        ('StarStation', (80, 220, 255), (90, 100, 130), 'toy'),
+        ('GalaxyThrone', (255, 214, 80), (150, 90, 240), 'golden'),
+    ]
+
+
 def arch_layout(n):
     """P = pillar centre |x|, Y0 = board bottom, H = board height (zone 1 = the big RAINING EGGS title arch)"""
     return (12.0, 20.0, 12.0) if n == 1 else (11.3, 15.6, 10.0)   # pillars stand on the road edges (ROADW 18; gate C.GATE.width 18 between them)
@@ -361,7 +379,7 @@ nt.nodes['Principled BSDF'].inputs['Roughness'].default_value = 0.6
 
 objs, neons, LOCS = [], [], []
 for i, (key, c1, c2, theme) in enumerate(ZONES):
-    num = i + 1
+    num = i + NUM0
     body, neon = arch(num, c1, c2, theme)
     loc = ((i % 5) * 90, -(i // 5) * 70, 0)
     LOCS.append(loc)
@@ -382,22 +400,22 @@ if 'nofbx' not in ARGS:
     for o in bpy.data.objects:
         o.select_set(o in objs)
     bpy.context.view_layer.objects.active = objs[0]
-    fbx = OUT / 'RainingEggsZoneSigns.fbx'
+    fbx = OUT / ('RainingEggsZoneSignsW2.fbx' if NUM0 > 1 else 'RainingEggsZoneSigns.fbx')
     bpy.ops.export_scene.fbx(filepath=str(fbx), use_selection=True, object_types={'MESH'}, apply_scale_options='FBX_SCALE_UNITS',
                              mesh_smooth_type='FACE', colors_type='SRGB', add_leaf_bones=False, bake_anim=False)
     home = os.environ.get('USERPROFILE') or os.environ.get('HOME')
-    desk = pathlib.Path(home) / 'Desktop' / fbx.name
+    desk = pathlib.Path(home) / 'Desktop' / (('RAINING EGGS NOU/' if NUM0 > 1 else '') + fbx.name)
     shutil.copyfile(fbx, desk)
     print('wrote', fbx.stat().st_size // 1024, 'KB ->', desk)
     # one small file per zone too (2 meshes each): Studio's upload can time out on 20 meshes at once
-    one = desk.parent / 'RainingEggsZoneSigns'
+    one = desk.parent / ('RainingEggsZoneSignsW2' if NUM0 > 1 else 'RainingEggsZoneSigns')
     one.mkdir(exist_ok=True)
     for i in range(len(ZONES)):
         pair = objs[2 * i:2 * i + 2]
         for o in bpy.data.objects:
             o.select_set(o in pair)
         bpy.context.view_layer.objects.active = pair[0]
-        f1 = one / f'ZoneSign_{i + 1}.fbx'
+        f1 = one / f'ZoneSign_{i + NUM0}.fbx'
         bpy.ops.export_scene.fbx(filepath=str(f1), use_selection=True, object_types={'MESH'}, apply_scale_options='FBX_SCALE_UNITS',
                                  mesh_smooth_type='FACE', colors_type='SRGB', add_leaf_bones=False, bake_anim=False)
     print('wrote', len(ZONES), 'zone files ->', one)
@@ -465,7 +483,7 @@ if 'norender' not in ARGS:
         ob.scale = (W - 2.6, 3.2, H - 2.8)
         ob.data.materials.append(pm_)
         name = ['RAINING EGGS', 'MUSHROOM GROVE', 'CANDY CANYON', 'TOY TOWN', 'CRYSTAL COAST', 'SPOOKY HOLLOW',
-                'THUNDER PEAKS', 'NEON CITY', 'CLOUD KINGDOM', 'GOLDEN NEST'][num - 1]
+                'THUNDER PEAKS', 'NEON CITY', 'CLOUD KINGDOM', 'GOLDEN NEST', 'COSMIC NEST', 'MOON CRATERS', 'NEBULA REEF', 'ASTEROID BELT', 'SOLAR FORGE', 'COMET GLACIER', 'ALIEN JUNGLE', 'BLACK HOLE', 'STAR STATION', 'GALAXY THRONE'][num - 1]
         bpy.ops.object.text_add(location=(loc[0], loc[1] + 1.65, Y0 + H / 2), rotation=(math.radians(90), 0, math.radians(180)))
         t = bpy.context.active_object
         t.data.body = name
@@ -496,7 +514,7 @@ if 'norender' not in ARGS:
 
     PANEL = {}
     for i, (key, c1, c2, theme) in enumerate(ZONES):
-        PANEL[i] = panel(LOCS[i], i + 1, c1, c2)
+        PANEL[i] = panel(LOCS[i], i + NUM0, c1, c2)
 
     def shot(name, tgt, dist, h, side=0.35, res=(1300, 900), keep=()):
         for o in bpy.data.objects:
@@ -511,8 +529,8 @@ if 'norender' not in ARGS:
 
     only = [a for a in ARGS if a.isdigit()]
     for i, (key, _, _, _) in enumerate(ZONES):
-        if only and str(i + 1) not in only:
+        if only and str(i + NUM0) not in only:
             continue
-        P, Y0, H = arch_layout(i + 1)
+        P, Y0, H = arch_layout(i + NUM0)
         keep = [objs[2 * i], objs[2 * i + 1]] + PANEL[i]
-        shot(f'{i + 1}_{key}', (LOCS[i][0], LOCS[i][1], Y0 * 0.85), 62 if i else 100, 12 if i else 16, keep=keep)
+        shot(f'{i + NUM0}_{key}', (LOCS[i][0], LOCS[i][1], Y0 * 0.85), 62 if i + NUM0 > 1 else 100, 12 if i + NUM0 > 1 else 16, keep=keep)

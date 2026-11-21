@@ -2506,7 +2506,7 @@ def world2():
     w2_scenery(random.Random(121))
     with group('W2Gates', unique=False):
         for k, (title, c1, c2) in enumerate(W2_GATES):
-            gate(140 * (k + 1), title, None, c1, c2)
+            gate(140 * (k + 1), title, None, c1, c2, n=k + 12)   # v139: Blender arch like world 1 (Map_ZoneArch_12..20) once imported
     keep = [q for q in PARTS[start:] if not ('W2Gates' in q['g'] and abs(q['p'][0]) > WORLD2['half'])]   # no flags in the void
     PARTS[start:] = keep
     with group('Zone11_CosmicNest', unique=False):           # sky: planets, a ringed giant, a moon and stars (far away)
