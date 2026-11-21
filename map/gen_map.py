@@ -2260,15 +2260,126 @@ def w2_throne(cr, z0):
         light(sph(0, 42, tz + 5, 6, (255, 240, 170), 'Neon', **NC), (255, 230, 150), 50, 2.4)
         egg(-26, 4, tz, 4, GOLD2, VIO, beam=True, name='Decor')
         egg(26, 4, tz, 4, VIO, GOLD2, beam=True, name='Decor')
-        # end of world 2: a golden wall (more worlds later)
+        # end of world 2 (v139b, user: no banner, just a wall): the checker wall of world 1, 3 rows + a ledge on top
         ze = z0 + 140
-        b = blk(0, 0, ze + 1, H * 2 + 20, 60, 2, (50, 30, 100), 'Slate', name='Wall')
-        sign(b, 'Front', 'THE END OF THE UNIVERSE', 'world 3 is coming soon', fg=(255, 230, 110),
-             bg1=(150, 90, 240), bg2=(50, 24, 120), pps=8)
-        for sx in (-1, 1):
-            blk(sx * (H - 14), 0, ze - 2, 8, 64, 8, GOLD1, 'Metal')
-            blk(sx * (H - 14), 64, ze - 2, 9, 3, 9, PINK, 'Neon')
-        blk(0, 60, ze + 1, H * 2 + 20, 240, 2, WHITE, transparency=1, name='Wall')
+        for k, x in enumerate(range(-HALF - 24, HALF + 24, 24)):
+            for row in range(3):
+                blk(x + 12, -4 + row * 17, ze + 12, 24, 17, 24, (90, 60, 150) if (k + row) % 2 == 0 else shade((90, 60, 150), 1.15), 'Plastic')
+            blk(x + 12, 47, ze + 12, 24, 3, 26, GOLD2, 'Plastic')
+            blk(x + 12, 50, ze + 12, 6, 1, 6, PINK if k % 2 else CYAN, 'Neon', **NC)
+        blk(0, 0, ze + 1, H * 2 + 20, 300, 2, WHITE, transparency=1, name='Wall')
+
+
+# v139b (user: "better, more detailed, professional"): per zone of 14-20 one HERO landmark (60-100 studs, seen from
+# the zone before), stepped two-tone terraces along both sides with props in clusters of 3, glowing trim on each step
+W2_PRO = {  # zone of world 2 (4..10): (hero kind, base, top, accent, side of the hero, group)
+    4: ('asteroid', (96, 84, 78), (150, 130, 118), (255, 140, 40), 1, 'Zone14_AsteroidBelt'),
+    5: ('volcano', (60, 30, 26), (120, 60, 40), (255, 110, 30), -1, 'Zone15_SolarForge'),
+    6: ('spire', (120, 160, 200), (220, 240, 255), (120, 200, 255), 1, 'Zone16_CometGlacier'),
+    7: ('tree', (40, 80, 60), (90, 170, 110), (190, 90, 255), -1, 'Zone17_AlienJungle'),
+    8: ('monolith', (30, 22, 50), (70, 50, 110), (255, 110, 220), 1, 'Zone18_BlackHole'),
+    9: ('rocket', (90, 96, 110), (200, 206, 220), (80, 220, 255), -1, 'Zone19_StarStation'),
+    10: ('eggstatue', (90, 60, 150), (240, 200, 80), (255, 140, 230), 1, 'Zone20_GalaxyThrone'),
+}
+
+
+def w2_terraces(cr, z0, base, top, acc):
+    """3 stepped ledges along each side wall (two-tone + glowing trim), props in clusters of 3 on the top step"""
+    H = WORLD2['half']
+    for sx in (-1, 1):
+        for k, (w, h) in enumerate(((44, 3), (30, 6), (16, 9))):
+            x = sx * (H - 8 - w / 2)
+            for seg in range(2):
+                zc, ln = z0 + 35 + seg * 70, 50
+                blk(x, 0, zc, w, h, ln, base if k % 2 == 0 else shade(base, 1.18), 'Plastic')
+                blk(x, h, zc, w + 0.4, 0.5, ln + 0.4, top, 'Plastic')
+                blk(x - sx * (w / 2 + 0.1), h - 0.8, zc, 0.3, 0.5, ln, acc, 'Neon', **NC)
+        for seg in range(2):
+            cx, cz = sx * (H - 16), z0 + 30 + seg * 70 + cr.uniform(-6, 6)
+            for j, (dx, dz, s2) in enumerate(((0, 0, 4), (2.6, 3.4, 2.6), (-2.4, 3.8, 1.8))):
+                blk(cx + dx, 9.5, cz + dz, s2, s2 * 1.4, s2, acc if j == 0 else top, 'Neon' if j == 0 else 'Plastic', yaw=cr.uniform(0, 45))
+
+
+def w2_hero(cr, z0, kind, base, top, acc, side):
+    """one big landmark beside the road, in the middle of the zone"""
+    x, z = side * 100, z0 + 70
+    if kind == 'asteroid':                                     # giant asteroid on a drill rig
+        for k in range(4):
+            blk(x, k * 8, z, 18 - k * 3, 8, 18 - k * 3, (70, 74, 84) if k % 2 else (230, 170, 40), 'Metal')
+        for j, d in enumerate((40, 34, 26, 16)):
+            blk(x, 34 + j * 8, z, d, 9, d * 0.9, shade(base, 0.9 + 0.08 * j), 'Slate', yaw=j * 17, **NC)
+        for j in range(6):
+            a = j * 1.047
+            blk(x + math.cos(a) * 16, 40 + j * 3, z + math.sin(a) * 14, 3, 2, 3, acc, 'Neon', **NC)
+        light(blk(x, 70, z, 3, 3, 3, acc, 'Neon', **NC), acc, 40, 2)
+    elif kind == 'volcano':                                    # stepped volcano with a lava top and lava falls
+        for j, (d, h) in enumerate(((60, 14), (46, 14), (34, 14), (24, 14), (16, 10))):
+            blk(x, j * 14, z, d, h, d, base if j % 2 else shade(base, 1.2), 'Basalt')
+        light(blk(x, 66, z, 12, 2, 12, acc, 'Neon', **NC), acc, 60, 2.5)
+        for a in (0.3, 2.2, 4.1):
+            for j in range(4):
+                blk(x + math.cos(a) * (8 + j * 6), 52 - j * 14, z + math.sin(a) * (8 + j * 6), 3, 14, 3, acc, 'Neon', **NC)
+    elif kind == 'spire':                                      # giant ice crystal spire
+        y = 0
+        for j, (w, h, tw) in enumerate(((16, 40, 0), (11, 34, 8), (7, 24, -6), (4, 14, 4))):
+            part((w, h, w), C(x, y + h / 2, z) * R(0, 45 + j * 10, tw), top if j % 2 else acc, 'Glass', transparency=0.15)
+            y += h - 2
+        for a in range(0, 360, 60):
+            r = math.radians(a)
+            part((5, 22, 5), C(x + math.cos(r) * 13, 9, z + math.sin(r) * 13) * R(math.cos(r) * 25, a, math.sin(r) * 25), top, 'Glass', transparency=0.2)
+        light(blk(x, y, z, 3, 3, 3, WHITE, 'Neon', **NC), acc, 50, 2)
+    elif kind == 'tree':                                       # giant alien tree with glowing pods
+        for j in range(8):
+            blk(x + math.sin(j * 0.7) * 2, j * 10, z, 9 - j * 0.5, 10, 9 - j * 0.5, shade(base, 1 + 0.05 * j), 'Grass')
+        for j, (d, y) in enumerate(((50, 76), (38, 84), (24, 92))):
+            blk(x, y, z, d, 8, d, top if j % 2 else shade(top, 0.8), 'Grass', **NC)
+        for j in range(10):
+            a = j * 0.628
+            px, pz = x + math.cos(a) * 20, z + math.sin(a) * 20
+            blk(px, 66, pz, 0.6, 10, 0.6, shade(base, 1.3), 'Grass', **NC)
+            light(sph(px, 64, pz, 3.4, acc if j % 2 else (150, 255, 90), 'Neon', **NC), acc, 14, 1.2)
+    elif kind == 'monolith':                                   # floating monoliths around a void ring
+        for j in range(5):
+            a = j * 1.2566
+            part((6, 40, 3), C(x + math.cos(a) * 30, 40 + j * 3, z + math.sin(a) * 30) * R(0, -math.degrees(a), 10), top, 'Slate', **NC)
+            blk(x + math.cos(a) * 30, 62 + j * 3, z + math.sin(a) * 30, 1.4, 1.4, 1.4, acc, 'Neon', **NC)
+        n = 28
+        for j in range(n):
+            a = j * 2 * math.pi / n
+            part((5, 5, 3), C(x + math.cos(a) * 22, 50 + math.sin(a) * 22, z) * R(0, 0, math.degrees(a)), acc if j % 2 else base, 'Neon', **NC)
+        sph(x, 50, z, 30, (0, 0, 0), 'SmoothPlastic', **NC)
+        blk(x, 0, z, 30, 4, 30, base, 'Slate')
+        blk(x, 4, z, 31, 0.4, 31, acc, 'Neon', **NC)
+    elif kind == 'rocket':                                     # launch pad with a big rocket and a gantry
+        blk(x, 0, z, 30, 3, 30, base, 'DiamondPlate')
+        for j in range(5):
+            blk(x, 3 + j * 16, z, 12 - j, 16, 12 - j, WHITE if j % 2 == 0 else (240, 70, 70), 'Metal')
+        blk(x, 83, z, 6, 8, 6, (240, 70, 70), 'Metal')
+        blk(x, 91, z, 2.4, 6, 2.4, (240, 70, 70), 'Metal')
+        for sx, sz in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            blk(x + sx * 8, 3, z + sz * 8, 4 if sx else 1.4, 18, 1.4 if sx else 4, (240, 70, 70), 'Metal')
+        tx = x - side * 16
+        for j in range(6):
+            blk(tx, 3 + j * 14, z, 5, 1, 5, top, 'Metal')
+            blk(tx, 3 + j * 14, z, 1, 14, 1, (230, 180, 40), 'Metal')
+        light(blk(x, 3, z, 10, 0.4, 10, acc, 'Neon', **NC), acc, 30, 2)
+    else:                                                      # golden egg statue on a stepped pedestal
+        for j, d in enumerate((40, 32, 24)):
+            blk(x, j * 6, z, d, 6, d, base if j % 2 else top, 'Plastic')
+            blk(x, j * 6 + 6, z, d + 0.4, 0.4, d + 0.4, acc, 'Neon', **NC)
+        egg(x, 18 + 1.5 * 22, z, 22, top, acc, n=9, name='HeroEgg')
+        for j in range(12):
+            a = j * 0.5236
+            blk(x + math.cos(a) * 30, 60 + math.sin(j) * 4, z + math.sin(a) * 30, 2, 2, 2, acc if j % 2 else WHITE, 'Neon', **NC)
+
+
+def w2_pro(cr):
+    for k, (kind, base, top, acc, side, name) in W2_PRO.items():
+        z0 = (k - 1) * 140
+        with group(name, unique=False):
+            w2_terraces(cr, z0, base, top, acc)
+            w2_hero(cr, z0, kind, base, top, acc, side)
+
 
 
 # v121 (user: "details and things on the walls, everything like in world 1, only with a space theme")
@@ -2391,6 +2502,7 @@ def world2():
     w2_nebula(cr, 280)
     for k, fn in enumerate((w2_asteroid, w2_solar, w2_ice, w2_jungle, w2_blackhole, w2_station, w2_throne)):   # v139
         fn(cr, 420 + k * 140)
+    w2_pro(random.Random(139))
     w2_scenery(random.Random(121))
     with group('W2Gates', unique=False):
         for k, (title, c1, c2) in enumerate(W2_GATES):
