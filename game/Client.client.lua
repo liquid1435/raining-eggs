@@ -4641,3 +4641,41 @@ task.spawn(function()
 		end
 	end)
 end)
+
+-- ============================================================ FLOWING PET COATS (client, v138)
+-- Gold / Rainbow pets of the 40 new Codex animals get a live coat: rainbow bands (or a gold shine) that keep
+-- flowing head -> tail (ReplicatedStorage.PetCoatFlow + PetCoatMaps). Works for pets built by the server
+-- (pens, carried) and by this client (hatch, index): every Model with a Species attribute and Tier 2/3.
+task.spawn(function()
+	local okM, Coat = pcall(function()
+		return require(RS:WaitForChild("PetCoatFlow", 20))
+	end)
+	local maps = RS:FindFirstChild("PetCoatMaps")
+	if not okM or not Coat or not maps then
+		warn("PetCoatFlow missing - Gold/Rainbow pets keep their static texture", Coat)
+		return
+	end
+	local TIERS = { [2] = "Gold", [3] = "Rainbow" }
+	local function try(m)
+		if not m:IsA("Model") then
+			return
+		end
+		local sp, tier = m:GetAttribute("Species"), TIERS[m:GetAttribute("Tier") or 1]
+		if sp and tier and maps:FindFirstChild(sp) then
+			task.defer(function() -- after the pet's parts are in place
+				if m.Parent then
+					pcall(Coat.apply, m, sp, tier)
+				end
+			end)
+		end
+	end
+	for _, d in ipairs(workspace:GetDescendants()) do
+		try(d)
+	end
+	workspace.DescendantAdded:Connect(try)
+	workspace.DescendantRemoving:Connect(function(d)
+		if d:IsA("Model") and d:GetAttribute("Species") then
+			pcall(Coat.clear, d)
+		end
+	end)
+end)

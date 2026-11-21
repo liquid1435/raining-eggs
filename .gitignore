@@ -51,3 +51,6 @@ map/patch_*.py
 
 # tools (economy simulator)
 !tools/*.py
+
+# v138 flowing pet coats (Codex maps)
+!game/PetCoatMaps.rbxmx

@@ -1,3 +1,4 @@
+import os
 r"""Codex voxel pets WITH their animations, for Roblox without uploading animations.
 
 Every Codex rig is rigid (each vertex follows one bone). This script cuts every pet into one mesh per bone
@@ -16,7 +17,7 @@ pet's bottom centre bc: rotation quaternion (4 x int8) + translation t = R*bc + 
 import base64, bpy, bmesh, json, math, pathlib, struct
 from mathutils import Matrix, Vector
 
-SRC = pathlib.Path(r'E:\rainingeggs\codex_pets_all')
+SRC = pathlib.Path(os.environ.get('PETS_SRC', r'E:\rainingeggs\codex_pets_all'))
 HERE = pathlib.Path(__file__).resolve().parent
 OUT_FBX = HERE / 'out' / 'RainingEggsPetParts.fbx'
 OUT_LUA = HERE.parent / 'game' / 'PetAnimData.lua'

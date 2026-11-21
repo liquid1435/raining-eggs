@@ -1,3 +1,4 @@
+import os
 r"""Packs Codex's 50 voxel pets (E:\rainingeggs\codex_pets_all) into ONE FBX for Roblox Studio (File > Import 3D):
 Pet_<zone>_<rarity> (normal texture), Pet_<zone>_<rarity>_G (gold), Pet_<zone>_<rarity>_R (rainbow).
 Static pose (rig removed), head to -Y like the old pets (the game turns them with C.MESH_YAW), textures embedded.
@@ -8,7 +9,7 @@ After the import + save: py blender\harvest_meshes.py "<saved .rbxlx>" -> game\m
 """
 import bpy, json, math, pathlib
 
-SRC = pathlib.Path(r'E:\rainingeggs\codex_pets_all')
+SRC = pathlib.Path(os.environ.get('PETS_SRC', r'E:\rainingeggs\codex_pets_all'))
 OUT = pathlib.Path(__file__).resolve().parent / 'out' / 'RainingEggsPets3.fbx'
 RARITY = {'Common': 1, 'Uncommon': 2, 'Rare': 3, 'Epic': 4, 'Legendary': 5}
 

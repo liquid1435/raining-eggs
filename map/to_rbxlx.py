@@ -223,6 +223,15 @@ def props_meta():
     return scr('ModuleScript', 'PropsMeta', SRC / 'PropsMeta.lua')
 
 
+def coat_maps():
+    """v138: Codex's PetCoatMaps folder (flow + brightness maps of the pets, StringValues), next to PetCoatFlow"""
+    p = SRC / 'PetCoatMaps.rbxmx'
+    if not p.exists():
+        return ''
+    t = p.read_text(encoding='utf-8')
+    return t[t.index('<Item'):t.rindex('</roblox>')]
+
+
 def bigegg():
     """BIG EGG DROP (Codex, E:\\rainingeggs\\event_bigegg): VFX modules -> ReplicatedStorage.BigEggFX, animation clips -> ReplicatedStorage.BigEggAnims"""
     ev = HERE.parent / 'event_bigegg'
@@ -238,7 +247,7 @@ def bigegg():
 
 GAME = ''
 if TAG:
-    GAME = (item('ReplicatedStorage', '<string name="Name">ReplicatedStorage</string>', scr('ModuleScript', 'Config', SRC / 'Config.lua') + scr('ModuleScript', 'Sfx', SRC / 'Sfx.lua') + scr('ModuleScript', 'UIMenus', SRC / 'UIMenus.lua') + scr('ModuleScript', 'HatchVFX', SRC / 'HatchVFX.lua') + scr('ModuleScript', 'PetAnim', SRC / 'PetAnim.lua') + scr('ModuleScript', 'PetAnimData', SRC / 'PetAnimData.lua') + assets_folder() + bigegg() +
+    GAME = (item('ReplicatedStorage', '<string name="Name">ReplicatedStorage</string>', scr('ModuleScript', 'Config', SRC / 'Config.lua') + scr('ModuleScript', 'Sfx', SRC / 'Sfx.lua') + scr('ModuleScript', 'UIMenus', SRC / 'UIMenus.lua') + scr('ModuleScript', 'HatchVFX', SRC / 'HatchVFX.lua') + scr('ModuleScript', 'PetAnim', SRC / 'PetAnim.lua') + scr('ModuleScript', 'PetAnimData', SRC / 'PetAnimData.lua') + scr('ModuleScript', 'PetCoatFlow', SRC / 'PetCoatFlow.lua') + coat_maps() + assets_folder() + bigegg() +
                  item('Folder', '<string name="Name">Shared</string>', ''.join(
                      scr('ModuleScript', n, SRC / 'treadmills' / f'{n}.lua') for n in ('TreadmillData', 'TreadmillBuilder', 'TreadmillConfig')))) +
             item('ServerScriptService', '<string name="Name">ServerScriptService</string>', scr('Script', 'GameServer', SRC / 'Server.server.lua')) +
