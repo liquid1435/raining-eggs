@@ -271,17 +271,40 @@ local function zonesDone(d)
 end
 
 -- v153: which of the 3 animals of a rarity hatches (equal chance); a variant only once its meshes are imported
-local function rollVariant(pet)
+-- v164 (user: 3 eggs gave the same beetle 3 times): animals of that rarity you do not have yet come first, so 3 eggs
+-- of one rarity give its 3 different animals; once you have all 3, it is random again
+local function rollVariant(pet, d)
 	local PA = C.petAnim()
-	local ok = {}
+	local ok = { 1 }
 	for v = 2, C.variantCount(pet.z, pet.i) do
 		if PA and PA.has({ z = pet.z, i = pet.i, v = v }) then
 			table.insert(ok, v)
 		end
 	end
-	local r = math.random(1, #ok + 1)
-	return r > 1 and ok[r - 1] or nil
+	local new = {}
+	for _, v in ipairs(ok) do
+		local key = pet.z .. "_" .. pet.i .. (v > 1 and ("_" .. v) or "")
+		if not (d and d.index[key]) then
+			table.insert(new, v)
+		end
+	end
+	local list = #new > 0 and new or ok
+	local v = list[math.random(1, #list)]
+	return v > 1 and v or nil
 end
+task.defer(function() -- Output check: how many variant animals the game can hatch
+	local PA, n = C.petAnim(), 0
+	for z = 1, C.TOTAL do
+		for i = 1, #C.RARITY do
+			for v = 2, C.variantCount(z, i) do
+				if PA and PA.has({ z = z, i = i, v = v }) then
+					n = n + 1
+				end
+			end
+		end
+	end
+	print("Pet variants live: " .. n .. " (should be 100)")
+end)
 local function eventKey()
 	return (C.eventAt(os.time())).key
 end
@@ -1563,7 +1586,7 @@ local function hatchBag(plr, only, limit)
 		local idx = roll(egg.luck)
 		-- v152: the coat (normal / Gold / Rainbow) is rolled at hatch: C.TIER_ODDS by egg kind
 		local pet = { z = egg.z, i = idx, t = math.clamp(math.floor(egg.tier or C.rollTier(egg.kind, eventKey() == "rainbow")), 1, #C.TIER) }
-		pet.v = rollVariant(pet)
+		pet.v = rollVariant(pet, d)
 		local def = C.petDef(pet)
 		local odds = C.RARITY[idx].odds
 		table.insert(d.carry, pet)
@@ -1775,7 +1798,7 @@ local function hatchToPen(plr, d, z, kind, boost, force)
 	local luck = C.luck(d.luck) * (d.passes.luck2 and 2 or 1) * (boost or 1) * (eventKey() == "luck" and 2 or 1)
 	local idx = force or roll(luck)
 	local pet = { z = z, i = idx, t = C.rollTier(kind, eventKey() == "rainbow") } -- v152
-	pet.v = rollVariant(pet)
+	pet.v = rollVariant(pet, d)
 	local def = C.petDef(pet)
 	d.caught = d.caught + 1
 	if C.RARITY[idx].odds > d.bestOdds then
