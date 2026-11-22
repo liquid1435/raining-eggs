@@ -4087,10 +4087,61 @@ task.spawn(function()
 			end
 		end)
 	end
+	-- v174 (user: a new look for the "where is the big egg" indicator): a HUD banner like the EGG STORM one - egg, BIG EGG,
+	-- white pill with an arrow that turns towards the egg + the distance. It stays until somebody takes the egg.
+	VFX.NO_CARD = true
+	local ind = nil
+	local function indicator(show, p)
+		if not ind and show then
+			local holder, face = lip(top, Color3.fromRGB(255, 160, 40), UDim2.fromScale(0.78, 0.36), BAR_HIGH, nil, 0.3)
+			holder.ZIndex = 4
+			icon(holder, "egg", UDim2.fromScale(0.3, 1.35), UDim2.fromScale(-0.06, 0.45), Vector2.new(0, 0.5)).ZIndex = 6
+			local tl = title(face, UDim2.fromScale(0.42, 0.7), UDim2.fromScale(0.2, 0.14), 32, "BIG EGG")
+			tl.TextColor3 = Color3.fromRGB(255, 240, 120)
+			tl.TextXAlignment = Enum.TextXAlignment.Left
+			tl.ZIndex = 5
+			local pill = make("Frame", {
+				BackgroundColor3 = WHITE, BorderSizePixel = 0, Size = UDim2.fromScale(0.34, 0.72), Position = UDim2.fromScale(0.63, 0.14), ZIndex = 5,
+			}, face)
+			make("UICorner", { CornerRadius = UDim.new(1, 0) }, pill)
+			make("UIStroke", { Thickness = 2.5, Color = BLACK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, pill)
+			local arrow = make("TextLabel", {
+				BackgroundTransparency = 1, Size = UDim2.fromScale(0.3, 0.9), Position = UDim2.fromScale(0.06, 0.05), ZIndex = 6,
+				Font = Enum.Font.GothamBlack, TextScaled = true, Text = "\u{25B2}", TextColor3 = Color3.fromRGB(240, 120, 20),
+			}, pill)
+			local dist = make("TextLabel", {
+				BackgroundTransparency = 1, Size = UDim2.fromScale(0.6, 0.8), Position = UDim2.fromScale(0.36, 0.1), ZIndex = 6,
+				Font = Enum.Font.FredokaOne, TextScaled = true, Text = "", TextColor3 = Color3.fromRGB(38, 42, 120),
+			}, pill)
+			ind = { holder = holder, arrow = arrow, dist = dist, pos = p }
+			RunService.RenderStepped:Connect(function()
+				if not ind.holder.Visible or not ind.pos then
+					return
+				end
+				ind.holder.Position = stormBanner.Visible and BAR_LOW or BAR_HIGH
+				local cam = workspace.CurrentCamera
+				local ch = LP.Character
+				local root = ch and ch:FindFirstChild("HumanoidRootPart")
+				if cam and root then
+					local rel = cam.CFrame:VectorToObjectSpace(ind.pos - cam.CFrame.Position)
+					ind.arrow.Rotation = math.deg(math.atan2(rel.X, -rel.Z))
+					ind.dist.Text = math.floor((ind.pos - root.Position).Magnitude + 0.5) .. "m"
+				end
+			end)
+		end
+		if ind then
+			ind.holder.Visible = show
+			ind.pos = p or ind.pos
+		end
+	end
 	BigEgg.OnClientEvent:Connect(function(cue, a, b)
+		if cue == "win" or cue == "clear" then
+			indicator(false)
+		end
 		if cue == "incoming" then
 			clear()
 			pos = a
+			indicator(true, pos)
 			pcall(VFX.PlayIncoming, pos)
 			if cinema then
 				cinema = false

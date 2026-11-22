@@ -2196,7 +2196,7 @@ local function startBigEgg()
 		ev.won = true
 		pp.Enabled = false
 		BigEgg:FireAllClients("win", plr.UserId, plr.DisplayName)
-		Notice:FireAllClients(plr.DisplayName .. " claimed the BIG EGG!", "legend")
+		-- v174 (user): no "claimed the BIG EGG" message
 		task.delay(1.2, function()
 			hatchToPen(plr, d, d.unlocked, "golden", C.BIGEGG_LUCK)
 			save(plr)

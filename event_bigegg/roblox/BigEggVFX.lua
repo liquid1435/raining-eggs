@@ -503,7 +503,7 @@ end
 function VFX.PlayIncoming(pos)
 	VFX.Clear()
 	local s = state()
-	local card = incomingCard(pos)
+	local card = VFX.NO_CARD and { update = function() end, close = function() end } or incomingCard(pos) -- v174: game draws its own
 	local tint = own(s, Instance.new("ColorCorrectionEffect"))
 	tint.Parent = Lighting
 	FX.tween(tint, 1.3, {Brightness = -0.13, TintColor = Color3.fromRGB(192, 204, 255)})
@@ -1108,7 +1108,7 @@ function VFX.PlayWin(egg, playerName, winnerCharacter)
 	local pos = egg:GetPivot().Position
 	clearPresentation()
 	local s = state()
-	s.celebration = characterClip(winnerCharacter,"Celebrate",false,.14)
+	-- v174 (user): no celebration dance for the winner
 	local function hide(part)
 		if part:IsA("BasePart") then
 			s.hidden[part] = part.LocalTransparencyModifier
@@ -1141,7 +1141,6 @@ function VFX.PlayWin(egg, playerName, winnerCharacter)
 		FX.tween(chip,.55,{CFrame=chip.CFrame+dir*6,Transparency=1})
 	end
 	fragments(pos,40,true)
-	local screen = banner(playerName.." claimed the BIG EGG!", "BIG EGG   /   CLAIMED")
-	Debris:AddItem(screen,4)
+	-- v174 (user): no "claimed the BIG EGG" banner
 end
 return VFX
