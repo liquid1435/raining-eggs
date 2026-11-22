@@ -4110,8 +4110,11 @@ task.spawn(function()
 		if not ind and show then
 			local holder, face = lip(top, Color3.fromRGB(255, 160, 40), UDim2.fromScale(0.78, 0.36), BAR_HIGH, nil, 0.3)
 			holder.ZIndex = 4
-			icon(holder, "egg", UDim2.fromScale(0.3, 1.35), UDim2.fromScale(-0.06, 0.45), Vector2.new(0, 0.5)).ZIndex = 6
-			local tl = title(face, UDim2.fromScale(0.42, 0.7), UDim2.fromScale(0.2, 0.14), 32, "BIG EGG")
+			-- v196 (user screenshot): the egg sits inside the banner, a big clear arrow in the pill
+			local eggIc = icon(face, "egg", UDim2.fromScale(0.13, 0.86), UDim2.fromScale(0.03, 0.5), Vector2.new(0, 0.5))
+			eggIc.ZIndex = 6
+			make("UIAspectRatioConstraint", { AspectRatio = 1 }, eggIc)
+			local tl = title(face, UDim2.fromScale(0.4, 0.66), UDim2.fromScale(0.17, 0.17), 32, "BIG EGG")
 			tl.TextColor3 = Color3.fromRGB(255, 240, 120)
 			tl.TextXAlignment = Enum.TextXAlignment.Left
 			tl.ZIndex = 5
@@ -4121,11 +4124,13 @@ task.spawn(function()
 			make("UICorner", { CornerRadius = UDim.new(1, 0) }, pill)
 			make("UIStroke", { Thickness = 2.5, Color = BLACK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, pill)
 			local arrow = make("TextLabel", {
-				BackgroundTransparency = 1, Size = UDim2.fromScale(0.3, 0.9), Position = UDim2.fromScale(0.06, 0.05), ZIndex = 6,
+				BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromScale(0.3, 1.25), Position = UDim2.fromScale(0.2, 0.5), ZIndex = 6,
 				Font = Enum.Font.GothamBlack, TextScaled = true, Text = "\u{25B2}", TextColor3 = Color3.fromRGB(240, 120, 20),
 			}, pill)
+			make("UIAspectRatioConstraint", { AspectRatio = 1 }, arrow)
+			make("UIStroke", { Thickness = 1.5, Color = BLACK }, arrow)
 			local dist = make("TextLabel", {
-				BackgroundTransparency = 1, Size = UDim2.fromScale(0.6, 0.8), Position = UDim2.fromScale(0.36, 0.1), ZIndex = 6,
+				BackgroundTransparency = 1, Size = UDim2.fromScale(0.56, 0.8), Position = UDim2.fromScale(0.4, 0.1), ZIndex = 6,
 				Font = Enum.Font.FredokaOne, TextScaled = true, Text = "", TextColor3 = Color3.fromRGB(38, 42, 120),
 			}, pill)
 			ind = { holder = holder, arrow = arrow, dist = dist, pos = p }
