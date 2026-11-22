@@ -514,7 +514,7 @@ do
 	local EV_COL = { luck = Color3.fromRGB(60, 200, 90), gold = Color3.fromRGB(255, 190, 40), cash = Color3.fromRGB(40, 190, 120),
 		rainbow = Color3.fromRGB(230, 80, 200), storm = Color3.fromRGB(140, 90, 240) }
 	local holder = make("Frame", {
-		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(470 / 1920, 1 - 40 / 1080), Size = UDim2.fromScale(84 / 1920, 104 / 1080), -- right of the money block
+		BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1 - 44 / 1920, 672 / 1080), Size = UDim2.fromScale(58 / 1920, 72 / 1080), -- v170: right side, under the right buttons, smaller
 	}, gui)
 	make("UIAspectRatioConstraint", { AspectRatio = 0.82 }, holder)
 	local btn = make("ImageButton", {
@@ -532,7 +532,7 @@ do
 	make("UIStroke", { Thickness = 2, Color = BLACK }, timerT)
 	-- the bubble that opens on tap
 	local bubble = make("Frame", {
-		Visible = false, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, -0.06), Size = UDim2.fromScale(4.2, 0.55),
+		Visible = false, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.fromScale(-0.15, 0.4), Size = UDim2.fromScale(5.4, 0.62),
 		BackgroundColor3 = Color3.fromRGB(28, 24, 58), ZIndex = 5,
 	}, holder)
 	make("UICorner", { CornerRadius = UDim.new(0.3, 0) }, bubble)
@@ -556,8 +556,8 @@ do
 		TweenService:Create(sc, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 	end)
 	local friendT = make("TextLabel", {
-		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromScale(3.2, 0.2), Position = UDim2.fromScale(1.1, 0.4),
-		Visible = false, Font = Enum.Font.FredokaOne, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left,
+		BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromScale(4, 0.24), Position = UDim2.fromScale(1, 1.04),
+		Visible = false, Font = Enum.Font.FredokaOne, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Right,
 		TextColor3 = Color3.fromRGB(120, 230, 255), Text = "",
 	}, holder)
 	make("UIStroke", { Thickness = 2, Color = BLACK }, friendT)
