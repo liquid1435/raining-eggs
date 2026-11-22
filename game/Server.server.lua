@@ -1436,7 +1436,12 @@ local function load(plr)
 		d.gift, d.tut = false, 0 -- v182: Studio test of the introduction
 	end
 	if C.TEST_ALL_ZONES_FREE and game:GetService("RunService"):IsStudio() then
-		d.unlocked = C.NZ -- Studio test: every zone open for free (Config C.TEST_ALL_ZONES_FREE)
+		-- Studio test: every zone open for free (Config C.TEST_ALL_ZONES_FREE); v226 (user): world 2 too - all 20 zones and
+		-- the Golden Portal open (all 10 altars filled)
+		d.unlocked = C.TOTAL
+		for z = 1, C.NZ do
+			d.altar[z] = true
+		end
 	end
 	d.zonesDone = zonesDone(d)
 	return d

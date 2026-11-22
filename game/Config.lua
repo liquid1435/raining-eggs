@@ -25,7 +25,7 @@ C.STORM_EVERY = { 2400, 4200 } -- v224: random time between storms (40-70 min)
 -- BIG EGG DROP: a giant egg falls in the plaza, players fight with weapons, holding E for 5 s claims it
 C.BIGEGG_FIRST = { 600, 1200 }  -- v224 (user: SECRET EGG, rare): seconds after the server starts (10-20 min)
 C.BIGEGG_EVERY = { 1500, 2700 } -- v224: random time between drops (25-45 min)
-C.TEST_ALL_ZONES_FREE = true    -- Studio only: all 10 zones open for free (to test the Golden Nest portal); the real game is not affected
+C.TEST_ALL_ZONES_FREE = true    -- Studio only: all 20 zones (world 1 + world 2) and the Golden Portal open for free; the real game is not affected
 C.MUSIC_ID = "1848049490" -- v206: Strauss II "Voices of Spring" (Roblox Toolbox audio, chosen by the user); v204: calm background music (audio/rainingeggs_music.ogg uploaded to Roblox), "" = no music
 C.MUSIC_VOLUME = 0.13 -- v208 (user): a bit quieter (was 0.22)
 C.SELL_SOUND = ""              -- sound when you sell pets (rbxassetid://...), empty = the coin sound

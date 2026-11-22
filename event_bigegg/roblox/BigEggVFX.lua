@@ -767,6 +767,17 @@ local function buildCrater(s, pos)
 			surface.CanCollide = false -- the cut copy (with the hole) is the solid ground now, on this client
 		end)
 	end
+	-- v226 (user: "I can walk through the stones by the egg"): the rim slabs are low and tilted, so players stepped up
+	-- over them - an invisible wall ring just outside the lip keeps everybody out (the claim prompt reaches 24 studs)
+	for i = 0, 23 do
+		local a = i * math.pi / 12
+		local wall = Instance.new("Part")
+		wall.Name = "CraterWall"
+		wall.Anchored, wall.CanCollide, wall.CanQuery, wall.CanTouch, wall.Transparency = true, true, false, false, 1
+		wall.Size = Vector3.new(radius * 2 * math.pi / 24 + 0.6, 9, 1.4)
+		wall.CFrame = CFrame.lookAt(pos + Vector3.new(math.cos(a), 0, math.sin(a)) * radius * 1.08 + Vector3.yAxis * 3.5, pos + Vector3.yAxis * 3.5)
+		wall.Parent = model
+	end
 	return radius
 end
 
