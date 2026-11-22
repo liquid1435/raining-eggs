@@ -3680,8 +3680,15 @@ do
 	-- (fence collision boxes, zones) can swallow clicks on a SurfaceGui. Backup: a click/tap that the GUI did not take
 	-- is ray-cast against the board only; if it lands on the button area, buy.
 	game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
-		if processed or not signPart or not btn then
+		if not signPart or not btn then
 			return
+		end
+		if processed then -- v162: only skip when a visible screen button is under the finger (not an empty HUD frame)
+			for _, g in ipairs(plr.PlayerGui:GetGuiObjectsAtPosition(input.Position.X, input.Position.Y)) do
+				if g:IsA("GuiButton") and g.Visible and g:FindFirstAncestorWhichIsA("ScreenGui") then
+					return
+				end
+			end
 		end
 		local t = input.UserInputType
 		if t ~= Enum.UserInputType.MouseButton1 and t ~= Enum.UserInputType.Touch then

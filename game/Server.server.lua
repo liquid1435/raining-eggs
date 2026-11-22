@@ -66,6 +66,8 @@ for i = 1, 8 do
 	end
 end
 
+local buyTrain -- v162: defined next to buy()
+
 -- treadmills from TreadmillPack (ReplicatedStorage.Shared): 20 models, a better one every 3 training levels
 local Shared = RS:FindFirstChild("Shared")
 local TBuilder = Shared and Shared:FindFirstChild("TreadmillBuilder") and require(Shared.TreadmillBuilder)
@@ -788,6 +790,37 @@ local function buy(plr, kind, part)
 		return
 	end
 	say(plr, UP_NAME[kind] .. " level " .. (lv + 1) .. "!", "buy")
+end
+
+-- v162 (user: the upgrade button on the fence does nothing): the treadmill board also gets a ClickDetector (click and
+-- phone tap, works even when an invisible part or a screen GUI swallows the SurfaceGui button). The SurfaceGui button,
+-- the client ray fallback and this detector can all fire on one press -> one buy per 0.4 s.
+local lastTrain = {}
+buyTrain = function(plr)
+	local d = data[plr]
+	if not d or os.clock() - (lastTrain[plr] or 0) < 0.4 then
+		return
+	end
+	lastTrain[plr] = os.clock()
+	buy(plr, "train", bases[d.base] and bases[d.base].tread)
+end
+Players.PlayerRemoving:Connect(function(plr)
+	lastTrain[plr] = nil
+end)
+for _, b in pairs(bases) do
+	local sign = b.treadSign
+	if sign then
+		sign.CanQuery = true
+		local cd = Instance.new("ClickDetector")
+		cd.MaxActivationDistance = 45
+		cd.Parent = sign
+		cd.MouseClick:Connect(function(plr)
+			local d = data[plr]
+			if d and bases[d.base] == b then
+				buyTrain(plr)
+			end
+		end)
+	end
 end
 
 local function prompt(part, kind, action)
@@ -1851,7 +1884,7 @@ Action.OnServerEvent:Connect(function(plr, what, kind)
 		if kind == "basket" or kind == "luck" then
 			buy(plr, kind, nil)
 		elseif kind == "train" then
-			buy(plr, "train", bases[d.base] and bases[d.base].tread)
+			buyTrain(plr)
 		end
 	elseif what == "daily" then
 		local now = os.time()
