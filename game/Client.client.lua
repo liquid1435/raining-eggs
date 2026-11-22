@@ -36,6 +36,31 @@ local function make(class, props, parent)
 end
 
 local UI = {} -- UI kit functions shared with the UIMenus module (filled further down)
+-- v210: swing a character's right arm (bat hit): up, then a quick chop forward, then back (shoulder joint only)
+UI.armSwing = function(char)
+	local m = char and (char:FindFirstChild("RightShoulder", true) or char:FindFirstChild("Right Shoulder", true))
+	if not m or not m:IsA("Motor6D") or m:GetAttribute("Swinging") then
+		return
+	end
+	m:SetAttribute("Swinging", true)
+	local c0 = m.C0
+	local TS = game:GetService("TweenService")
+	local r6 = m.Name == "Right Shoulder"
+	local up = c0 * (r6 and CFrame.Angles(0, 0, math.rad(110)) or CFrame.Angles(math.rad(120), 0, 0))
+	local down = c0 * (r6 and CFrame.Angles(0, 0, math.rad(-25)) or CFrame.Angles(math.rad(-30), 0, 0))
+	task.spawn(function()
+		local a = TS:Create(m, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { C0 = up })
+		a:Play()
+		a.Completed:Wait()
+		local b = TS:Create(m, TweenInfo.new(0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { C0 = down })
+		b:Play()
+		b.Completed:Wait()
+		local c = TS:Create(m, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { C0 = c0 })
+		c:Play()
+		c.Completed:Wait()
+		m:SetAttribute("Swinging", nil)
+	end)
+end
 -- v190 (user: upgrade buttons had a delay): buy at once on this screen - new level + cash shown locally right away,
 -- the server does the real buy and its numbers replace these (a refused buy sends the real numbers back)
 UI.buyUpgrade = function(kind, viaShop)
@@ -3948,7 +3973,7 @@ task.spawn(function()
 				return
 			end
 			last = os.clock()
-			pcall(WFX.PlaySwing, tool)
+			UI.armSwing(LP.Character) -- v210 (user): only the arm moves, no body animation
 			BigEggSwing:FireServer()
 		end)
 	end
@@ -4177,6 +4202,10 @@ task.spawn(function()
 		end
 	end
 	BigEgg.OnClientEvent:Connect(function(cue, a, b)
+		if cue == "swing" and a ~= LP.UserId then
+			UI.armSwing(charOf(a))
+			return
+		end
 		if cue == "win" or cue == "clear" then
 			indicator(false)
 		end
@@ -5280,13 +5309,99 @@ do
 			pcall(playClick)
 		end
 	end)
-	-- Roblox's own tool bar (BIG EGG weapons) sits at the bottom too: lift the hotbar above it while you have tools
+	-- v210 (user): no Roblox tool bar - the BIG EGG bat is the 11th slot of this bar (tap it or press F to hold it)
 	task.spawn(function()
-		while true do
-			local bp = plr:FindFirstChildOfClass("Backpack")
-			local tools = (bp and #bp:GetChildren() > 0) or (plr.Character and plr.Character:FindFirstChildOfClass("Tool") ~= nil)
-			bar.Position = UDim2.new(0.5, 0, 1, tools and -80 or -8)
-			task.wait(1)
+		for _ = 1, 20 do
+			if pcall(function()
+				game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+			end) then
+				break
+			end
+			task.wait(0.5)
+		end
+	end)
+	local wBtn = make("TextButton", {
+		LayoutOrder = N + 1, Size = UDim2.fromScale(0.092, 1), BackgroundColor3 = Color3.fromRGB(58, 30, 20), BackgroundTransparency = 0.1,
+		AutoButtonColor = true, Text = "", Visible = false,
+	}, bar)
+	make("UIAspectRatioConstraint", { AspectRatio = 1 }, wBtn)
+	make("UICorner", { CornerRadius = UDim.new(0.18, 0) }, wBtn)
+	local wStroke = make("UIStroke", { Thickness = 2.5, Color = Color3.fromRGB(255, 170, 60), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, wBtn)
+	local wView, wFor = nil, nil
+	local function myTool()
+		local bp = plr:FindFirstChildOfClass("Backpack")
+		local ch = plr.Character
+		local held = ch and ch:FindFirstChildOfClass("Tool")
+		if held and held:GetAttribute("BigEggWeapon") then
+			return held, true
+		end
+		for _, t in ipairs(bp and bp:GetChildren() or {}) do
+			if t:IsA("Tool") and t:GetAttribute("BigEggWeapon") then
+				return t, false
+			end
+		end
+		return nil, false
+	end
+	local function toggleTool()
+		local t, held = myTool()
+		local hum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
+		if not t or not hum then
+			return
+		end
+		pcall(playClick)
+		if held then
+			hum:UnequipTools()
+		else
+			sel = nil -- no pet in the hand while holding the bat
+			hum:EquipTool(t)
+		end
+	end
+	wBtn.Activated:Connect(toggleTool)
+	UIS.InputBegan:Connect(function(input, processed)
+		if not processed and input.KeyCode == Enum.KeyCode.F then
+			toggleTool()
+		end
+	end)
+	RunService.Heartbeat:Connect(function()
+		local t, held = myTool()
+		wBtn.Visible = t ~= nil
+		wStroke.Color = held and Color3.fromRGB(120, 255, 120) or Color3.fromRGB(255, 170, 60)
+		wStroke.Thickness = held and 4 or 2.5
+		if t ~= wFor then
+			wFor = t
+			if wView then
+				wView:Destroy()
+				wView = nil
+			end
+			if t then -- a small picture of the bat
+				local vp = make("ViewportFrame", { Size = UDim2.fromScale(0.9, 0.9), Position = UDim2.fromScale(0.05, 0.05), BackgroundTransparency = 1, ZIndex = 3 }, wBtn)
+				local cam = make("Camera", { FieldOfView = 40 }, vp)
+				vp.CurrentCamera = cam
+				local m = Instance.new("Model")
+				for _, q in ipairs(t:GetChildren()) do
+					if q:IsA("BasePart") then
+						local c = q:Clone()
+						c.Anchored = true
+						for _, w in ipairs(c:GetChildren()) do
+							if w:IsA("WeldConstraint") then
+								w:Destroy()
+							end
+						end
+						c.Parent = m
+					end
+				end
+				m.Parent = vp
+				local cf, size = m:GetBoundingBox()
+				cam.CFrame = CFrame.lookAt(cf.Position + Vector3.new(0, 0, size.Magnitude * 1.15), cf.Position) * CFrame.Angles(0, 0, math.rad(40))
+				wView = vp
+			end
+		end
+		-- a pet taken in hand puts the bat away
+		if sel and held then
+			local hum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
+			if hum then
+				hum:UnequipTools()
+			end
 		end
 	end)
 end

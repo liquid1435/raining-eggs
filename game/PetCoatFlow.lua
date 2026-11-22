@@ -3,6 +3,10 @@ local AssetService = game:GetService("AssetService")
 local EncodingService = game:GetService("EncodingService")
 local RunService = game:GetService("RunService")
 local Coat = {}
+-- v210 (user: the Gold / Rainbow pets looked blurry and the colours wrong): the live image is only 256 px, so Roblox
+-- smooths it into blurry colour smears. Off: the pets keep their crisp coloured Gold / Rainbow textures (x4, nearest)
+-- and only get a light moving effect (a shine band on Gold, a soft colour shift on Rainbow).
+Coat.LIVE = false
 local models, groups, palettes = {}, {}, {}
 local heartbeat
 local period = 1 / 12
@@ -155,11 +159,12 @@ local function display(state, step)
 				-- v194 (user: Gold pets had no moving effect): no live image -> a bright shine band runs head -> tail over the
 				-- baked gold texture (Color only darkens a texture, so the parts dim and the band is full white)
 				local d = math.abs(((p.phase-step)%256)/256 - .5)*2 -- 0 = band centre, 1 = far
-				local L = .5 + .5*(1-d)^5
-				p.tint.Color = Color3.new(L, L*.97, L*.9)
+				local L = .82 + .18*(1-d)^5 -- v210: the gold stays bright, the band only lights it up a little more
+				p.tint.Color = Color3.new(L, L*.98, L*.94)
 			else
 				local r,gc,b = channels(g.tier,(p.phase-step)%256)
-				p.tint.Color = Color3.new(math.min(1,r),math.min(1,gc),math.min(1,b))
+				local c = Color3.new(math.min(1,r),math.min(1,gc),math.min(1,b))
+				p.tint.Color = Color3.new(1, 1, 1):Lerp(c, .3) -- v210: a soft shift over the crisp rainbow texture
 			end
 		end
 	end
@@ -203,7 +208,7 @@ local function tickCoats()
 	local g = chosen
 	g.nextUpdate = now + period - .001
 	local step = math.floor(now*.55*256)%256
-	if not g.image and now >= g.retry then
+	if Coat.LIVE and not g.image and now >= g.retry then
 		local ok, made = pcall(makeImage,g)
 		if not ok or not made then
 			if not Coat.warned then

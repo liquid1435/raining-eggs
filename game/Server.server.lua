@@ -2137,11 +2137,49 @@ local function weaponTool(kind)
 	return t
 end
 
+-- v210 (user): a wooden baseball bat instead of the hammer / pillow
+local function batTool()
+	local t = Instance.new("Tool")
+	t.Name = "Bat"
+	t.CanBeDropped = false
+	t.ToolTip = "Hit players to stop them taking the BIG EGG"
+	t:SetAttribute("BigEggWeapon", "Bat")
+	local WOOD, DARKW, TAPE = Color3.fromRGB(214, 160, 96), Color3.fromRGB(150, 98, 52), Color3.fromRGB(40, 36, 52)
+	-- the handle runs along Y (like the old weapons: Grip (0, -1, 0)); round looks come from cylinders turned upright
+	local h = Instance.new("Part")
+	h.Name = "Handle"
+	h.Size = Vector3.new(0.3, 1.5, 0.3)
+	h.Transparency = 1
+	h.CanCollide, h.Massless = false, true
+	h.Parent = t
+	local UPRIGHT = CFrame.Angles(0, 0, math.rad(90)) -- a cylinder's axis is X: turn it onto Y
+	local function seg(len, d, y, col, mat)
+		local p = Instance.new("Part")
+		p.Shape = Enum.PartType.Cylinder
+		p.Size = Vector3.new(len, d, d)
+		p.Color, p.Material = col, mat or Enum.Material.Wood
+		p.CanCollide, p.Massless, p.CanTouch, p.CanQuery = false, true, false, false
+		p.CFrame = h.CFrame * CFrame.new(0, y, 0) * UPRIGHT
+		local w = Instance.new("WeldConstraint")
+		w.Part0, w.Part1, w.Parent = h, p, p
+		p.Parent = t
+	end
+	seg(1.5, 0.32, 0, TAPE, Enum.Material.Fabric)  -- grip tape
+	seg(0.18, 0.5, -0.84, DARKW)                  -- knob
+	seg(0.9, 0.36, 1.15, WOOD)                    -- taper
+	seg(0.8, 0.46, 1.95, WOOD)
+	seg(0.9, 0.56, 2.8, WOOD)                     -- barrel
+	seg(0.12, 0.58, 3.3, DARKW)                   -- end cap
+	t.Grip = CFrame.new(0, -0.3, 0)
+	return t
+end
+
 local function giveWeapons()
-	for i, plr in ipairs(Players:GetPlayers()) do
+	for _, plr in ipairs(Players:GetPlayers()) do
 		local bp = plr:FindFirstChildOfClass("Backpack")
-		if bp and not bp:FindFirstChild("Bonk Hammer") and not bp:FindFirstChild("Pillow Bat") then
-			weaponTool(i % 2 == 1 and "Hammer" or "Pillow").Parent = bp
+		local has = (bp and bp:FindFirstChild("Bat")) or (plr.Character and plr.Character:FindFirstChild("Bat"))
+		if bp and not has then
+			batTool().Parent = bp
 		end
 	end
 end
@@ -2288,6 +2326,7 @@ BigEggSwing.OnServerEvent:Connect(function(plr)
 		return
 	end
 	d.swingT = now
+	BigEgg:FireAllClients("swing", plr.UserId) -- v210: every client swings that player's arm
 	local best, bestDist = nil, C.BIGEGG_REACH
 	for _, other in ipairs(Players:GetPlayers()) do
 		local oc = other ~= plr and other.Character
@@ -2305,7 +2344,7 @@ BigEggSwing.OnServerEvent:Connect(function(plr)
 	if not best then
 		return
 	end
-	task.delay(0.3, function() -- the hit lands at the contact pose of the swing clip
+	task.delay(0.18, function() -- the hit lands when the arm comes down
 		local orr = best.Character and best.Character:FindFirstChild("HumanoidRootPart")
 		if not orr or not bigEv then
 			return
