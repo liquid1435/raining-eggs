@@ -438,7 +438,7 @@ local TIER_COLOR = { nil, Color3.fromRGB(255, 204, 40), Color3.fromRGB(255, 120,
 local function label(model, pet, mult)
 	local bb = Instance.new("BillboardGui")
 	bb.Name = "Tag"
-	bb.Size = UDim2.fromScale(8, 2.4)
+	bb.Size = UDim2.fromOffset(170, 50) -- v214 (user: a giant "$600M/s" up close): same size on screen at any distance
 	-- v144 fix (user: some pets showed no $/s): the tag sat a fixed 5 studs up, inside the big pets' bodies
 	-- (AlwaysOnTop off hides it there), and pets without a PrimaryPart got no tag at all -> put it above the real top
 	local root = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
