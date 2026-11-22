@@ -683,5 +683,6 @@ C.FRIEND_MAX = 4
 -- a new player gets a free egg 10 s after joining: Rare (or Epic) pet from Sunny Meadow
 C.GIFT_DELAY = 10
 C.GIFT_EPIC = 0.3
+C.TEST_TUTORIAL = true  -- v182: Studio only - every Play starts the introduction (welcome egg + steps); the real game is not affected
 
 return C

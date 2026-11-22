@@ -1416,6 +1416,9 @@ local function load(plr)
 		end
 	end
 	d.unlocked = math.clamp(math.floor(unlocked), 1, C.TOTAL)
+	if C.TEST_TUTORIAL and game:GetService("RunService"):IsStudio() then
+		d.gift, d.tut = false, 0 -- v182: Studio test of the introduction
+	end
 	if C.TEST_ALL_ZONES_FREE and game:GetService("RunService"):IsStudio() then
 		d.unlocked = C.NZ -- Studio test: every zone open for free (Config C.TEST_ALL_ZONES_FREE)
 	end
