@@ -370,6 +370,8 @@ local palettes = {
 	cosmic = {{20,32,60},{52,96,160},{150,206,245},{200,255,255},{80,220,255},{12,20,48},{36,66,118}},
 }
 
+local SOLID = {ArchStone=true, GiltFacing=true, Threshold=true, Heel=true}
+
 function VFX.ShowPortal(position: Vector3, size: number?, theme: string?)
 	if portal then stop(portal) end
 	local h = math.max(1, size or 30)
@@ -386,6 +388,8 @@ function VFX.ShowPortal(position: Vector3, size: number?, theme: string?)
 	local function piece(name, dims, cf, ink, material, ellipsoid, group)
 		local part = FX.part(p, name, dims*h, frame * (cf.Rotation + cf.Position*h), colors[ink])
 		part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch = true,false,false,false
+		-- v146 (user): the portal frame is a solid object; only the animated inside lets you walk through
+		if SOLID[name] then part.CanCollide, part.CanQuery = true, true end
 		part.Material = material
 		if ellipsoid then
 			local mesh = Instance.new("SpecialMesh")
