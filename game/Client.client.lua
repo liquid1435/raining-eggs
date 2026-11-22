@@ -514,7 +514,7 @@ do
 	local EV_COL = { luck = Color3.fromRGB(60, 200, 90), gold = Color3.fromRGB(255, 190, 40), cash = Color3.fromRGB(40, 190, 120),
 		rainbow = Color3.fromRGB(230, 80, 200), storm = Color3.fromRGB(140, 90, 240) }
 	local holder = make("Frame", {
-		BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1 - 44 / 1920, 672 / 1080), Size = UDim2.fromScale(58 / 1920, 72 / 1080), -- v170: right side, under the right buttons, smaller
+		BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1 - 24 / 1920, 1 - 30 / 1080), Size = UDim2.fromScale(58 / 1920, 72 / 1080), -- v178: bottom-right corner
 	}, gui)
 	make("UIAspectRatioConstraint", { AspectRatio = 0.82 }, holder)
 	local btn = make("ImageButton", {
@@ -556,7 +556,7 @@ do
 		TweenService:Create(sc, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 	end)
 	local friendT = make("TextLabel", {
-		BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromScale(4, 0.24), Position = UDim2.fromScale(1, 1.04),
+		BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 1), Size = UDim2.fromScale(4, 0.24), Position = UDim2.fromScale(1, -0.04),
 		Visible = false, Font = Enum.Font.FredokaOne, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Right,
 		TextColor3 = Color3.fromRGB(120, 230, 255), Text = "",
 	}, holder)
@@ -5049,8 +5049,9 @@ do
 					sl.view = vp
 				end
 			end
-			sl.btn.Visible = true
-			sl.btn.BackgroundTransparency = pet and 0.15 or 0.55
+			-- v178 (user): only filled slots show; the bar is centred, so 1 pet = 1 slot in the middle, more pets line up
+			sl.btn.Visible = pet ~= nil
+			sl.btn.BackgroundTransparency = 0.15
 		end
 		if sel and not pets[sel] then
 			sel = nil
