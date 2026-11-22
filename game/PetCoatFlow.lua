@@ -159,12 +159,12 @@ local function display(state, step)
 				-- v194 (user: Gold pets had no moving effect): no live image -> a bright shine band runs head -> tail over the
 				-- baked gold texture (Color only darkens a texture, so the parts dim and the band is full white)
 				local d = math.abs(((p.phase-step)%256)/256 - .5)*2 -- 0 = band centre, 1 = far
-				local L = .82 + .18*(1-d)^5 -- v210: the gold stays bright, the band only lights it up a little more
-				p.tint.Color = Color3.new(L, L*.98, L*.94)
+				local L = .62 + .38*(1-d)^3 -- v216: a clear shine band runs head -> tail (v210's was too faint to see)
+				p.tint.Color = Color3.new(L, L*.97, L*.88)
 			else
 				local r,gc,b = channels(g.tier,(p.phase-step)%256)
 				local c = Color3.new(math.min(1,r),math.min(1,gc),math.min(1,b))
-				p.tint.Color = Color3.new(1, 1, 1):Lerp(c, .3) -- v210: a soft shift over the crisp rainbow texture
+				p.tint.Color = Color3.new(1, 1, 1):Lerp(c, .55) -- v216: a clearly visible colour wave over the rainbow texture
 			end
 		end
 	end

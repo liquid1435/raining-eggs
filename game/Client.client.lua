@@ -5029,6 +5029,47 @@ task.spawn(function()
 	end
 	local TIERS = { [2] = "Gold", [3] = "Rainbow" }
 	local known = setmetatable({}, { __mode = "k" }) -- v192: every pet model seen, for the 2 s safety net
+	-- v216 (user: "why are there no effects"): Gold / Rainbow pets sparkle - gold stars, or stars in every colour
+	local RAINBOW_SEQ = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)), ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 220, 60)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(80, 230, 120)), ColorSequenceKeypoint.new(0.75, Color3.fromRGB(80, 170, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(210, 100, 255)),
+	})
+	function sparkles(m, tier)
+		if m:FindFirstChild("CoatSparkles", true) or (tier or 1) < 2 then
+			return
+		end
+		local cf, size = m:GetBoundingBox()
+		local host = Instance.new("Part")
+		host.Name = "CoatSparkles"
+		host.Anchored, host.CanCollide, host.CanQuery, host.CanTouch, host.Transparency = true, false, false, false, 1
+		host.Size = size * 0.8
+		host.CFrame = cf
+		host.Parent = m
+		local e = Instance.new("ParticleEmitter")
+		e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		e.Color = tier == 2 and ColorSequence.new(Color3.fromRGB(255, 236, 140), Color3.fromRGB(255, 190, 40)) or RAINBOW_SEQ
+		e.LightEmission = 1
+		e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.3, math.clamp(size.Magnitude * 0.05, 0.3, 1.4)), NumberSequenceKeypoint.new(1, 0) })
+		e.Transparency = NumberSequence.new(0.1)
+		e.Lifetime = NumberRange.new(0.6, 1.1)
+		e.Rate = tier == 2 and 7 or 11
+		e.Speed = NumberRange.new(0.4, 1.2)
+		e.SpreadAngle = Vector2.new(180, 180)
+		e.Rotation = NumberRange.new(0, 360)
+		e.RotSpeed = NumberRange.new(-90, 90)
+		e.Shape = Enum.ParticleEmitterShape.Box
+		e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+		e.Parent = host
+		-- the sparkles follow the pet when it walks
+		task.spawn(function()
+			while host.Parent and m.Parent do
+				local c2 = m:GetBoundingBox()
+				host.CFrame = c2
+				task.wait(0.1)
+			end
+		end)
+	end
 	local function try(m)
 		if not m:IsA("Model") then
 			return
@@ -5041,6 +5082,7 @@ task.spawn(function()
 			task.defer(function() -- after the pet's parts are in place
 				if m.Parent then
 					pcall(Coat.apply, m, sp, tier)
+					pcall(sparkles, m, m:GetAttribute("Tier"))
 				end
 			end)
 		end
