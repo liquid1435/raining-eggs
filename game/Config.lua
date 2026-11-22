@@ -302,15 +302,49 @@ C.HATCH = {
 	leave = 0.2,         -- seconds: pet shrinks away
 }
 
--- a pet is { z = zone, i = rarity index, t = tier (1 normal, 2 gold, 3 rainbow) }
+-- v153 (user: 3 animals per rarity in every egg): variants 2 and 3 (Codex models 101-200) - { name, sound kind }
+-- An egg hatches variant 1, 2 or 3 of the rolled rarity (equal chance) once that variant's meshes are imported.
+C.VARIANTS = {
+	[1] = { { { "Rabbit", "q" }, { "Hedgehog", "q" } }, { { "Squirrel", "q" }, { "Badger", "q" } }, { { "Wild Boar", "q" }, { "Beaver", "q" } }, { { "Lynx", "q" }, { "Moose", "q" } }, { { "Hippogriff", "b" }, { "Leaf Dragon", "q" } } },
+	[2] = { { { "Frog", "o" }, { "Snail", "o" } }, { { "Mole", "q" }, { "Stag Beetle", "o" } }, { { "Sloth", "q" }, { "Lemur", "q" } }, { { "Luna Moth", "b" }, { "Mushroom Deer", "q" } }, { { "Fungus Dragon", "q" }, { "Shroom Tortoise", "q" } } },
+	[3] = { { { "Hamster", "q" }, { "Flamingo", "b" } }, { { "Pink Poodle", "q" }, { "Llama", "q" } }, { { "Macaw", "b" }, { "Cotton Candy Sheep", "q" } }, { { "Pink Dolphin", "o" }, { "Caramel Camel", "q" } }, { { "Candy Dragon", "q" }, { "Rainbow Alicorn", "q" } } },
+	[4] = { { { "Puppy", "q" }, { "Duckling", "b" } }, { { "Wind-up Mouse", "q" }, { "Tin Turtle", "q" } }, { { "Robot Cat", "q" }, { "Clockwork Monkey", "q" } }, { { "Rocking Horse", "q" }, { "Clockwork Owl", "b" } }, { { "Mecha Rex", "q" }, { "Brick Dragon", "q" } } },
+	[5] = { { { "Crab", "o" }, { "Clownfish", "o" } }, { { "Sea Turtle", "o" }, { "Pufferfish", "o" } }, { { "Dolphin", "o" }, { "Walrus", "o" } }, { { "Orca", "o" }, { "Crystal Seahorse", "o" } }, { { "Leviathan", "o" }, { "Sea Serpent", "o" } } },
+	[6] = { { { "Bat", "b" }, { "Black Cat", "q" } }, { { "Raven", "b" }, { "Spider", "o" } }, { { "Ghost Fox", "q" }, { "Werewolf Pup", "q" } }, { { "Nightmare Horse", "q" }, { "Wraith Owl", "b" } }, { { "Bone Dragon", "q" }, { "Shadow Wyvern", "b" } } },
+	[7] = { { { "Mountain Goat", "q" }, { "Marmot", "q" } }, { { "Falcon", "b" }, { "Yak", "q" } }, { { "Puma", "q" }, { "Bighorn Ram", "q" } }, { { "Storm Wolf", "q" }, { "Lightning Lynx", "q" } }, { { "Storm Dragon", "q" }, { "Thunder Roc", "b" } } },
+	[8] = { { { "Pigeon", "b" }, { "Rat", "q" } }, { { "Raccoon", "q" }, { "Alley Cat", "q" } }, { { "Neon Jellyfish", "o" }, { "Cyber Wolf", "q" } }, { { "Neon Tiger", "q" }, { "Holo Koi", "o" } }, { { "Cyber Phoenix", "b" }, { "Neon Manticore", "q" } } },
+	[9] = { { { "Lamb", "q" }, { "Dove", "b" } }, { { "Alpaca", "q" }, { "Cloud Bunny", "q" } }, { { "Sky Ray", "o" }, { "Angel Cat", "q" } }, { { "Halo Stag", "q" }, { "Wind Serpent", "o" } }, { { "Sky Dragon", "q" }, { "Seraph Owl", "b" } } },
+	[10] = { { { "Golden Hamster", "q" }, { "Gold Chick", "b" } }, { { "Golden Retriever", "q" }, { "Gold Frog", "o" } }, { { "Royal Peacock", "b" }, { "Golden Monkey", "q" } }, { { "Gilded Elephant", "q" }, { "Royal Horse", "q" } }, { { "Golden Phoenix", "b" }, { "King Griffin", "q" } } },
+}
+for z, list in pairs(C.VARIANTS) do
+	for i, vars in ipairs(list) do
+		local base = C.ZONES[z].pets[i]
+		base.vars = {}
+		for k, v in ipairs(vars) do
+			base.vars[k + 1] = { name = v[1], kind = v[2], c = base.c, a = base.a, ears = base.ears, income = base.income }
+		end
+	end
+end
+-- the definition of a pet (its variant when it has one)
+function C.petDef(pet)
+	local base = C.ZONES[pet.z].pets[pet.i]
+	local v = pet.v or 1
+	return (v > 1 and base.vars and base.vars[v]) or base
+end
+function C.variantCount(z, i)
+	local base = C.ZONES[z] and C.ZONES[z].pets[i]
+	return base and base.vars and #base.vars or 1
+end
+
+-- a pet is { z = zone, i = rarity index, t = tier (1 normal, 2 gold, 3 rainbow), v = variant (nil/1, 2, 3) }
 function C.petIncome(pet)
 	return C.ZONES[pet.z].pets[pet.i].income * C.TIER[pet.t or 1].mult
 end
 function C.petName(pet)
-	return C.TIER[pet.t or 1].name .. C.ZONES[pet.z].pets[pet.i].name
+	return C.TIER[pet.t or 1].name .. C.petDef(pet).name
 end
-function C.petKey(pet)
-	return pet.z .. "_" .. pet.i
+function C.petKey(pet) -- index key; also the asset key: Pet_<key>, Pet_<key>__<part>, Pet_<key>_G / _R
+	return pet.z .. "_" .. pet.i .. ((pet.v or 1) > 1 and ("_" .. pet.v) or "")
 end
 
 -- upgrades: level starts at 0
@@ -448,7 +482,7 @@ function C.petAnim() -- v129: ReplicatedStorage.PetAnim (Codex pets made of movi
 end
 
 function C.buildPet(pet, s, anchored)
-	local def = C.ZONES[pet.z].pets[pet.i]
+	local def = C.petDef(pet)
 	local tier = pet.t or 1
 	local PA = C.petAnim()
 	if PA then -- v129: the animated Codex pet (parts) when its part meshes are imported
@@ -460,9 +494,10 @@ function C.buildPet(pet, s, anchored)
 			return am
 		end
 	end
-	local src = C.meshOf("Pet_" .. pet.z .. "_" .. pet.i)
+	local pk = C.petKey(pet)
+	local src = C.meshOf("Pet_" .. pk)
 	-- v127: the Codex pets have their own Gold / Rainbow textures (Pet_z_i_G / Pet_z_i_R); old pets only get a tint
-	local variant = (tier == 2 and C.meshOf("Pet_" .. pet.z .. "_" .. pet.i .. "_G")) or (tier == 3 and C.meshOf("Pet_" .. pet.z .. "_" .. pet.i .. "_R")) or nil
+	local variant = (tier == 2 and C.meshOf("Pet_" .. pk .. "_G")) or (tier == 3 and C.meshOf("Pet_" .. pk .. "_R")) or nil
 	if variant then
 		src = variant
 	end

@@ -33,9 +33,19 @@ for z, names in ZONES.items():
         e = dict(new[n]); used.add(n)
         e['zone_number'], e['rarity'], e['folder'] = z, R[i], str(NEW / e['folder'])
         out.append(e)
+# v153: variants 2 and 3 of every rarity (Codex models 101-200, manifest field "variant")
+for n, e0 in new.items():
+    if e0.get('variant', 1) > 1:
+        e = dict(e0); used.add(n)
+        e['folder'] = str(NEW / e['folder'])
+        out.append(e)
 assert used == set(new), set(new) - used
 (OUT / 'manifest.json').write_text(json.dumps(out, indent=1), encoding='utf-8')
 # v139: world 2 only (zones 11-20) for a small FBX import
 W2 = pathlib.Path(r'E:\rainingeggs\codex_pets_game_w2'); W2.mkdir(exist_ok=True)
 (W2 / 'manifest.json').write_text(json.dumps([e for e in out if e['zone_number'] > 10], indent=1), encoding='utf-8')
+# v153: variants only, split in two halves for the Studio import (big FBX files fail silently)
+for tag, lo, hi in (('va', 1, 5), ('vb', 6, 10)):
+    D = pathlib.Path(r'E:\rainingeggs\codex_pets_game_' + tag); D.mkdir(exist_ok=True)
+    (D / 'manifest.json').write_text(json.dumps([e for e in out if e.get('variant', 1) > 1 and lo <= e['zone_number'] <= hi], indent=1), encoding='utf-8')
 print(len(out), 'pets')

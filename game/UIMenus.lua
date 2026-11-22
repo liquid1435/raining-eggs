@@ -284,9 +284,9 @@ function M.init(X)
 	local function parsePets(s)
 		local out = {}
 		for _, k in ipairs(string.split(s or "", ",")) do
-			local z, i, t = string.match(k, "^(%d+)_(%d+)_(%d+)$")
+			local z, i, t, v = string.match(k, "^(%d+)_(%d+)_(%d+)_?(%d*)$")
 			if z and C.ZONES[tonumber(z)] and C.RARITY[tonumber(i)] then
-				table.insert(out, { z = tonumber(z), i = tonumber(i), t = tonumber(t) })
+				table.insert(out, { z = tonumber(z), i = tonumber(i), t = tonumber(t), v = tonumber(v) })
 			end
 		end
 		return out

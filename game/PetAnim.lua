@@ -111,8 +111,12 @@ local function frames(key, clip)
 	return entry
 end
 
+local function keyOf(pet) -- v153: variants 2/3 = <z>_<i>_<v>
+	return pet.z .. "_" .. pet.i .. ((pet.v or 1) > 1 and ("_" .. pet.v) or "")
+end
+
 function PA.has(pet)
-	local key = pet.z .. "_" .. pet.i
+	local key = keyOf(pet)
 	return DATA[key] ~= nil and asset("Pet_" .. key .. "__1") ~= nil
 end
 
@@ -123,7 +127,7 @@ local function textureOf(key, tier)
 end
 
 function PA.build(pet, s, anchored, meshYaw, meshSize)
-	local key = pet.z .. "_" .. pet.i
+	local key = keyOf(pet)
 	local d = DATA[key]
 	if not d or not asset("Pet_" .. key .. "__1") then
 		return nil

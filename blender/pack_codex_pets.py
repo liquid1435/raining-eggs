@@ -60,7 +60,7 @@ for k, e in enumerate(manifest):
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
     bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
     z, i = e['zone_number'], RARITY[e['rarity']]
-    base = f'Pet_{z}_{i}'
+    base = f'Pet_{z}_{i}' + (f"_{e['variant']}" if e.get('variant', 1) > 1 else '')   # v153: variants
     stem = pathlib.Path(e['files'][0]).stem
     for suffix, png in (('', f'{stem}.png'), ('_G', f'{stem}_Gold.png'), ('_R', f'{stem}_Rainbow.png')):
         o = ob if suffix == '' else ob.copy()

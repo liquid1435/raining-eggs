@@ -1195,11 +1195,11 @@ do
 		local function rows(str, where, tag)
 			local i = 0
 			for _, k in ipairs(string.split(str, ",")) do
-				local z, idx, t = string.match(k, "^(%d+)_(%d+)_(%d+)$")
+				local z, idx, t, vv = string.match(k, "^(%d+)_(%d+)_(%d+)_?(%d*)$")
 				if z then
 					i = i + 1
 					n = n + 1
-					local pet = { z = tonumber(z), i = tonumber(idx), t = tonumber(t) }
+					local pet = { z = tonumber(z), i = tonumber(idx), t = tonumber(t), v = tonumber(vv) }
 					local price = math.floor(C.petIncome(pet) * C.SELL_MULT)
 					local row = make("TextButton", { LayoutOrder = n, Size = UDim2.new(0.95, 0, 0, 46), BackgroundColor3 = WHITE, AutoButtonColor = true, Text = "", ZIndex = 3 }, list)
 					corner(row, 0.25)
@@ -2674,7 +2674,7 @@ local function drawShow(sh, dt)
 		sfx("egg_crack", 1, 0.75)
 		hfx("burst", 1)
 		task.delay(0.4 * sh.k, hfx, "reveal", 0.8)
-		task.delay(0.15 * sh.k, petSound, C.ZONES[sh.pet.z].pets[sh.pet.i].kind, nil, 0.6)
+		task.delay(0.15 * sh.k, petSound, C.petDef(sh.pet).kind, nil, 0.6)
 		if UI.confetti and R >= 4 then
 			task.delay(0.35 * sh.k, UI.confetti, R >= 5 and 90 or 45, R >= 5 and WARM or RCOL[4])
 		end

@@ -252,7 +252,11 @@ local function zonesDone(d)
 	for z = 1, C.NZ do
 		local all = true
 		for i = 1, #C.RARITY do
-			if not d.index[z .. "_" .. i] then
+			local got = d.index[z .. "_" .. i]
+			for v = 2, C.variantCount(z, i) do
+				got = got or d.index[z .. "_" .. i .. "_" .. v]
+			end
+			if not got then
 				all = false
 				break
 			end
@@ -264,6 +268,18 @@ local function zonesDone(d)
 	return n
 end
 
+-- v153: which of the 3 animals of a rarity hatches (equal chance); a variant only once its meshes are imported
+local function rollVariant(pet)
+	local PA = C.petAnim()
+	local ok = {}
+	for v = 2, C.variantCount(pet.z, pet.i) do
+		if PA and PA.has({ z = pet.z, i = pet.i, v = v }) then
+			table.insert(ok, v)
+		end
+	end
+	local r = math.random(1, #ok + 1)
+	return r > 1 and ok[r - 1] or nil
+end
 local function eventKey()
 	return (C.eventAt(os.time())).key
 end
@@ -280,7 +296,7 @@ end
 local function petList(list)
 	local t = {}
 	for _, pet in ipairs(list) do
-		table.insert(t, pet.z .. "_" .. pet.i .. "_" .. (pet.t or 1))
+		table.insert(t, pet.z .. "_" .. pet.i .. "_" .. (pet.t or 1) .. ((pet.v or 1) > 1 and ("_" .. pet.v) or "")) -- v153: _v
 	end
 	return table.concat(t, ",")
 end
@@ -451,7 +467,7 @@ local function renderPen(plr)
 		m:PivotTo(CFrame.new(c.X + SLOT_X[col], c.Y + 0.05 + 1.75 * s, c.Z + SLOT_Z[row]) * CFrame.Angles(0, math.pi, 0))
 		label(m, pet, mult)
 		m:SetAttribute("Phase", k * 0.7)
-		m:SetAttribute("Kind", C.ZONES[pet.z].pets[pet.i].kind)
+		m:SetAttribute("Kind", C.petDef(pet).kind)
 		-- v143: the client lets the pet walk around the pen (centre of the pen floor + how high the pivot sits)
 		m:SetAttribute("PenC", Vector3.new(c.X, c.Y + 0.05, c.Z))
 		m:SetAttribute("Lift", 1.75 * s)
@@ -611,7 +627,7 @@ local function fuse(d)
 		for k, e in ipairs(all) do
 			local pet = e.pet
 			if pet.t < #C.TIER then
-				local key = pet.z .. "_" .. pet.i .. "_" .. pet.t
+				local key = pet.z .. "_" .. pet.i .. "_" .. pet.t .. "_" .. (pet.v or 1)
 				groups[key] = groups[key] or {}
 				table.insert(groups[key], k)
 				if #groups[key] == C.FUSE then
@@ -624,7 +640,7 @@ local function fuse(d)
 						eq = eq or all[k2].eq
 						table.remove(all, k2)
 					end
-					local new = { z = pet.z, i = pet.i, t = pet.t + 1 }
+					local new = { z = pet.z, i = pet.i, t = pet.t + 1, v = pet.v }
 					table.insert(all, { pet = new, eq = eq })
 					table.insert(made, new)
 					again = true
@@ -1172,7 +1188,8 @@ local function load(plr)
 		for _, pet in ipairs(type(list) == "table" and list or {}) do
 			local t = type(pet) == "table" and (tonumber(pet.t) or 1)
 			if t and C.ZONES[pet.z] and C.ZONES[pet.z].pets[pet.i] and C.TIER[t] then
-				table.insert((into == pets and #pets < C.PEN_MAX) and pets or stored, { z = pet.z, i = pet.i, t = t })
+				local v = math.clamp(math.floor(tonumber(pet.v) or 1), 1, C.variantCount(pet.z, pet.i))
+				table.insert((into == pets and #pets < C.PEN_MAX) and pets or stored, { z = pet.z, i = pet.i, t = t, v = v > 1 and v or nil })
 			end
 		end
 	end
@@ -1512,7 +1529,8 @@ local function hatchBag(plr, only, limit)
 		local idx = roll(egg.luck)
 		-- v152: the coat (normal / Gold / Rainbow) is rolled at hatch: C.TIER_ODDS by egg kind
 		local pet = { z = egg.z, i = idx, t = math.clamp(math.floor(egg.tier or C.rollTier(egg.kind, eventKey() == "rainbow")), 1, #C.TIER) }
-		local def = C.ZONES[egg.z].pets[idx]
+		pet.v = rollVariant(pet)
+		local def = C.petDef(pet)
 		local odds = C.RARITY[idx].odds
 		table.insert(d.carry, pet)
 		d.caught = d.caught + 1
@@ -1723,7 +1741,8 @@ local function hatchToPen(plr, d, z, kind, boost, force)
 	local luck = C.luck(d.luck) * (d.passes.luck2 and 2 or 1) * (boost or 1) * (eventKey() == "luck" and 2 or 1)
 	local idx = force or roll(luck)
 	local pet = { z = z, i = idx, t = C.rollTier(kind, eventKey() == "rainbow") } -- v152
-	local def = C.ZONES[z].pets[idx]
+	pet.v = rollVariant(pet)
+	local def = C.petDef(pet)
 	d.caught = d.caught + 1
 	if C.RARITY[idx].odds > d.bestOdds then
 		d.bestOdds, d.bestName = C.RARITY[idx].odds, def.name
