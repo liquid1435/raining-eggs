@@ -101,6 +101,9 @@ for name, file in pairs(SND) do
 	sounds[name] = make("Sound", { Name = "RE_" .. name, SoundId = "rbxasset://sounds/" .. file, Volume = 0.5 }, SoundService)
 end
 local function play(name, pitch, volume)
+	if os.clock() < (NOTE_QUIET_UNTIL or math.huge) then
+		return -- v220
+	end
 	local s = sounds[name]
 	s.PlaybackSpeed = pitch or 1
 	s.Volume = volume or 0.5
@@ -125,6 +128,9 @@ if SFX_ID ~= "rbxassetid://0" then
 	end)
 end
 local function sfx(name, volume, pitch, parent)
+	if os.clock() < (NOTE_QUIET_UNTIL or math.huge) then
+		return nil -- v220: silent during the loading screen and 12 s after it
+	end
 	local r = SFX[name]
 	if not r then
 		return nil
@@ -401,6 +407,9 @@ local ZONE_ID = "rbxassetid://84026827045347" -- zona_5_magie.mp3
 local buySound = make("Sound", { Name = "RE_Buy", SoundId = BUY_ID, Volume = 2.5 }, SoundService) -- pop: loud (user)
 local zoneSound = make("Sound", { Name = "RE_Zone", SoundId = ZONE_ID, Volume = 0.8 }, SoundService)
 local function playBuy()
+	if os.clock() < (NOTE_QUIET_UNTIL or math.huge) then
+		return -- v220
+	end
 	if BUY_ID ~= "" then
 		SoundService:PlayLocalSound(buySound)
 	else
@@ -408,6 +417,9 @@ local function playBuy()
 	end
 end
 local function playZone()
+	if os.clock() < (NOTE_QUIET_UNTIL or math.huge) then
+		return -- v220
+	end
 	if ZONE_ID ~= "" then
 		SoundService:PlayLocalSound(zoneSound)
 	else
@@ -416,6 +428,9 @@ local function playZone()
 end
 
 local function playClick()
+	if os.clock() < (NOTE_QUIET_UNTIL or math.huge) then
+		return -- v220
+	end
 	if CLICK_ID ~= "" then
 		SoundService:PlayLocalSound(clickSound)
 	end
@@ -796,6 +811,34 @@ task.spawn(function()
 		task.wait(0.25)
 	end
 	NOTE_QUIET_UNTIL = os.clock() + 12
+end)
+task.spawn(function() -- v220 (user: sounds play under the loading screen): stop every sound until the quiet time is over
+	local SS = game:GetService("SoundService")
+	local function hush(o)
+		if o:IsA("Sound") and o.Name ~= "BackgroundMusic" and os.clock() < (NOTE_QUIET_UNTIL or math.huge) then
+			if o.Playing then
+				o:Stop()
+			end
+			o.Played:Once(function()
+				if os.clock() < (NOTE_QUIET_UNTIL or math.huge) and o.Name ~= "BackgroundMusic" then
+					o:Stop()
+				end
+			end)
+		end
+	end
+	local conns = {}
+	for _, root in ipairs({ workspace, SS, plr:WaitForChild("PlayerGui") }) do
+		for _, o in ipairs(root:GetDescendants()) do
+			hush(o)
+		end
+		table.insert(conns, root.DescendantAdded:Connect(hush))
+	end
+	while os.clock() < (NOTE_QUIET_UNTIL or math.huge) do
+		task.wait(0.5)
+	end
+	for _, c in ipairs(conns) do
+		c:Disconnect()
+	end
 end)
 local NOTE_COL = {
 	info = WHITE, good = Color3.fromRGB(120, 240, 120), bad = Color3.fromRGB(255, 60, 60), cash = YELLOW,
@@ -5082,7 +5125,6 @@ task.spawn(function()
 			task.defer(function() -- after the pet's parts are in place
 				if m.Parent then
 					pcall(Coat.apply, m, sp, tier)
-					pcall(sparkles, m, m:GetAttribute("Tier"))
 				end
 			end)
 		end

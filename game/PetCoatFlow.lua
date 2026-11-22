@@ -3,10 +3,11 @@ local AssetService = game:GetService("AssetService")
 local EncodingService = game:GetService("EncodingService")
 local RunService = game:GetService("RunService")
 local Coat = {}
--- v210 (user: the Gold / Rainbow pets looked blurry and the colours wrong): the live image is only 256 px, so Roblox
--- smooths it into blurry colour smears. Off: the pets keep their crisp coloured Gold / Rainbow textures (x4, nearest)
--- and only get a light moving effect (a shine band on Gold, a soft colour shift on Rainbow).
-Coat.LIVE = false
+-- v220 (user: wants the original flowing coat back, but not blurry): the coat is painted into a small image (atlas size,
+-- cheap) and then drawn x4 bigger with Pixelated sampling into the image the pet wears, so every voxel stays one crisp
+-- colour (the 256 px image used to be smoothed by Roblox into blurry smears). Falls back to x2 / x1 if memory is short.
+Coat.LIVE = true
+local UPSCALE = { 4, 2, 1 }
 local models, groups, palettes = {}, {}, {}
 local heartbeat
 local period = 1 / 12
@@ -84,8 +85,22 @@ end
 local function makeImage(g)
 	local map = g.map
 	if not map.entry then return false end
-	local image = AssetService:CreateEditableImage({Size=map.size})
-	if not image then return false end
+	-- the small image we paint, and the big pixelated copy the parts wear
+	local small = AssetService:CreateEditableImage({Size=map.size})
+	if not small then return false end
+	local image, scale = nil, 1
+	for _, k in ipairs(UPSCALE) do
+		if k == 1 then
+			image, scale = small, 1
+			break
+		end
+		local ok, big = pcall(function() return AssetService:CreateEditableImage({Size=map.size*k}) end)
+		if ok and big then
+			image, scale = big, k
+			break
+		end
+	end
+	g.small, g.scale = small, scale
 	g.image = image -- kept here so a partial initialization can be undone
 	local encoded = buffer.fromstring(map.entry.Value:sub(map.start))
 	local raw = EncodingService:DecompressBuffer(EncodingService:Base64Decode(encoded), Enum.CompressionAlgorithm.Zstd)
@@ -107,7 +122,24 @@ local function paint(g, step)
 	for i = 0, buffer.len(pixels)-4, 4 do
 		buffer.writeu32(pixels,i,buffer.readu32(lut,buffer.readu32(indices,i)-step*4))
 	end
-	g.image:WritePixelsBuffer(g.map.origin,g.map.region,pixels)
+	g.small:WritePixelsBuffer(g.map.origin,g.map.region,pixels)
+	if g.scale > 1 then
+		local ok = pcall(function()
+			g.image:DrawImageTransformed(Vector2.zero, Vector2.new(g.scale, g.scale), 0, g.small, {
+				CombineType = Enum.ImageCombineType.Overwrite, SamplingMode = Enum.ResamplerMode.Pixelated, PivotPoint = Vector2.zero,
+			})
+		end)
+		if not ok then -- no pixelated upscale on this device: wear the small image
+			g.image:Destroy()
+			g.image, g.scale = g.small, 1
+			g.content = Content.fromObject(g.image)
+			for state in g.members do
+				for _, part in state.parts do
+					part.bound = false
+				end
+			end
+		end
+	end
 end
 
 local function restore(p)
@@ -126,7 +158,8 @@ local function release(g)
 		end
 	end
 	if g.image then g.image:Destroy() end
-	g.image, g.indices, g.pixels, g.content = nil, nil, nil, nil
+	if g.small and g.small ~= g.image then g.small:Destroy() end
+	g.image, g.small, g.indices, g.pixels, g.content = nil, nil, nil, nil, nil
 end
 
 local function addPart(state, mesh)
@@ -159,12 +192,12 @@ local function display(state, step)
 				-- v194 (user: Gold pets had no moving effect): no live image -> a bright shine band runs head -> tail over the
 				-- baked gold texture (Color only darkens a texture, so the parts dim and the band is full white)
 				local d = math.abs(((p.phase-step)%256)/256 - .5)*2 -- 0 = band centre, 1 = far
-				local L = .62 + .38*(1-d)^3 -- v216: a clear shine band runs head -> tail (v210's was too faint to see)
-				p.tint.Color = Color3.new(L, L*.97, L*.88)
+				local L = .5 + .5*(1-d)^5
+				p.tint.Color = Color3.new(L, L*.97, L*.9)
 			else
 				local r,gc,b = channels(g.tier,(p.phase-step)%256)
 				local c = Color3.new(math.min(1,r),math.min(1,gc),math.min(1,b))
-				p.tint.Color = Color3.new(1, 1, 1):Lerp(c, .55) -- v216: a clearly visible colour wave over the rainbow texture
+				p.tint.Color = c
 			end
 		end
 	end
