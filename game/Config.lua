@@ -27,7 +27,7 @@ C.BIGEGG_FIRST = { 300, 300 }   -- seconds after the server starts (user: every 
 C.BIGEGG_EVERY = { 300, 300 }   -- between drops: every 5 minutes
 C.TEST_ALL_ZONES_FREE = true    -- Studio only: all 10 zones open for free (to test the Golden Nest portal); the real game is not affected
 C.MUSIC_ID = "1848049490" -- v206: Strauss II "Voices of Spring" (Roblox Toolbox audio, chosen by the user); v204: calm background music (audio/rainingeggs_music.ogg uploaded to Roblox), "" = no music
-C.MUSIC_VOLUME = 0.22
+C.MUSIC_VOLUME = 0.13 -- v208 (user): a bit quieter (was 0.22)
 C.SELL_SOUND = ""              -- sound when you sell pets (rbxassetid://...), empty = the coin sound
 C.HATCH_STYLE = "vfx"         -- "vfx" = new world-space hatch show (HatchVFX), "old" = the v85 show
 C.BIGEGG_SIZE = 26              -- studs tall; it lands on the white road in the middle of a random zone
@@ -140,7 +140,7 @@ C.ZONES = {
 	}),
 	zone("Golden Nest", 2.5e10, 1e8, { 255, 204, 40 }, W, {
 		{ "Golden Pheasant", { 255, 204, 40 }, { 255, 240, 150 }, 0, "b" },
-		{ "Gold Scarab", { 255, 214, 80 }, W, 2, "q" },
+		{ "Golden Lynx", { 255, 214, 80 }, W, 2, "q" }, -- v208: was Gold Scarab (user: no insects)
 		{ "Royal Tiger", { 255, 180, 40 }, { 160, 100, 250 }, 1, "q" },
 		{ "Golden Ram", { 255, 204, 40 }, { 240, 66, 66 }, 1, "q" },
 		{ "Celestial Dragon", { 255, 240, 150 }, { 160, 100, 250 }, 2, "o" },
@@ -308,11 +308,11 @@ C.HATCH = {
 -- An egg hatches variant 1, 2 or 3 of the rolled rarity (equal chance) once that variant's meshes are imported.
 C.VARIANTS = {
 	[1] = { { { "Rabbit", "q" }, { "Hedgehog", "q" } }, { { "Squirrel", "q" }, { "Badger", "q" } }, { { "Wild Boar", "q" }, { "Beaver", "q" } }, { { "Lynx", "q" }, { "Moose", "q" } }, { { "Hippogriff", "b" }, { "Leaf Dragon", "q" } } },
-	[2] = { { { "Frog", "o" }, { "Snail", "o" } }, { { "Mole", "q" }, { "Stag Beetle", "o" } }, { { "Sloth", "q" }, { "Lemur", "q" } }, { { "Luna Moth", "b" }, { "Mushroom Deer", "q" } }, { { "Fungus Dragon", "q" }, { "Shroom Tortoise", "q" } } },
+	[2] = { { { "Frog", "o" }, { "Dormouse", "q" } }, { { "Mole", "q" }, { "Truffle Pig", "q" } }, { { "Sloth", "q" }, { "Lemur", "q" } }, { { "Spirit Elk", "q" }, { "Mushroom Deer", "q" } }, { { "Fungus Dragon", "q" }, { "Shroom Tortoise", "q" } } },
 	[3] = { { { "Hamster", "q" }, { "Flamingo", "b" } }, { { "Pink Poodle", "q" }, { "Llama", "q" } }, { { "Macaw", "b" }, { "Cotton Candy Sheep", "q" } }, { { "Pink Dolphin", "o" }, { "Caramel Camel", "q" } }, { { "Candy Dragon", "q" }, { "Rainbow Alicorn", "q" } } },
 	[4] = { { { "Puppy", "q" }, { "Duckling", "b" } }, { { "Wind-up Mouse", "q" }, { "Tin Turtle", "q" } }, { { "Robot Cat", "q" }, { "Clockwork Monkey", "q" } }, { { "Rocking Horse", "q" }, { "Clockwork Owl", "b" } }, { { "Mecha Rex", "q" }, { "Brick Dragon", "q" } } },
 	[5] = { { { "Crab", "o" }, { "Clownfish", "o" } }, { { "Sea Turtle", "o" }, { "Pufferfish", "o" } }, { { "Dolphin", "o" }, { "Walrus", "o" } }, { { "Orca", "o" }, { "Crystal Seahorse", "o" } }, { { "Leviathan", "o" }, { "Sea Serpent", "o" } } },
-	[6] = { { { "Bat", "b" }, { "Black Cat", "q" } }, { { "Raven", "b" }, { "Spider", "o" } }, { { "Ghost Fox", "q" }, { "Werewolf Pup", "q" } }, { { "Nightmare Horse", "q" }, { "Wraith Owl", "b" } }, { { "Bone Dragon", "q" }, { "Shadow Wyvern", "b" } } },
+	[6] = { { { "Bat", "b" }, { "Black Cat", "q" } }, { { "Raven", "b" }, { "Hyena", "q" } }, { { "Ghost Fox", "q" }, { "Werewolf Pup", "q" } }, { { "Nightmare Horse", "q" }, { "Wraith Owl", "b" } }, { { "Bone Dragon", "q" }, { "Shadow Wyvern", "b" } } },
 	[7] = { { { "Mountain Goat", "q" }, { "Marmot", "q" } }, { { "Falcon", "b" }, { "Yak", "q" } }, { { "Puma", "q" }, { "Bighorn Ram", "q" } }, { { "Storm Wolf", "q" }, { "Lightning Lynx", "q" } }, { { "Storm Dragon", "q" }, { "Thunder Roc", "b" } } },
 	[8] = { { { "Pigeon", "b" }, { "Rat", "q" } }, { { "Raccoon", "q" }, { "Alley Cat", "q" } }, { { "Neon Jellyfish", "o" }, { "Cyber Wolf", "q" } }, { { "Neon Tiger", "q" }, { "Holo Koi", "o" } }, { { "Cyber Phoenix", "b" }, { "Neon Manticore", "q" } } },
 	[9] = { { { "Lamb", "q" }, { "Dove", "b" } }, { { "Alpaca", "q" }, { "Cloud Bunny", "q" } }, { { "Sky Ray", "o" }, { "Angel Cat", "q" } }, { { "Halo Stag", "q" }, { "Wind Serpent", "o" } }, { { "Sky Dragon", "q" }, { "Seraph Owl", "b" } } },

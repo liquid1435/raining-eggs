@@ -1771,6 +1771,12 @@ task.spawn(function()
 		task.wait(1)
 		local now = workspace:GetServerTimeNow()
 		if not storm then
+			-- v208 (user): never an EGG STORM while a BIG EGG is out - the storm waits until the big egg is gone
+			if workspace:GetAttribute("BigEggActive") and now >= nextAt - 12 then
+				nextAt = now + 30
+				warned = false
+				workspace:SetAttribute("StormNext", nextAt)
+			end
 			if not warned and now >= nextAt - 10 then
 				warned = true
 				Notice:FireAllClients("EGG STORM in 10 seconds! Run to a zone!", "storm")

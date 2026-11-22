@@ -564,9 +564,238 @@ def egg_storm():  # Storm egg: violet swirl, yellow bolts, ring of dark clouds
     return e
 
 
+# ======================================================================= v208: WORLD 2 eggs (zones 11-20, space)
+def starry(c, base, density=0.06, col=(255, 255, 255), seed=1):
+    """sparse star dots on the shell: deterministic from the direction"""
+    h = math.sin(c.x * 127.1 + c.y * 311.7 + c.z * 74.7 + seed) * 43758.5453
+    return col if (h - math.floor(h)) < density else base
+
+
+def egg_cosmic_nest():  # 11 Cosmic Nest: deep violet night sky, pink nebula band, stars, cyan ring, gold star on top
+    e = Egg()
+    V1, V2, PINK = (52, 30, 120), (90, 50, 180), (255, 110, 220)
+
+    def pat(th, t, c):
+        band = math.sin(th * 2 + t * 5)
+        base = mix(V1, V2, (t + 1) / 2)
+        if abs(t - 0.15 * math.sin(th * 3)) < 0.16:
+            base = mix(base, PINK, 0.6 + 0.3 * band)
+        return starry(c, base, 0.07, (255, 250, 210), 3)
+    e.shell(pat)
+    e.torus(Vector((0, 0, -0.1)), R * 1.22, 0.07, (90, 230, 255), rot=(14, 6, 0), seg=56)
+    for k in range(5):
+        a = k * math.tau / 5 + 0.4
+        q = Vector((R * 1.22 * math.cos(a), R * 1.22 * math.sin(a), -0.1 + 0.3 * math.sin(a)))
+        e.star(q, 0.16, 0.06, (255, 230, 120), rot=(90, 0, math.degrees(a)), points=5)
+    tip, n = e.surf(0, 1)
+    e.star(tip + Vector((0, 0, 0.32)), 0.4, 0.1, (255, 214, 60), rot=(90, 0, 0), points=5)
+    return e
+
+
+def egg_moon_craters():  # 12 Moon Craters: grey moon with dark craters, crater rims, little crescent moon on top
+    e = Egg()
+    G1, G2, DARKG = (196, 200, 214), (160, 165, 182), (110, 114, 132)
+    craters = fib(14, -0.85, 0.8, 12)
+
+    def pat(th, t, c):
+        for k, d in enumerate(craters):
+            r = 0.2 + 0.08 * (k % 3)
+            a = angd(c, d)
+            if a < r * 0.7:
+                return DARKG
+            if a < r:
+                return G1
+        return G1 if math.sin(th * 5 + t * 3) > 0 else G2
+    e.shell(pat)
+    for d in craters[:8]:  # raised rims of the big craters
+        p, n = e.surf(math.atan2(d.y, d.x), d.z, 0.0)
+        e.torus(p, 0.2, 0.05, (210, 214, 228), normal=n, seg=20, segr=6)
+    tip, n = e.surf(0, 1)
+    e.sph(tip + Vector((0, 0, 0.42)), 0.38, (255, 236, 150), seg=18)
+    e.sph(tip + Vector((0.16, 0, 0.5)), 0.33, (196, 200, 214), seg=18)   # bites the crescent out
+    return e
+
+
+def egg_nebula_reef():  # 13 Nebula Reef: teal to pink waves, glowing bubbles, a starfish
+    e = Egg()
+    TEAL, PINK, LIGHT2 = (40, 190, 200), (255, 120, 210), (190, 255, 245)
+
+    def pat(th, t, c):
+        w = math.sin(th * 4 + t * 7) * 0.12
+        k = min(1, max(0, (t + w + 1) / 2))
+        base = mix(TEAL, PINK, k)
+        return mix(base, LIGHT2, 0.5) if abs(math.sin((t + w) * 9)) < 0.12 else base
+    e.shell(pat)
+    rng = random.Random(13)
+    for k in range(9):
+        th, t = rng.uniform(-math.pi, math.pi), rng.uniform(-0.6, 0.8)
+        p, n = e.surf(th, t, 0.04)
+        e.sph(p, rng.uniform(0.09, 0.18), (200, 250, 255), seg=12)
+    p, n = e.surf(1.2, 0.05, 0.03)
+    e.star(p, 0.42, 0.1, (255, 150, 90), normal=n, points=5)
+    tip, n = e.surf(0, 1)
+    e.sph(tip + Vector((0, 0, 0.2)), 0.22, (190, 255, 245), seg=12)
+    return e
+
+
+def egg_asteroid_belt():  # 14 Asteroid Belt: rocky brown-grey egg with an orbit of little rocks
+    e = Egg()
+    R1, R2, R3 = (140, 120, 104), (104, 92, 84), (180, 160, 140)
+
+    def pat(th, t, c):
+        f = math.sin(th * 6 + math.sin(t * 5) * 2) * math.cos(t * 8 + th)
+        return R3 if f > 0.6 else (R1 if f > -0.2 else R2)
+    e.shell(pat, seg=24, rings=16, flat=True)
+    rng = random.Random(14)
+    for k in range(16):
+        a = k * math.tau / 16 + rng.uniform(-0.1, 0.1)
+        rr = R * 1.3 + rng.uniform(-0.1, 0.12)
+        q = Vector((rr * math.cos(a), rr * math.sin(a), 0.15 * math.sin(a * 2)))
+        s_ = rng.uniform(0.1, 0.22)
+        e.gem(q, s_, s_ * 1.3, (rng.choice((150, 125, 175)),) * 3, normal=Vector((math.cos(a), math.sin(a), 0.4)).normalized(), seg=5)
+    tip, n = e.surf(0, 1)
+    e.gem(tip + Vector((0, 0, 0.2)), 0.3, 0.45, (255, 190, 90), seg=6)
+    return e
+
+
+def egg_solar_forge():  # 15 Solar Forge: dark rock with glowing lava cracks, flame on top
+    e = Egg()
+    ROCK, ROCK2, LAVA, HOT = (60, 34, 30), (84, 46, 36), (255, 110, 20), (255, 220, 80)
+
+    def pat(th, t, c):
+        crack = abs(math.sin(th * 5 + math.sin(t * 6) * 1.4)) * abs(math.sin(t * 7 + th * 2))
+        if crack < 0.08:
+            return HOT
+        if crack < 0.18:
+            return LAVA
+        return ROCK if math.sin(th * 3 + t * 9) > 0 else ROCK2
+    e.shell(pat)
+    tip, n = e.surf(0, 1)
+    e.cone(tip + Vector((0, 0, 0.35)), 0.42, 0.0, 0.9, (255, 120, 30), seg=10)
+    e.cone(tip + Vector((0, 0, 0.3)), 0.26, 0.0, 0.7, (255, 220, 80), seg=10)
+    for k in range(4):
+        a = k * math.tau / 4
+        e.cone(tip + Vector((0.32 * math.cos(a), 0.32 * math.sin(a), 0.1)), 0.16, 0.0, 0.45, (255, 150, 40),
+               rot=(math.degrees(-0.4 * math.sin(a)), math.degrees(0.4 * math.cos(a)), 0), seg=8)
+    return e
+
+
+def egg_comet_glacier():  # 16 Comet Glacier: icy blue with frost bands, ice crystals around the top
+    e = Egg()
+    ICE1, ICE2, FROST = (150, 210, 255), (100, 170, 240), (235, 250, 255)
+
+    def pat(th, t, c):
+        if abs(math.sin(t * 6 + math.sin(th * 5) * 0.6)) < 0.14:
+            return FROST
+        return starry(c, mix(ICE2, ICE1, (t + 1) / 2), 0.05, FROST, 7)
+    e.shell(pat)
+    tip, n = e.surf(0, 1)
+    for k in range(6):
+        a = k * math.tau / 6
+        d = Vector((math.cos(a) * 0.45, math.sin(a) * 0.45, 1)).normalized()
+        e.cone(tip + Vector((0.3 * math.cos(a), 0.3 * math.sin(a), -0.25)) + d * 0.3, 0.14, 0.0, 0.65, (210, 245, 255), normal=d, seg=6)
+    e.cone(tip + Vector((0, 0, 0.45)), 0.18, 0.0, 0.95, (240, 252, 255), seg=6)
+    return e
+
+
+def egg_alien_jungle():  # 17 Alien Jungle: lime egg with purple spots, alien leaves, antennae with glowing balls
+    e = Egg()
+    LIME, LIME2, PURP = (130, 230, 70), (90, 190, 60), (170, 80, 230)
+    sp = fib(16, -0.9, 0.75, 17)
+
+    def pat(th, t, c):
+        if dots(c, sp, 0.2):
+            return PURP
+        return LIME if math.sin(th * 7) * math.sin(t * 6) > 0 else LIME2
+    e.shell(pat)
+    for k in range(5):
+        a = k * math.tau / 5
+        p, n = e.surf(a, -0.75, 0.02)
+        e.leaf(p, 0.75, (60, 170, 120) if k % 2 else (200, 90, 240), n, rot=(0, 0, math.degrees(a)))
+    tip, n = e.surf(0, 1)
+    for sx in (-1, 1):
+        q = tip + Vector((sx * 0.25, 0, -0.05))
+        e.cone(q + Vector((sx * 0.1, 0, 0.35)), 0.05, 0.04, 0.7, (90, 190, 60), rot=(0, sx * 15, 0), seg=8)
+        e.sph(q + Vector((sx * 0.2, 0, 0.75)), 0.14, (255, 120, 240), seg=12)
+    return e
+
+
+def egg_black_hole():  # 18 Black Hole: black egg with a purple swirl and a glowing tilted accretion ring
+    e = Egg()
+    BLK, VIO, VIO2 = (14, 10, 26), (120, 50, 220), (200, 120, 255)
+
+    def pat(th, t, c):
+        sw = math.sin(th * 2 - t * 9)
+        if sw > 0.85:
+            return VIO2
+        if sw > 0.55:
+            return VIO
+        return starry(c, BLK, 0.04, (190, 170, 255), 11)
+    e.shell(pat)
+    e.torus(Vector((0, 0, 0.0)), R * 1.3, 0.11, (210, 140, 255), rot=(22, 0, 0), seg=64)
+    e.torus(Vector((0, 0, 0.0)), R * 1.48, 0.05, (255, 170, 90), rot=(22, 0, 0), seg=64)
+    tip, n = e.surf(0, 1)
+    e.sph(tip + Vector((0, 0, 0.16)), 0.2, (210, 140, 255), seg=12)
+    return e
+
+
+def egg_star_station():  # 19 Star Station: white metal panels, blue light lines, antenna dish
+    e = Egg()
+    W1, W2, BLUE, GREYD = (228, 232, 240), (190, 196, 210), (60, 170, 255), (90, 96, 112)
+
+    def pat(th, t, c):
+        if abs(math.sin(t * math.pi * 3)) < 0.05 or abs(math.sin(th * 3)) < 0.03:
+            return GREYD
+        if abs(math.sin(t * math.pi * 3 + 1.2)) < 0.06:
+            return BLUE
+        return W1 if math.sin(th * 3) > 0 else W2
+    e.shell(pat, seg=24, rings=18, flat=True)
+    for k in range(6):
+        p, n = e.surf(k * math.tau / 6, 0.05, 0.03)
+        e.sph(p, 0.08, (120, 220, 255), seg=8)
+    tip, n = e.surf(0, 1)
+    e.cone(tip + Vector((0, 0, 0.3)), 0.05, 0.04, 0.7, GREYD, seg=8)
+    e.cone(tip + Vector((0, 0, 0.62)), 0.36, 0.06, 0.18, W1, seg=20)
+    e.sph(tip + Vector((0, 0, 0.82)), 0.09, (255, 80, 80), seg=8)
+    return e
+
+
+def egg_galaxy_throne():  # 20 Galaxy Throne: royal galaxy (dark blue, gold stars, swirl) with a gold crown + gems
+    e = Egg()
+    NAVY, BLUE2, GOLDC, MAG = (20, 22, 70), (60, 50, 160), (255, 210, 70), (220, 90, 255)
+
+    def pat(th, t, c):
+        sw = math.sin(th * 2 + t * 6)
+        base = mix(NAVY, BLUE2, max(0, sw))
+        if sw > 0.9:
+            base = mix(base, MAG, 0.5)
+        if abs(t + 0.1) < 0.08:
+            return GOLDC
+        return starry(c, base, 0.08, (255, 236, 150), 20)
+    e.shell(pat)
+    for k in range(8):
+        p, n = e.surf(k * math.tau / 8, -0.1, 0.03)
+        e.gem(p, 0.15, 0.2, [(255, 80, 200), (90, 220, 255), (255, 255, 255)][k % 3], normal=-n)
+    tip, n = e.surf(0, 1)
+    c0 = tip + Vector((0, 0, -0.25))
+    e.cone(c0 + Vector((0, 0, 0.2)), 0.72, 0.8, 0.4, GOLDC, seg=24, smooth=True)
+    for k in range(6):
+        a = k * math.tau / 6
+        q = c0 + Vector((0.75 * math.cos(a), 0.75 * math.sin(a), 0.55))
+        e.star(q + Vector((0, 0, 0.1)), 0.17, 0.06, GOLDC, rot=(90, 0, math.degrees(a)), points=5)
+    e.star(c0 + Vector((0, 0, 0.95)), 0.3, 0.08, (255, 240, 170), rot=(90, 0, 0), points=5)
+    return e
+
+
+EGGS_W2 = [('Egg_11', egg_cosmic_nest), ('Egg_12', egg_moon_craters), ('Egg_13', egg_nebula_reef), ('Egg_14', egg_asteroid_belt),
+           ('Egg_15', egg_solar_forge), ('Egg_16', egg_comet_glacier), ('Egg_17', egg_alien_jungle), ('Egg_18', egg_black_hole),
+           ('Egg_19', egg_star_station), ('Egg_20', egg_galaxy_throne)]
+
 EGGS = [('Egg_1', egg_meadow), ('Egg_2', egg_mushroom), ('Egg_3', egg_candy), ('Egg_4', egg_toy), ('Egg_5', egg_crystal),
         ('Egg_6', egg_spooky), ('Egg_7', egg_thunder), ('Egg_8', egg_neon), ('Egg_9', egg_cloud), ('Egg_10', egg_golden_nest),
         ('Egg_Gold', egg_gold), ('Egg_Rotten', egg_rotten), ('Egg_Storm', egg_storm)]
+if 'w2' in ARGS:  # v208: only the world 2 eggs (own FBX + renders)
+    EGGS = EGGS_W2
 
 # ======================================================================= scene
 for o in list(bpy.data.objects):
@@ -590,7 +819,7 @@ if 'nofbx' not in ARGS:
     for o in bpy.data.objects:
         o.select_set(o in objs)
     bpy.context.view_layer.objects.active = objs[0]
-    fbx = HERE / 'out' / 'RainingEggsEggs2.fbx'
+    fbx = HERE / 'out' / ('RainingEggsEggsW2.fbx' if 'w2' in ARGS else 'RainingEggsEggs2.fbx')
     bpy.ops.export_scene.fbx(filepath=str(fbx), use_selection=True, object_types={'MESH'}, apply_scale_options='FBX_SCALE_UNITS',
                              mesh_smooth_type='FACE', colors_type='NONE', add_leaf_bones=False, bake_anim=False, path_mode='COPY', embed_textures=True)
     desk = pathlib.Path(os.environ['USERPROFILE']) / 'Desktop' / 'RAINING EGGS NOU' / fbx.name
@@ -642,7 +871,7 @@ if 'norender' not in ARGS:
         bpy.ops.render.render(write_still=True)
 
     # lineup: all eggs in two rows
-    shot(out / 'eggs2_all.png', (15, -46, 13), (15, -3, 1.4), (1800, 1000), 40)
+    shot(out / ('eggsw2_all.png' if 'w2' in ARGS else 'eggs2_all.png'), (15, -46, 13), (15, -3, 1.4), (1800, 1000), 40)
     # close-ups, one by one
     for o in objs:
         for q in objs:

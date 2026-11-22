@@ -12,7 +12,7 @@ ZONES = {
  7: ['Eagle', 'Bear', 'Snow Leopard', 'Griffin', 'Thunderbird'],
  8: ['Octopus', 'Sphinx', 'Hydra', 'Phoenix', 'Eastern Dragon'],
  9: ['Snowy Owl', 'Swan', 'Arctic Fox', 'Sky Whale', 'Seraph Lion'],
- 10: ['Golden Pheasant', 'Gold Scarab', 'Royal Tiger', 'Golden Ram', 'Celestial Dragon'],
+ 10: ['Golden Pheasant', 'Golden Lynx', 'Royal Tiger', 'Golden Ram', 'Celestial Dragon'],
  11: ['Star Kitten', 'Moon Bunny', 'Comet Fox', 'Nebula Wolf', 'Galaxy Dragon'],
  12: ['Moon Mouse', 'Crater Pup', 'Rocket Rabbit', 'Astro Panda', 'Lunar Phoenix'],
  13: ['Nebula Jelly', 'Star Fish', 'Comet Seahorse', 'Void Shark', 'Galaxy Kraken'],

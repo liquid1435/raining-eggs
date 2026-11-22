@@ -3104,6 +3104,16 @@ local function enqueue(job)
 	end
 	busy = true
 	task.spawn(function()
+		-- v208 (user): the player cannot move while the hatch animation plays
+		local controls
+		pcall(function()
+			controls = require(plr:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule", 5)):GetControls()
+			controls:Disable()
+		end)
+		local hum = plr.Character and plr.Character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum:Move(Vector3.zero)
+		end
 		while #queue > 0 do
 			local job1 = table.remove(queue, 1)
 			-- big batch: Common/Uncommon only get a line of text; Rare plays faster; Epic+ always get the full show
@@ -3131,6 +3141,11 @@ local function enqueue(job)
 					cleanupAfterError()
 				end
 			end
+		end
+		if controls then
+			pcall(function()
+				controls:Enable()
+			end)
 		end
 		busy = false
 	end)

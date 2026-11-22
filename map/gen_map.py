@@ -1073,11 +1073,16 @@ def candy_mesh(z0, rz_, cs):
         blk(0, 0, rz_ + sz * 12.75, ROADW + 4, 0.8, 1.6, (240, 200, 130), transparency=1)
     for sx in (-1, 1):
         blk(sx * (ROADW / 2 + 1.5), 1.6, rz_, 1, 3, 24, (255, 120, 150), transparency=1)
+    taken = []                                            # v208 (user: ice creams in a heap, one inside a lollipop)
     for _ in range(20):
         c1, c2 = rng.sample(cs, 2)
-        lollipop(side_x(18, 160), rng.choice((rng.uniform(z0 + 8, rz_ - 16), rng.uniform(rz_ + 16, z0 + ZL - 8))), rng.uniform(9, 20), rng.uniform(8, 15), c1, c2)
+        lx, lz = side_x(18, 160), rng.choice((rng.uniform(z0 + 8, rz_ - 16), rng.uniform(rz_ + 16, z0 + ZL - 8)))
+        lollipop(lx, lz, rng.uniform(9, 20), rng.uniform(8, 15), c1, c2)
+        taken.append((lx, lz, 7))
     for _ in range(12):
-        candy_cane(side_x(18, 160), rng.choice((rng.uniform(z0 + 8, rz_ - 16), rng.uniform(rz_ + 16, z0 + ZL - 8))), rng.randint(4, 9), rng.choice((0, 90, 180, 270)))
+        kx, kz = side_x(18, 160), rng.choice((rng.uniform(z0 + 8, rz_ - 16), rng.uniform(rz_ + 16, z0 + ZL - 8)))
+        candy_cane(kx, kz, rng.randint(4, 9), rng.choice((0, 90, 180, 270)))
+        taken.append((kx, kz, 5))
     for _ in range(40):                                   # gumdrops
         d = rng.uniform(2.4, 6)
         x = side_x(12, 164)
@@ -1085,8 +1090,15 @@ def candy_mesh(z0, rz_, cs):
         c = rng.choice(cs)
         mpart(f'Map_Gumdrop{cs.index(c) + 1}', x, 0, z, (x * 13) % 360, d / 4)
         blk(x, 0, z, d * 0.8, d * 0.6, d * 0.8, c, transparency=1)
+    lr = type(rng)(int(z0) + 77)                           # own dice for moving cones, the rest of the layout stays the same
     for _ in range(9):                                    # ice cream cones
         x, z = side_x(22, 150), rng.choice((rng.uniform(z0 + 10, rz_ - 18), rng.uniform(rz_ + 18, z0 + ZL - 10)))
+        for _try in range(40):                            # keep 9 studs + the other thing's radius free around every cone
+            if all(math.hypot(x - tx, z - tz) > 9 + tr for tx, tz, tr in taken):
+                break
+            sx = 1 if lr.random() < 0.5 else -1
+            x, z = sx * lr.uniform(22, 150), lr.choice((lr.uniform(z0 + 10, rz_ - 18), lr.uniform(rz_ + 18, z0 + ZL - 10)))
+        taken.append((x, z, 8))
         cols = rng.sample(cs, 3)
         mpart(f'Map_IceCream{cs.index(cols[0]) % 3 + 1}', x, 0, z, (z * 7) % 360)
         blk(x, 0, z, 5, 20, 5, cols[0], transparency=1)

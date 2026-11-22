@@ -161,9 +161,15 @@ VF = os.environ.get('FBX_PARTS_FILTER', '')          # v153: 'va,vb' = one FBX p
 if VF:
     for tag in VF.split(','):
         lo, hi = (1, 5) if tag == 'va' else (6, 10)
+        only = set(tag[5:].split(';')) if tag.startswith('keys=') else None   # v208: 'keys=10_2;2_1_3' = just these pets
         for o in bpy.data.objects:
             k = o.name[4:].split('__')[0].split('_')      # Pet_<z>_<i>[_<v>]__<j>
-            o.select_set(len(k) == 3 and lo <= int(k[0]) <= hi)
+            if only is not None:
+                o.select_set('_'.join(k) in only)
+            else:
+                o.select_set(len(k) == 3 and lo <= int(k[0]) <= hi)
+        if only is not None:
+            tag = 'fix'
         f = OUT_FBX.with_name(OUT_FBX.stem + f'_{tag}.fbx')
         f.parent.mkdir(exist_ok=True)
         bpy.ops.export_scene.fbx(filepath=str(f), use_selection=True, apply_scale_options='FBX_SCALE_ALL',
