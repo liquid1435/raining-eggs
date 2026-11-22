@@ -26,7 +26,7 @@ C.STORM_EVERY = { 900, 2400 }  -- random time between storms (15-40 min)
 C.BIGEGG_FIRST = { 300, 300 }   -- seconds after the server starts (user: every 5 minutes)
 C.BIGEGG_EVERY = { 300, 300 }   -- between drops: every 5 minutes
 C.TEST_ALL_ZONES_FREE = true    -- Studio only: all 10 zones open for free (to test the Golden Nest portal); the real game is not affected
-C.MUSIC_ID = ""            -- v204: calm background music (audio/rainingeggs_music.ogg uploaded to Roblox), "" = no music
+C.MUSIC_ID = "1848049490" -- v206: Strauss II "Voices of Spring" (Roblox Toolbox audio, chosen by the user); v204: calm background music (audio/rainingeggs_music.ogg uploaded to Roblox), "" = no music
 C.MUSIC_VOLUME = 0.22
 C.SELL_SOUND = ""              -- sound when you sell pets (rbxassetid://...), empty = the coin sound
 C.HATCH_STYLE = "vfx"         -- "vfx" = new world-space hatch show (HatchVFX), "old" = the v85 show
