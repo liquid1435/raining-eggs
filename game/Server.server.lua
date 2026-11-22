@@ -479,13 +479,39 @@ local function renderPen(plr)
 	if not base or not base.pen then
 		return
 	end
-	base.folder:ClearAllChildren()
+	-- v184 (user: placing / taking one pet reset all the others): keep the models of pets that stay in the pen (they keep
+	-- walking where they are on the clients); only removed pets lose their model, only new pets get one
+	if base.modelsOf ~= d then
+		base.folder:ClearAllChildren()
+		base.models, base.modelsOf = {}, d
+	end
 	table.sort(d.pets, function(a, b)
 		return C.petIncome(a) > C.petIncome(b)
 	end)
 	local c = base.pen.Position
 	local mult = cashMult(d)
+	local keep = {}
+	for _, pet in ipairs(d.pets) do
+		keep[pet] = true
+	end
+	for pet, m in pairs(base.models) do
+		if not keep[pet] or not m.Parent then
+			m:Destroy()
+			base.models[pet] = nil
+		end
+	end
 	for k, pet in ipairs(d.pets) do
+		local old = base.models[pet]
+		if old then
+			old:SetAttribute("PenIdx", k)
+			local root = old.PrimaryPart or old:FindFirstChildWhichIsA("BasePart", true)
+			local tag = root and root:FindFirstChild("Tag")
+			if tag then
+				tag:Destroy()
+			end
+			label(old, pet, mult) -- the $/s can change (friends, rebirth...)
+			continue
+		end
 		local col = (k - 1) % 3 + 1
 		local row = math.floor((k - 1) / 3) + 1
 		local s = (1.3 + 0.1 * pet.i + 0.15 * (pet.t - 1)) * C.zoneScale(pet.z) -- v160: bigger every zone
@@ -509,6 +535,7 @@ local function renderPen(plr)
 		m:SetAttribute("PenSize", base.pen.Size)
 		m.Parent = base.folder
 		CS:AddTag(m, "PenPet")
+		base.models[pet] = m
 	end
 end
 
@@ -1507,6 +1534,7 @@ Players.PlayerRemoving:Connect(function(plr)
 		setTreadmill(bases[d.base], 0)
 		setTreadSign(bases[d.base], nil)
 		bases[d.base].folder:ClearAllChildren()
+		bases[d.base].models, bases[d.base].modelsOf = {}, nil
 		setSign(bases[d.base], "EMPTY")
 	end
 	data[plr] = nil
