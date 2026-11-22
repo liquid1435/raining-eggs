@@ -5059,6 +5059,21 @@ do
 		end
 	end)
 	task.defer(rebuild)
+	UI.hotbar = { -- v182: for the introduction
+		slot = function(k)
+			return slots[k] and slots[k].btn
+		end,
+		sel = function()
+			return sel
+		end,
+		count = function()
+			local n = 0
+			for k = 1, N do
+				n = n + (pets[k] and 1 or 0)
+			end
+			return n
+		end,
+	}
 	UIS.InputBegan:Connect(function(input, processed)
 		if processed or input.UserInputType ~= Enum.UserInputType.Keyboard then
 			return
@@ -5212,6 +5227,149 @@ do
 			local tools = (bp and #bp:GetChildren() > 0) or (plr.Character and plr.Character:FindFirstChildOfClass("Tool") ~= nil)
 			bar.Position = UDim2.new(0.5, 0, 1, tools and -80 or -8)
 			task.wait(1)
+		end
+	end)
+end
+
+-- ============================================================ v182: INTRODUCTION (user: the welcome egg does not open by itself;
+-- show EGGS, then HATCH, then how to put the pet in the pen, the treadmill, and where eggs fall)
+-- Steps live on the server (attribute Tut, saved): 1 open EGGS, 2 press HATCH, 3 take the pet from the bar, 4 place it in the
+-- pen, 5 run on the treadmill, 6 catch an egg in Sunny Meadow, 99 done. UI targets get a gold frame + a bouncing arrow,
+-- world targets a gold beam from you + a floating arrow; a bubble says what to do.
+do
+	local GOLDC = Color3.fromRGB(255, 205, 60)
+	local hl = make("Frame", { BackgroundTransparency = 1, Visible = false, ZIndex = 60 }, gui)
+	make("UICorner", { CornerRadius = UDim.new(0.2, 0) }, hl)
+	make("UIStroke", { Thickness = 5, Color = GOLDC, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, hl)
+	local finger = make("TextLabel", {
+		BackgroundTransparency = 1, Visible = false, ZIndex = 61, Size = UDim2.fromOffset(54, 54), AnchorPoint = Vector2.new(0.5, 1),
+		Font = Enum.Font.GothamBlack, TextScaled = true, Text = "\u{25BC}", TextColor3 = GOLDC,
+	}, gui)
+	make("UIStroke", { Thickness = 3, Color = BLACK }, finger)
+	local tip = make("Frame", {
+		Visible = false, ZIndex = 62, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.2), Size = UDim2.fromScale(0.34, 0.075),
+		BackgroundColor3 = Color3.fromRGB(28, 22, 52), BackgroundTransparency = 0.08,
+	}, gui)
+	make("UICorner", { CornerRadius = UDim.new(0.35, 0) }, tip)
+	make("UIStroke", { Thickness = 3, Color = GOLDC, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, tip)
+	local tipT = make("TextLabel", {
+		BackgroundTransparency = 1, ZIndex = 63, Size = UDim2.fromScale(0.94, 0.8), Position = UDim2.fromScale(0.03, 0.1),
+		Font = Enum.Font.LuckiestGuy, TextScaled = true, TextColor3 = WHITE, Text = "",
+	}, tip)
+	make("UIStroke", { Thickness = 2.5, Color = BLACK }, tipT)
+	-- world guide: beam + arrow
+	local wPart = make("Part", { Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, Transparency = 1, Size = Vector3.new(1, 1, 1) }, nil)
+	local a1 = make("Attachment", {}, wPart)
+	local a0 = make("Attachment", {}, nil)
+	local beam = make("Beam", {
+		Attachment0 = a0, Attachment1 = a1, Color = ColorSequence.new(GOLDC), Width0 = 0.7, Width1 = 0.7, FaceCamera = true,
+		LightEmission = 1, Transparency = NumberSequence.new(0.25), Texture = "rbxasset://textures/particles/sparkles_main.dds",
+		TextureMode = Enum.TextureMode.Static, TextureLength = 3, TextureSpeed = 2, Segments = 20, CurveSize0 = 6, CurveSize1 = -6,
+	}, wPart)
+	local bb = make("BillboardGui", { Size = UDim2.fromOffset(90, 90), StudsOffset = Vector3.new(0, 7, 0), AlwaysOnTop = true, LightInfluence = 0 }, wPart)
+	local bbT = make("TextLabel", {
+		BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Font = Enum.Font.GothamBlack, TextScaled = true,
+		Text = "\u{25BC}", TextColor3 = GOLDC,
+	}, bb)
+	make("UIStroke", { Thickness = 3, Color = BLACK }, bbT)
+	local function pointUI(obj, text)
+		wPart.Parent = nil
+		if not obj or not obj.Parent or not obj.Visible then
+			hl.Visible, finger.Visible = false, false
+		else
+			local gp = gui.AbsolutePosition
+			local ap, as = obj.AbsolutePosition - gp, obj.AbsoluteSize
+			hl.Position, hl.Size = UDim2.fromOffset(ap.X - 4, ap.Y - 4), UDim2.fromOffset(as.X + 8, as.Y + 8)
+			local bob = math.abs(math.sin(os.clock() * 4)) * 12
+			finger.Position = UDim2.fromOffset(ap.X + as.X / 2, ap.Y - 6 - bob)
+			hl.Visible, finger.Visible = true, true
+		end
+		tip.Visible, tipT.Text = true, text
+	end
+	local function pointWorld(pos, text)
+		hl.Visible, finger.Visible = false, false
+		local root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+		if pos and root then
+			wPart.CFrame = CFrame.new(pos)
+			a0.Parent = root
+			wPart.Parent = workspace
+			bbT.Position = UDim2.fromOffset(0, -math.abs(math.sin(os.clock() * 3)) * 14)
+		else
+			wPart.Parent = nil
+		end
+		tip.Visible, tipT.Text = true, text
+	end
+	local function hide()
+		hl.Visible, finger.Visible, tip.Visible = false, false, false
+		wPart.Parent = nil
+	end
+	local function myBase()
+		local map = workspace:FindFirstChild("Map")
+		return map and map:FindFirstChild("Base" .. attr("Base", 0))
+	end
+	local sent, speed0, caught0 = 0, nil, nil
+	local function go(n)
+		if n > sent then
+			sent = n
+			Action:FireServer("tut", n)
+		end
+	end
+	RunService.RenderStepped:Connect(function()
+		local T = math.max(attr("Tut", 99), sent)
+		if T <= 0 or T >= 99 then
+			hide()
+			return
+		end
+		local hb = UI.hotbar
+		if T == 1 then
+			if UI.tutEggsOpen and UI.tutEggsOpen() then
+				go(2)
+			else
+				pointUI(UI.tutEggsBtn, "Open your EGGS")
+			end
+		elseif T == 2 then
+			if attr("Eggs", 0) == 0 then
+				go(3)
+			elseif UI.tutEggsOpen and UI.tutEggsOpen() then
+				pointUI(UI.tutHatchBtn and UI.tutHatchBtn(), "Press HATCH!")
+			else
+				pointUI(UI.tutEggsBtn, "Open your EGGS")
+			end
+		elseif T == 3 then
+			if attr("Equipped", 0) > 0 then
+				go(5)
+			elseif hb and hb.sel() then
+				go(4)
+			else
+				pointUI(hb and hb.slot(1), "Tap your new pet")
+			end
+		elseif T == 4 then
+			local b = myBase()
+			local pen = b and b:FindFirstChild("PenFloor", true)
+			if attr("Equipped", 0) > 0 then
+				go(5)
+			elseif hb and not hb.sel() then
+				pointUI(hb.slot(1), "Tap your new pet")
+			else
+				pointWorld(pen and pen.Position + Vector3.new(0, 2, 0), "Tap inside your pen to place it")
+			end
+		elseif T == 5 then
+			speed0 = speed0 or attr("Speed", 0)
+			local b = myBase()
+			local tr = b and b:FindFirstChild("Treadmill", true)
+			if attr("Speed", 0) > speed0 then
+				go(6)
+			else
+				pointWorld(tr and ((tr:IsA("BasePart") and tr.Position) or (tr:IsA("Model") and tr:GetPivot().Position)) and (((tr:IsA("BasePart") and tr.Position) or tr:GetPivot().Position) + Vector3.new(0, 2, 0)), "Run on the treadmill to get faster!")
+			end
+		elseif T == 6 then
+			caught0 = caught0 or attr("Caught", 0)
+			if attr("Caught", 0) > caught0 or attr("Eggs", 0) > 0 then
+				go(99)
+				hide()
+			else
+				pointWorld(Vector3.new(0, 2, C.ZONE_LEN * 0.5), "Catch falling eggs in Sunny Meadow!")
+			end
 		end
 	end)
 end

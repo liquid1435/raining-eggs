@@ -371,6 +371,7 @@ local function sync(plr)
 	plr:SetAttribute("CarryMax", carryMax(d))
 	plr:SetAttribute("Radius", C.basketRadius(d.basket))
 	plr:SetAttribute("TrainLv", d.train)
+	plr:SetAttribute("Tut", d.tut or 99)
 	if bases[d.base] then
 		setTreadmill(bases[d.base], d.train)
 		setTreadSign(bases[d.base], d.train)
@@ -1053,6 +1054,17 @@ end
 local function num(v)
 	return typeof(v) == "number" and v == v and math.abs(v) < 1e6
 end
+Action.OnServerEvent:Connect(function(plr, what, a)
+	-- v182: the introduction tells the server which step the player reached (saved, so it never repeats)
+	if what ~= "tut" then
+		return
+	end
+	local d = data[plr]
+	if d and typeof(a) == "number" and a == a and a >= (d.tut or 0) and a <= 99 then
+		d.tut = math.floor(a)
+		plr:SetAttribute("Tut", d.tut)
+	end
+end)
 Action.OnServerEvent:Connect(function(plr, what, a, x, z)
 	if what ~= "place" and what ~= "pickup" then
 		return
@@ -1352,7 +1364,7 @@ local function load(plr)
 	local bag = {}
 	for _, egg in ipairs(type(saved.eggs) == "table" and saved.eggs or {}) do
 		if type(egg) == "table" and C.ZONES[tonumber(egg.z) or 0] then
-			table.insert(bag, { z = tonumber(egg.z), kind = tostring(egg.kind or "normal"), luck = tonumber(egg.luck) or 1, tier = tonumber(egg.tier) })
+			table.insert(bag, { z = tonumber(egg.z), kind = tostring(egg.kind or "normal"), luck = tonumber(egg.luck) or 1, tier = tonumber(egg.tier), force = tonumber(egg.force) })
 		end
 	end
 	local d = {
@@ -1383,6 +1395,7 @@ local function load(plr)
 		dailyLast = tonumber(saved.dailyLast) or 0, -- os.time() of the last claim
 		gift = saved.gift == true or (tonumber(saved.caught) or 0) > 0, -- v150: welcome egg already given (old players: yes)
 		friends = 0,
+		tut = tonumber(saved.tut) or ((tonumber(saved.caught) or 0) > 0 and 99 or 0), -- v182: introduction step (99 = done)
 		altar = {}, -- zones whose egg is on its altar in the Golden Nest (all 10 = the golden egg sinks, the portal opens)
 	}
 	for _, z in ipairs(type(saved.altar) == "table" and saved.altar or {}) do
@@ -1432,7 +1445,7 @@ local function save(plr)
 		store:SetAsync("u" .. plr.UserId, {
 			cash = d.cash, speed = d.speed, train = d.train, basket = d.basket, luck = d.luck, rebirth = d.rebirth,
 			caught = d.caught, bestOdds = d.bestOdds, bestName = d.bestName, pets = d.pets, stored = d.stored, index = keys,
-			unlocked = d.unlocked, dailyDay = d.dailyDay, dailyLast = d.dailyLast, eggs = d.bag, altar = altarList(d), gift = d.gift,
+			unlocked = d.unlocked, dailyDay = d.dailyDay, dailyLast = d.dailyLast, eggs = d.bag, altar = altarList(d), gift = d.gift, tut = d.tut,
 		})
 	end)
 end
@@ -1670,7 +1683,7 @@ local function hatchBag(plr, only, limit)
 	end
 	d.bag = keep
 	for _, egg in ipairs(bag) do
-		local idx = roll(egg.luck)
+		local idx = egg.force or roll(egg.luck) -- v182: the welcome egg has its rarity fixed
 		-- v152: the coat (normal / Gold / Rainbow) is rolled at hatch: C.TIER_ODDS by egg kind
 		local pet = { z = egg.z, i = idx, t = math.clamp(math.floor(egg.tier or C.rollTier(egg.kind, eventKey() == "rainbow")), 1, #C.TIER) }
 		pet.v = rollVariant(pet, d)
@@ -1919,11 +1932,12 @@ local function giveGift(plr)
 		return
 	end
 	d.gift = true
-	say(plr, "WELCOME GIFT! Your first egg is free!", "legend")
-	task.wait(1.2)
-	if data[plr] == d then
-		hatchToPen(plr, d, 1, "golden", nil, math.random() < C.GIFT_EPIC and 4 or 3)
-	end
+	-- v182 (user): the gift egg goes into EGGS (it does not open on its own) and the introduction starts
+	table.insert(d.bag, { z = 1, kind = "golden", luck = 1, force = math.random() < C.GIFT_EPIC and 4 or 3 })
+	d.tut = 1
+	plr:SetAttribute("Tut", d.tut)
+	say(plr, "WELCOME GIFT! A free golden egg - open EGGS!", "legend")
+	sync(plr)
 end
 -- friends on the same server: +10% cash each (max 4); recount for everybody when someone joins or leaves
 local function countFriends()

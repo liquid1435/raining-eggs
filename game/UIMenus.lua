@@ -508,6 +508,9 @@ function M.init(X)
 			sub.TextColor3 = Color3.fromRGB(255, 235, 150)
 			sub.ZIndex = 3
 			local hb = bigButton(c, GREEN, UDim2.fromScale(0.8, 0.2), UDim2.fromScale(0.5, 0.97), Vector2.new(0.5, 1))
+			if c.LayoutOrder <= 1 or not X.UI.tutFirstHatch or not X.UI.tutFirstHatch.Parent then
+				X.UI.tutFirstHatch = hb.button
+			end
 			hb.label.Text = "HATCH" -- v103 (user): one egg at a time, the player picks which one; HATCH ALL is at the bottom
 			hb.button.ZIndex = 4
 			hb.button.Activated:Connect(function()
@@ -526,6 +529,14 @@ function M.init(X)
 		eggsPanel.toggle()
 		M.refreshEggs()
 	end)
+	-- v182: the introduction (Client) points at these
+	X.UI.tutEggsBtn = eggsBtn
+	X.UI.tutEggsOpen = function()
+		return eggsPanel.frame.Visible
+	end
+	X.UI.tutHatchBtn = function()
+		return X.UI.tutFirstHatch or hatchAll.button
+	end
 	M.refreshEggs()
 
 	-- ============================================================ SELL (v104, user: "select the pets, with their picture, professional")
