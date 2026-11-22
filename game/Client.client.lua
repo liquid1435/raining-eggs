@@ -131,7 +131,7 @@ local function sfx(name, volume, pitch, parent)
 end
 local PET_SFX = { b = "pet_chirp", o = "pet_blub" }
 local function petSound(kind, parent, volume)
-	sfx(PET_SFX[kind] or "pet_yip", volume or 0.45, 0.9 + math.random() * 0.25, parent)
+	-- v204 (user): the animals make no sounds any more
 end
 
 -- ------------------------------------------------------------ small effect parts
@@ -5418,4 +5418,17 @@ do
 			end
 		end
 	end)
+end
+
+-- ============================================================ v204: calm background music (loops all the time, C.MUSIC_ID)
+do
+	if C.MUSIC_ID and C.MUSIC_ID ~= "" then
+		local id = tostring(C.MUSIC_ID)
+		if not string.find(id, "rbxassetid://", 1, true) then
+			id = "rbxassetid://" .. id
+		end
+		local music = make("Sound", { Name = "BackgroundMusic", SoundId = id, Looped = true, Volume = 0 }, game:GetService("SoundService"))
+		music:Play()
+		TweenService:Create(music, TweenInfo.new(4), { Volume = C.MUSIC_VOLUME or 0.22 }):Play() -- fades in
+	end
 end

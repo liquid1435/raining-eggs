@@ -1954,7 +1954,7 @@ local function giveGift(plr)
 	table.insert(d.bag, { z = 1, kind = "golden", luck = 1, force = math.random() < C.GIFT_EPIC and 4 or 3 })
 	d.tut = 1
 	plr:SetAttribute("Tut", d.tut)
-	say(plr, "WELCOME GIFT! A free golden egg - open EGGS!", "legend")
+	say(plr, "WELCOME GIFT! A free golden egg - open EGGS!", "cash") -- v204 (user): no sound with it
 	sync(plr)
 end
 -- friends on the same server: +10% cash each (max 4); recount for everybody when someone joins or leaves
