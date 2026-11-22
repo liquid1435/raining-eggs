@@ -445,8 +445,8 @@ local function label(model, pet, mult)
 	bb.Parent = root
 end
 
-local SLOT_X = { -10, 0, 10 }
-local SLOT_Z = { 7, -1.5, -10, -18.5 } -- front row first (the pen opens towards the plaza, +Z); behind the treadmill
+local SLOT_X = { -14, 0, 14 } -- v156: bigger pens (48 x 60) and bigger pets
+local SLOT_Z = { 8, -4, -16, -24 } -- front row first (the pen opens towards the plaza, +Z); behind the treadmill
 local function renderPen(plr)
 	local d = data[plr]
 	local base = d and bases[d.base]
@@ -471,6 +471,7 @@ local function renderPen(plr)
 		-- v143: the client lets the pet walk around the pen (centre of the pen floor + how high the pivot sits)
 		m:SetAttribute("PenC", Vector3.new(c.X, c.Y + 0.05, c.Z))
 		m:SetAttribute("Lift", 1.75 * s)
+		m:SetAttribute("PenSize", base.pen.Size)
 		m.Parent = base.folder
 		CS:AddTag(m, "PenPet")
 	end

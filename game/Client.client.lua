@@ -1973,7 +1973,7 @@ local function addPenPet(model)
 		penPets[model] = {
 			cf = cf, phase = model:GetAttribute("Phase") or 0, bodies = bodies,
 			-- v143: walking around the pen (pos on the floor, facing yaw, a target, idle time left)
-			penC = model:GetAttribute("PenC"), lift = model:GetAttribute("Lift") or 2,
+			penC = model:GetAttribute("PenC"), lift = model:GetAttribute("Lift") or 2, penSize = model:GetAttribute("PenSize"),
 			pos = cf.Position, yaw = math.atan2(-cf.LookVector.X, -cf.LookVector.Z),
 			target = nil, wait = 1 + (model:GetAttribute("Phase") or 0) % 3, walkT = 0, last = os.clock(),
 		}
@@ -1991,12 +1991,19 @@ end)
 -- Pen = PenFloor 34 x 52 (front = +Z towards the plaza); the treadmill stands in the front left corner.
 local penWalk -- one main-chunk local only (the chunk is near the 200-local limit)
 do
-local PEN_HX, PEN_ZB, PEN_ZF = 12.5, -20, 21
+local PEN_HX, PEN_ZB, PEN_ZF, TREAD_X, TREAD_Z = 12.5, -20, 21, -4.5, 6.5
+local function penSize(size) -- v156: the wander area follows the pen floor (pens are 48 x 60 now)
+	PEN_HX, PEN_ZB, PEN_ZF = size.X / 2 - 5, -size.Z / 2 + 7, size.Z / 2 - 5
+	TREAD_X, TREAD_Z = -size.X / 2 + 13, size.Z / 2 - 19.5
+end
 local function penFree(lx, lz)
-	return not (lx < -4.5 and lz > 6.5) -- the treadmill corner
+	return not (lx < TREAD_X and lz > TREAD_Z) -- the treadmill corner
 end
 local function penTarget(info)
 	local c = info.penC
+	if info.penSize then
+		penSize(info.penSize)
+	end
 	for _ = 1, 12 do
 		local lx, lz = (math.random() * 2 - 1) * PEN_HX, PEN_ZB + math.random() * (PEN_ZF - PEN_ZB)
 		local p = Vector3.new(c.X + lx, info.pos.Y, c.Z + lz)

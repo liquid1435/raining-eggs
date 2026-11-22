@@ -446,14 +446,20 @@ WOOD = (222, 150, 66)
 WOOD2 = (186, 112, 50)
 
 
+PEN_W = 48
+N_BASES = 6
+
+
 def base(i):
     """a plot of the normal checker grass with a plain wooden fence; pets stand inside and earn on their own"""
-    bx = -147 + i * 42
-    zf, zb = -60, -112
+    # v156 (user: fewer but bigger pens): 6 pens of PEN_W x 60 over the same width as the old 8 pens of 34 x 52
+    bx = -140 + i * 56
+    zf, zb = -60, -120
+    W, HW = PEN_W, PEN_W / 2
     zc = (zf + zb) / 2
     prng = random.Random(500 + i)
     with group(f'Base{i + 1}', unique=False):
-        blk(bx, 0, zc, 34, 0.1, zf - zb, (118, 204, 84), 'Plastic', name='PenFloor', transparency=1, **NC)   # marks the pen area for scripts
+        blk(bx, 0, zc, W, 0.1, zf - zb, (118, 204, 84), 'Plastic', name='PenFloor', transparency=1, **NC)   # marks the pen area for scripts
         col = BASE_COLS[i][0]
         dk, lt = shade(col, 0.7), tuple(int(v + (255 - v) * 0.55) for v in col)
         STONE, STONE2 = (232, 236, 246), (196, 202, 220)
@@ -518,36 +524,36 @@ def base(i):
             light(p, (255, 230, 160), 18, 1.2)
             blk(x, y + 1.3, z, 1.7, 0.4, 1.7, dk, **NC)
 
-        for k in range(1, 5):
+        for k in range(1, 6):
             for sx in (-1, 1):
-                post(bx + sx * 17, zb + k * 10.4)
-        for k in range(1, 3):
-            post(bx - 17 + k * 34 / 3, zb)
+                post(bx + sx * HW, zb + k * (zf - zb) / 6)
+        for k in range(1, 4):
+            post(bx - HW + k * W / 4, zb)
         for sx in (-1, 1):
-            post(bx + sx * 11.5, zf)
-            rail(bx + sx * 17, zc, zf - zb, False)
-            rail(bx + sx * 11.5, zf, 11, True)
+            post(bx + sx * (6 + HW) / 2, zf)
+            rail(bx + sx * HW, zc, zf - zb, False)
+            rail(bx + sx * (6 + HW) / 2, zf, HW - 6, True)
             for z in (zb, zf):                                  # corners = plain fence posts (no stone, no lamps)
-                post(bx + sx * 17, z)
+                post(bx + sx * HW, z)
             # (v109: user removed the gate at the pen entrance: no pillars / beam, just the opening in the fence)
             post(bx + sx * 6.0, zf)                             # v110: end post where the front rail stops (no cut-off fence)
-        rail(bx, zb, 34, True)
+        rail(bx, zb, W, True)
         blk(bx, 0.02, zf, 10.4, 0.12, 5, lt, **NC)              # door mat
         blk(bx, 0.03, zf, 8.6, 0.12, 3.4, col, **NC)
         # hay and water at the back fence
-        for hx, hz, hy in ((-13.5, zb + 3, 0), (-10.4, zb + 3, 0), (-12, zb + 3, 2.2)):
+        for hx, hz, hy in ((-HW + 3.5, zb + 3, 0), (-HW + 6.6, zb + 3, 0), (-HW + 5, zb + 3, 2.2)):
             blk(bx + hx, hy, hz, 3, 2.2, 2.6, (238, 200, 96), **NC)
             blk(bx + hx, hy + 0.8, hz, 3.1, 0.35, 2.7, (200, 150, 70), **NC)
-        blk(bx + 11.5, 0, zb + 2.8, 6, 1.6, 2.6, WOOD2)
-        blk(bx + 11.5, 1.2, zb + 2.8, 5.2, 0.5, 1.8, (90, 190, 250), **NC)
+        blk(bx + HW - 5.5, 0, zb + 2.8, 6, 1.6, 2.6, WOOD2)
+        blk(bx + HW - 5.5, 1.2, zb + 2.8, 5.2, 0.5, 1.8, (90, 190, 250), **NC)
         # speed trainer in the front corner
         # invisible marker: the game script builds a TreadmillPack model here (console towards the back fence)
-        blk(bx - 11.5, 0, zf - 8.5, 7.6, 0.8, 14.6, (40, 44, 60), name='Treadmill', transparency=1, **NC)
+        blk(bx - HW + 5.5, 0, zf - 8.5, 7.6, 0.8, 14.6, (40, 44, 60), name='Treadmill', transparency=1, **NC)
         # sign on the side fence next to the treadmill: TREADMILL / LEVEL n / next price (text = game script, face +X into the pen)
         # upgrade panel on the FRONT fence, right in front of the treadmill, facing the plaza (+Z = Back face)
         # (invisible here: only the owner's client shows its own board)
-        blk(bx - 14.25, 1.45, zf + 1.15, 5.3, 3.5, 0.25, (255, 200, 60), 'SmoothPlastic', name='TreadSignBack', transparency=1, **NC)
-        blk(bx - 14.25, 1.5, zf + 1.35, 5.1, 3.4, 0.2, (28, 24, 58), 'SmoothPlastic', name='TreadSign', transparency=1, **NC)
+        blk(bx - HW + 2.75, 1.45, zf + 1.15, 5.3, 3.5, 0.25, (255, 200, 60), 'SmoothPlastic', name='TreadSignBack', transparency=1, **NC)
+        blk(bx - HW + 2.75, 1.5, zf + 1.35, 5.1, 3.4, 0.2, (28, 24, 58), 'SmoothPlastic', name='TreadSign', transparency=1, **NC)
 
 
 SHOP_KEY = {'BASKETS': 'Baskets', 'LUCK SHOP': 'Luck', 'SELL': 'Sell', 'INDEX': 'Index'}
@@ -788,7 +794,7 @@ def home():
             if k % 3 == 1:
                 tree(x + 10, -138, 1.4)
         blk(0, 0, -125, HALF * 2 + 48, 120, 2, WHITE, transparency=1, name='Wall')
-    for i in range(8):
+    for i in range(N_BASES):
         base(i)
     with group('Plaza', unique=False):
         sp = blk(0, 0.35, -44, 12, 0.6, 12, (255, 255, 255), 'Neon', spawn=True)
