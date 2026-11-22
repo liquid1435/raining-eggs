@@ -5006,11 +5006,7 @@ do
 		make("UIAspectRatioConstraint", { AspectRatio = 1 }, b)
 		make("UICorner", { CornerRadius = UDim.new(0.18, 0) }, b)
 		local st = make("UIStroke", { Thickness = 2.5, Color = BLACK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
-		local num = make("TextLabel", {
-			BackgroundTransparency = 1, Size = UDim2.fromScale(0.34, 0.3), Position = UDim2.fromScale(0.04, 0.02), ZIndex = 4,
-			Font = Enum.Font.LuckiestGuy, TextScaled = true, TextColor3 = WHITE, Text = tostring(k % 10), TextXAlignment = Enum.TextXAlignment.Left,
-		}, b)
-		make("UIStroke", { Thickness = 2, Color = BLACK }, num)
+		-- v180 (user): no slot numbers (keys 1-0 still work)
 		slots[k] = { btn = b, stroke = st, view = nil }
 		b.Activated:Connect(function()
 			if pets[k] then
