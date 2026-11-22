@@ -823,16 +823,19 @@ local function buy(plr, kind, part)
 	end
 	if kind == "train" and (not bases[d.base] or bases[d.base].tread ~= part) then
 		say(plr, "This is not your base", "bad")
+		sync(plr)
 		return
 	end
 	local lv = d[kind]
 	if lv >= C.MAX_LV[kind] then
 		say(plr, UP_NAME[kind] .. " is MAX", "info")
+		sync(plr) -- v190: undo the client's instant preview
 		return
 	end
 	local cost = C.cost(kind, lv)
 	if d.cash < cost then
 		say(plr, "You need $" .. C.fmt(cost), "bad")
+		sync(plr)
 		return
 	end
 	d.cash = d.cash - cost
@@ -858,7 +861,7 @@ end
 local lastTrain = {}
 buyTrain = function(plr)
 	local d = data[plr]
-	if not d or os.clock() - (lastTrain[plr] or 0) < 0.4 then
+	if not d or os.clock() - (lastTrain[plr] or 0) < 0.12 then -- v190: only collapses the 2-3 paths of one press
 		return
 	end
 	lastTrain[plr] = os.clock()
@@ -882,21 +885,7 @@ for _, b in pairs(bases) do
 				buyTrain(plr)
 			end
 		end)
-		-- v176 (user: the board button still does nothing): a prompt right at the board too - E on PC, tap on phones
-		local pp = Instance.new("ProximityPrompt")
-		pp.Name = "TreadUpgrade"
-		pp.ActionText, pp.ObjectText = "Upgrade", "Treadmill"
-		pp.HoldDuration = 0
-		pp.MaxActivationDistance = 12
-		pp.RequiresLineOfSight = false
-		pp.KeyboardKeyCode = Enum.KeyCode.E
-		pp.Parent = sign
-		pp.Triggered:Connect(function(plr)
-			local d = data[plr]
-			if d and bases[d.base] == b then
-				buyTrain(plr)
-			end
-		end)
+		-- v190 (user): no "E Upgrade" prompt - the button on the board is the way to upgrade
 	end
 end
 
@@ -1691,9 +1680,7 @@ Catch.OnServerEvent:Connect(function(plr, id)
 	end
 	table.insert(d.bag, { z = e.zone, kind = e.kind, luck = luck, tier = tier })
 	EggGone:FireAllClients(id, plr.UserId, e.kind)
-	if e.kind == "storm" then
-		Notice:FireAllClients(plr.DisplayName .. " caught the STORM EGG!", "storm")
-	end
+	-- v190 (user): no more violet "X caught the STORM EGG!" message
 	renderCarry(plr)
 	sync(plr)
 end)

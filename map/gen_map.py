@@ -1485,8 +1485,15 @@ def z_toy(i):
     G = (130, 200, 255)
     with group(f'Zone{i + 1}_ToyTown', unique=False):
         z0, zc = zone_base(i, G, 'SmoothPlastic', (255, 250, 236), (240, 90, 80), (70, 120, 220))
+        used = set()
         for _ in range(60):                                   # play-mat tiles
-            blk(side_x(14, 162), 0, rng.uniform(z0 + 8, z0 + ZL - 8), 10, 0.14, 10, rng.choice(TOY), **NC)
+            # v190 (user screenshot: red/yellow tiles flicker where they overlap): snapped to a 10-stud grid, one tile per cell
+            x, z, c = side_x(14, 162), rng.uniform(z0 + 8, z0 + ZL - 8), rng.choice(TOY)
+            gx, gz = round(x / 10) * 10, round(z / 10) * 10
+            if (gx, gz) in used:
+                continue
+            used.add((gx, gz))
+            blk(gx, 0, gz, 10, 0.14, 10, c, **NC)
         if has_mesh('Map_ToyBlock1', 'Map_Dice', 'Map_StackRings', 'Map_Crayon1', 'Map_Ball1', 'Map_TrainTrack', 'Map_TrainEngine',
                     'Map_TrainCar1', 'Map_Teddy', 'Map_DuckTub', 'Map_DuckTubWater'):
             return toy_mesh(z0, G)
@@ -1730,7 +1737,7 @@ def z_neon(i):
                 blk(sx * 92, 0, z, 150, 0.14, 0.6, NEON[(z // 20) % 2], 'Neon', **NC)
         for x in range(30, 170, 28):
             for sx in (-1, 1):
-                blk(sx * x, 0, zc, 0.6, 0.14, ZL - 6, NEON[2], 'Neon', **NC)
+                blk(sx * x, 0.03, zc, 0.6, 0.14, ZL - 6, NEON[2], 'Neon', **NC)   # v190: a bit higher, no flicker where the lines cross
         for sx in (-1, 1):                                    # road edge lights
             blk(sx * (ROADW / 2 + 1.6), 0.7, zc, 0.5, 0.3, ZL, NEON[0 if sx < 0 else 1], 'Neon', **NC)
         if has_mesh('Map_Tower1', 'Map_TowerNeon1', 'Map_NeonLamp', 'Map_NeonOrb1', 'Map_Arcade', 'Map_ArcadeNeon1', 'Map_HoverCar',

@@ -820,7 +820,7 @@ function M.init(X)
 			elseif attr("Cash", 0) < C.cost(u.kind, lv) then
 				toast("You need $" .. C.fmt(C.cost(u.kind, lv)), "bad")
 			else
-				Action:FireServer("upgrade", u.kind)
+				if X.UI.buyUpgrade then X.UI.buyUpgrade(u.kind) else Action:FireServer("upgrade", u.kind) end -- v190: instant
 			end
 		end)
 		upRows[n] = { u = u, fx = fx, fill = fill, b = b, name = nm }

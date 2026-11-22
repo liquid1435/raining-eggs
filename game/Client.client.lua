@@ -36,6 +36,23 @@ local function make(class, props, parent)
 end
 
 local UI = {} -- UI kit functions shared with the UIMenus module (filled further down)
+-- v190 (user: upgrade buttons had a delay): buy at once on this screen - new level + cash shown locally right away,
+-- the server does the real buy and its numbers replace these (a refused buy sends the real numbers back)
+UI.buyUpgrade = function(kind)
+	local p = game:GetService("Players").LocalPlayer
+	local attrName = ({ train = "TrainLv", luck = "LuckLv", basket = "BasketLv" })[kind]
+	local cfg = require(game:GetService("ReplicatedStorage"):WaitForChild("Config"))
+	local lv = attrName and p:GetAttribute(attrName) or nil
+	if lv and lv < cfg.MAX_LV[kind] then
+		local cost = cfg.cost(kind, lv)
+		local cash = p:GetAttribute("Cash") or 0
+		if cash >= cost then
+			p:SetAttribute("Cash", cash - cost)
+			p:SetAttribute(attrName, lv + 1)
+		end
+	end
+	Remotes:WaitForChild("Action"):FireServer("upgrade", kind)
+end
 
 local function attr(name, default)
 	local v = plr:GetAttribute(name)
@@ -2369,11 +2386,11 @@ local function buildStages()
 	end
 	-- "RARITY / <NAME>" under the egg (on the screen)
 	S.signSmall = make("TextLabel", {
-		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.835), Size = UDim2.fromScale(0.3, 0.03),
+		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.735), Size = UDim2.fromScale(0.3, 0.03),
 		Font = Enum.Font.Garamond, TextScaled = true, Text = "RARITY", TextColor3 = Color3.fromRGB(220, 220, 230), Visible = false, ZIndex = 4,
 	}, showGui)
 	S.signBig = make("TextLabel", {
-		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.885), Size = UDim2.fromScale(0.6, 0.07),
+		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.785), Size = UDim2.fromScale(0.6, 0.07),
 		Font = Enum.Font.Garamond, TextScaled = true, Text = "", TextColor3 = WHITE, ZIndex = 4,
 	}, showGui)
 	make("UIStroke", { Thickness = 2, Color = Color3.new(0, 0, 0), Transparency = 0.3 }, S.signBig)
@@ -3708,7 +3725,7 @@ do
 	local NAVY1, NAVY2, GOLDLINE = Color3.fromRGB(58, 52, 112), Color3.fromRGB(28, 24, 58), Color3.fromRGB(255, 200, 60)
 	local signPart, lastBuy = nil, 0
 	buyTrain = function()
-		if os.clock() - lastBuy < 0.35 then
+		if os.clock() - lastBuy < 0.12 then
 			return
 		end
 		lastBuy = os.clock()
@@ -3716,7 +3733,7 @@ do
 		local sc = btn:FindFirstChildOfClass("UIScale") or make("UIScale", {}, btn)
 		sc.Scale = 0.9
 		TweenService:Create(sc, TweenInfo.new(0.15, Enum.EasingStyle.Back), { Scale = 1 }):Play()
-		Action:FireServer("upgrade", "train")
+		UI.buyUpgrade("train") -- v190: instant
 	end
 	-- v144 fix (user: the upgrade button on the fence did nothing): invisible parts between the camera and the board
 	-- (fence collision boxes, zones) can swallow clicks on a SurfaceGui. Backup: a click/tap that the GUI did not take
@@ -3841,17 +3858,6 @@ do
 			build(part)
 			refresh()
 		end
-		-- v176: the server's "Upgrade Treadmill" prompt shows only at YOUR board
-		task.spawn(function()
-			for k = 1, 8 do
-				local bk = map and map:FindFirstChild("Base" .. k)
-				local sg = bk and bk:FindFirstChild("TreadSign", true)
-				local pp = sg and sg:WaitForChild("TreadUpgrade", 10)
-				if pp then
-					pp.Enabled = (k == i)
-				end
-			end
-		end)
 	end
 	task.spawn(function()
 		workspace:WaitForChild("Map", 30)
