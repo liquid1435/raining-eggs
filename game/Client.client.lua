@@ -3607,8 +3607,48 @@ end
 -- The board parts are invisible in the map; only YOUR base's board is shown (locally), with LV a > b, speed, and a buy button.
 do
 	local sg, lvT, spT, btn, btnT, shown
+	local buyTrain
 	local NAVY1, NAVY2, GOLDLINE = Color3.fromRGB(58, 52, 112), Color3.fromRGB(28, 24, 58), Color3.fromRGB(255, 200, 60)
+	local signPart, lastBuy = nil, 0
+	buyTrain = function()
+		if os.clock() - lastBuy < 0.35 then
+			return
+		end
+		lastBuy = os.clock()
+		playClick()
+		local sc = btn:FindFirstChildOfClass("UIScale") or make("UIScale", {}, btn)
+		sc.Scale = 0.9
+		TweenService:Create(sc, TweenInfo.new(0.15, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		Action:FireServer("upgrade", "train")
+	end
+	-- v144 fix (user: the upgrade button on the fence did nothing): invisible parts between the camera and the board
+	-- (fence collision boxes, zones) can swallow clicks on a SurfaceGui. Backup: a click/tap that the GUI did not take
+	-- is ray-cast against the board only; if it lands on the button area, buy.
+	game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+		if processed or not signPart or not btn then
+			return
+		end
+		local t = input.UserInputType
+		if t ~= Enum.UserInputType.MouseButton1 and t ~= Enum.UserInputType.Touch then
+			return
+		end
+		local cam = workspace.CurrentCamera
+		local ray = cam:ViewportPointToRay(input.Position.X, input.Position.Y)
+		local rp = RaycastParams.new()
+		rp.FilterType = Enum.RaycastFilterType.Include
+		rp.FilterDescendantsInstances = { signPart }
+		local hit = workspace:Raycast(ray.Origin, ray.Direction * 120, rp)
+		if not hit or hit.Normal:Dot(signPart.CFrame.LookVector) > -0.5 then
+			return -- missed, or not the Back face (the side facing the plaza)
+		end
+		local lp = signPart.CFrame:PointToObjectSpace(hit.Position)
+		local u, v = lp.X / signPart.Size.X + 0.5, 0.5 - lp.Y / signPart.Size.Y
+		if u > 0.05 and u < 0.95 and v > 0.66 and v < 0.97 then
+			buyTrain()
+		end
+	end)
 	local function build(part)
+		signPart = part
 		if sg then
 			sg:Destroy()
 		end
@@ -3662,11 +3702,7 @@ do
 		}, btn)
 		make("UIStroke", { Thickness = 4, Color = BLACK }, btnT)
 		btn.Activated:Connect(function()
-			playClick()
-			local sc = btn:FindFirstChildOfClass("UIScale") or make("UIScale", {}, btn)
-			sc.Scale = 0.9
-			TweenService:Create(sc, TweenInfo.new(0.15, Enum.EasingStyle.Back), { Scale = 1 }):Play()
-			Action:FireServer("upgrade", "train")
+			buyTrain()
 		end)
 		btn.Name = "Buy"
 		bgr.Name = "Grad"

@@ -393,10 +393,18 @@ local function label(model, pet, mult)
 	local bb = Instance.new("BillboardGui")
 	bb.Name = "Tag"
 	bb.Size = UDim2.fromScale(8, 2.4)
-	bb.StudsOffsetWorldSpace = Vector3.new(0, 5, 0)
-	bb.MaxDistance = 70
+	-- v144 fix (user: some pets showed no $/s): the tag sat a fixed 5 studs up, inside the big pets' bodies
+	-- (AlwaysOnTop off hides it there), and pets without a PrimaryPart got no tag at all -> put it above the real top
+	local root = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+	if not root then
+		return
+	end
+	local bcf, bsize = model:GetBoundingBox()
+	local top = bcf.Position.Y + bsize.Y / 2 - root.Position.Y
+	bb.StudsOffsetWorldSpace = Vector3.new(0, math.max(top, 2) + 2.2, 0)
+	bb.MaxDistance = 90
 	bb.AlwaysOnTop = false
-	bb.Adornee = model.PrimaryPart
+	bb.Adornee = root
 	local function line(text, y, h, col)
 		local t = Instance.new("TextLabel")
 		t.BackgroundTransparency = 1
@@ -414,7 +422,7 @@ local function label(model, pet, mult)
 	end
 	line(C.petName(pet), 0, 0.55, TIER_COLOR[pet.t] or C.RARITY[pet.i].color)
 	line("$" .. C.fmt(C.petIncome(pet) * mult) .. "/s", 0.55, 0.45, Color3.fromRGB(255, 222, 60))
-	bb.Parent = model.PrimaryPart
+	bb.Parent = root
 end
 
 local SLOT_X = { -10, 0, 10 }
