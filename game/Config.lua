@@ -47,7 +47,7 @@ C.STORM_EGG_LINGER = 5  -- seconds the storm egg waits on the ground
 
 C.INDEX_BONUS = 0.1     -- cash per completed zone
 C.REBIRTH_BONUS = 0.5   -- cash and training per rebirth
-C.REBIRTH_SPEED_SCALE = 1e6 -- v119 balance: rebirth speed = zone speed numbers x this (first rebirth after ~3 h of play, was ~5 min)
+C.REBIRTH_SPEED_SCALE = 1e13 -- v148 balance: first rebirth after ~3 h of play (the faster early treadmill needed a bigger scale; was 1e6)
 
 C.RARITY = {
 	{ name = "Common", odds = 2, mult = 1, color = Color3.fromRGB(205, 208, 215) },
@@ -252,10 +252,13 @@ C.PET_COUNT = C.NZ * #C.RARITY
 -- ============================================================ ZONE GATES (tweak here)
 -- Cash price to open each zone, in order. Zone 1 is free. Change a number = change the price.
 -- A player must buy them in order (zone 3 can not be bought before zone 2).
--- v119 balance (tools/sim_economy.py, target between medium and slow): a normal player opens zone 2 after ~4 min,
+-- v148 balance (user: fast start as a hook, then each step harder; tools/tune_economy.py fits every price to a curve):
+-- zone 2 ~1 min, 3 ~3 min, 4 ~7 min, 5 ~15 min, 6 ~30 min, 7 ~55 min, 8 ~1.5 h, 9 ~2.5 h, 10 ~4 h; world 2 zone 12 ~6.5 h .. zone 20 ~50 h.
+-- Baskets, treadmill and luck follow the same kind of curve (C.BASKETS, C.TRAIN_COST, C.LUCK_COST).
+-- (old) v119 balance (tools/sim_economy.py, target between medium and slow): a normal player opens zone 2 after ~4 min,
 -- zone 3 ~14 min, zone 4 ~40 min, zone 5 ~2 h, zone 6 ~3.5 h, zone 7 ~5.5 h, zone 8 ~8 h, zone 9 ~11 h, zone 10 ~15 h of play.
 -- (v118 prices { 0, 1e3, 1e4, 7.5e4, 5e5, 4e6, 3e7, 2.5e8, 2e9, 1.5e10 } let players open all 10 zones in ~15 minutes.)
-C.ZONE_PRICE = { 0, 8e3, 5.5e5, 3.5e7, 3e9, 3e10, 5e11, 6.5e12, 6.5e13, 6.5e14, 0, 7e16, 9e17, 1e19, 1.1e20, 1.2e21, 1.3e22, 1.4e23, 1.5e24, 1.7e25 } -- 11-20 = world 2 (11 free: the Golden Portal)
+C.ZONE_PRICE = { 0, 190, 1.2e4, 4.5e5, 1.3e7, 2.7e8, 9.1e9, 1.2e11, 2.4e12, 5.6e13, 0, 9.2e15, 1.2e17, 1.4e18, 1.8e19, 3e20, 4.2e21, 4.6e22, 6.7e23, 8e24 } -- 11-20 = world 2 (11 free: the Golden Portal)
 for i, z in ipairs(C.ZONES) do
 	z.price = C.ZONE_PRICE[i] or 0
 end
@@ -316,33 +319,40 @@ C.MAX_LV = { train = 60, basket = 19, luck = 20 }
 -- BasketLv 0 = basket 1 (free), BasketLv 19 = basket 20
 C.BASKETS = {
 	{ name = "Old Basket", price = 0 },
-	{ name = "Straw Basket", price = 100 },
-	{ name = "Picnic Basket", price = 220 },
-	{ name = "Flower Basket", price = 480 },
-	{ name = "Honey Pot", price = 1100 },
-	{ name = "Mushroom Basket", price = 2300 },
-	{ name = "Candy Bucket", price = 5200 },
-	{ name = "Sand Pail", price = 11000 },
-	{ name = "Cookie Jar", price = 25000 },
-	{ name = "Pumpkin Pack", price = 55000 },
-	{ name = "Ice Bucket", price = 120000 },
-	{ name = "Tech Pack", price = 270000 },
-	{ name = "Ocean Basket", price = 580000 },
-	{ name = "Lava Basket", price = 1300000 },
-	{ name = "Thunder Pack", price = 2800000 },
-	{ name = "Neon Basket", price = 6200000 },
-	{ name = "Cloud Basket", price = 14000000 },
-	{ name = "Crystal Basket", price = 30000000 },
-	{ name = "Rainbow Basket", price = 66000000 },
-	{ name = "Royal Basket", price = 150000000 },
+	{ name = "Straw Basket", price = 26 },
+	{ name = "Picnic Basket", price = 60 },
+	{ name = "Flower Basket", price = 200 },
+	{ name = "Honey Pot", price = 990 },
+	{ name = "Mushroom Basket", price = 6.5e3 },
+	{ name = "Candy Bucket", price = 4.7e4 },
+	{ name = "Sand Pail", price = 3.4e5 },
+	{ name = "Cookie Jar", price = 2.4e6 },
+	{ name = "Pumpkin Pack", price = 1.8e7 },
+	{ name = "Ice Bucket", price = 1.4e8 },
+	{ name = "Tech Pack", price = 1.1e9 },
+	{ name = "Ocean Basket", price = 9.4e9 },
+	{ name = "Lava Basket", price = 8.8e10 },
+	{ name = "Thunder Pack", price = 1e12 },
+	{ name = "Neon Basket", price = 1.8e13 },
+	{ name = "Cloud Basket", price = 4.6e14 },
+	{ name = "Crystal Basket", price = 1.4e16 },
+	{ name = "Rainbow Basket", price = 4.3e17 },
+	{ name = "Royal Basket", price = 1.3e19 },
 }
 function C.basketRim(k) -- top of basket k, seen from the torso centre (same numbers as blender\gen_baskets20.py)
 	local t = (k - 1) / 19
 	local rt, h, y0 = 1.0 + 0.3 * t, 1.9 + 0.4 * t, -1.25 - 0.2 * t
 	return Vector3.new(0, y0 + h + 0.1, 0.55 + rt + 0.05)
 end
+-- v148: price of the next treadmill / luck level (index = level you have + 1); fitted by tools/tune_economy.py
+C.TRAIN_COST = { 28, 36, 47, 61, 81, 120, 240, 550, 1.1e3, 1.9e3, 3.2e3, 6.6e3, 1.7e4, 4e4, 7.9e4, 1.3e5, 2.3e5, 4.8e5, 1.1e6, 2.3e6, 4.2e6, 7.3e6, 1.4e7, 3.1e7, 6.5e7, 1.3e8, 2.7e8, 6.1e8, 1.4e9, 3e9, 6.6e9, 1.5e10, 3.4e10, 7.2e10, 1.5e11, 3.5e11, 8.4e11, 2.2e12, 6.6e12, 2.5e13, 1.1e14, 4.4e14, 1.6e15, 4.9e15, 1.5e16, 5e16, 1.8e17, 6.6e17, 2.6e18, 1.1e19, 4.9e19, 2.4e20, 1.2e21, 5.6e21, 2.6e22, 1.1e23, 5e23, 2.2e24, 9.7e24, 4.3e25 }
+C.LUCK_COST = { 60, 210, 1e3, 6.4e3, 4.5e4, 3.2e5, 2.3e6, 1.6e7, 1.2e8, 1e9, 8.3e9, 7.8e10, 9e11, 1.4e13, 3.1e14, 9.2e15, 3.1e17, 1.2e19, 5.6e20, 3.1e22 }
 function C.cost(kind, lv)
-	if kind == "train" then
+	if kind == "train" and C.TRAIN_COST[lv + 1] then
+		return C.TRAIN_COST[lv + 1]
+	elseif kind == "luck" then
+		return C.LUCK_COST[lv + 1] or math.huge
+	elseif kind == "train" then
 		return math.floor(40 * 3 ^ lv)
 	elseif kind == "basket" then
 		local b = C.BASKETS[lv + 2]

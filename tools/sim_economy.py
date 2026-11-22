@@ -43,10 +43,17 @@ PEN_MAX, STORAGE_MAX = int(num('PEN_MAX')), int(num('STORAGE_MAX'))
 REBIRTH_BONUS, INDEX_BONUS, FUSE = num('REBIRTH_BONUS'), num('INDEX_BONUS'), int(num('FUSE'))
 GOLDEN_CHANCE, GOLDEN_LUCK = 1 / 30, num('GOLDEN_LUCK')
 MAX_LV = dict(train=60, basket=len(BASKETS) - 1, luck=20)
+AUTO_FUSE = bool(re.search(r'^C\.AUTO_FUSE\s*=\s*true', CFG, re.M))
+TRAIN_COST = arr('TRAIN_COST') if re.search(r'^C\.TRAIN_COST', CFG, re.M) else None   # v148: price tables
+LUCK_COST = arr('LUCK_COST') if re.search(r'^C\.LUCK_COST', CFG, re.M) else None
 
 
 # ---------------------------------------------------------------- formulas (copied from Config.lua)
 def cost(kind, lv):
+    if kind == 'train' and TRAIN_COST:
+        return TRAIN_COST[lv] if lv < len(TRAIN_COST) else math.inf
+    if kind == 'luck' and LUCK_COST:
+        return LUCK_COST[lv] if lv < len(LUCK_COST) else math.inf
     if kind == 'train':
         return math.floor(40 * 3 ** lv)
     if kind == 'basket':
@@ -139,7 +146,8 @@ def play(rng, hours=30.0, verbose=False):
             i = roll(luck, rng)
             pets.append((z, i, 0))
             index.add((z, i))
-        fuse()
+        if AUTO_FUSE:
+            fuse()
         pets.sort(key=inc_of, reverse=True)
         while len(pets) > PEN_MAX + STORAGE_MAX:
             cash += inc_of(pets.pop()) * 30
@@ -157,6 +165,7 @@ def play(rng, hours=30.0, verbose=False):
             c, k = min(opts)
             cash -= c
             lv[k] += 1
+            mark(f'{k} {lv[k]}')
         if speed >= rebirth_need(reb):
             mark(f'rebirth {reb + 1} possible')
         for zd in range(1, zones_done() + 1):
