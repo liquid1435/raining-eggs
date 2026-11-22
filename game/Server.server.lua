@@ -1858,7 +1858,7 @@ task.spawn(function()
 					zi = CO.first
 					if not d.cosmicSeen then
 						d.cosmicSeen = true
-						Notice:FireAllClients(plr.DisplayName .. " entered the COSMIC NEST!", "legend")
+						-- v222 (user): no "entered the COSMIC NEST" message / sound
 					end
 				end
 				if zi > 1 and zi <= C.NZ then
@@ -2448,7 +2448,7 @@ local function placeAltar(plr, n, quiet)
 		task.delay(0.8, function()
 			GoldenAltar:FireClient(plr, "sink")
 		end)
-		Notice:FireAllClients(plr.DisplayName .. " opened the GOLDEN PORTAL!", "legend")
+		-- v222 (user): no "opened the GOLDEN PORTAL" message / sound
 	elseif not quiet then
 		say(plr, C.ZONES[n].name .. " egg placed! " .. count .. " / " .. C.NZ .. " altars", "good")
 	end
