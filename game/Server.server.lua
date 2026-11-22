@@ -264,8 +264,12 @@ local function zonesDone(d)
 	return n
 end
 
+local function eventKey()
+	return (C.eventAt(os.time())).key
+end
 local function cashMult(d)
 	return C.rebirthMult(d.rebirth) * (1 + C.INDEX_BONUS * d.zonesDone) * (d.passes.cash2 and 2 or 1)
+		* (eventKey() == "cash" and 2 or 1) * (1 + C.FRIEND_BONUS * (d.friends or 0)) -- v150: weekly event + friends
 end
 
 -- basket size: upgrades + the VIP Basket game pass
@@ -1187,7 +1191,7 @@ local function load(plr)
 	local bag = {}
 	for _, egg in ipairs(type(saved.eggs) == "table" and saved.eggs or {}) do
 		if type(egg) == "table" and C.ZONES[tonumber(egg.z) or 0] then
-			table.insert(bag, { z = tonumber(egg.z), kind = tostring(egg.kind or "normal"), luck = tonumber(egg.luck) or 1 })
+			table.insert(bag, { z = tonumber(egg.z), kind = tostring(egg.kind or "normal"), luck = tonumber(egg.luck) or 1, tier = tonumber(egg.tier) })
 		end
 	end
 	local d = {
@@ -1216,6 +1220,8 @@ local function load(plr)
 		passes = {},
 		dailyDay = tonumber(saved.dailyDay) or 0, -- last claimed day of the streak (1..7)
 		dailyLast = tonumber(saved.dailyLast) or 0, -- os.time() of the last claim
+		gift = saved.gift == true or (tonumber(saved.caught) or 0) > 0, -- v150: welcome egg already given (old players: yes)
+		friends = 0,
 		altar = {}, -- zones whose egg is on its altar in the Golden Nest (all 10 = the golden egg sinks, the portal opens)
 	}
 	for _, z in ipairs(type(saved.altar) == "table" and saved.altar or {}) do
@@ -1265,7 +1271,7 @@ local function save(plr)
 		store:SetAsync("u" .. plr.UserId, {
 			cash = d.cash, speed = d.speed, train = d.train, basket = d.basket, luck = d.luck, rebirth = d.rebirth,
 			caught = d.caught, bestOdds = d.bestOdds, bestName = d.bestName, pets = d.pets, stored = d.stored, index = keys,
-			unlocked = d.unlocked, dailyDay = d.dailyDay, dailyLast = d.dailyLast, eggs = d.bag, altar = altarList(d),
+			unlocked = d.unlocked, dailyDay = d.dailyDay, dailyLast = d.dailyLast, eggs = d.bag, altar = altarList(d), gift = d.gift,
 		})
 	end)
 end
@@ -1372,7 +1378,7 @@ local function spawnEgg(zoneIndex, near, forced)
 				local kind, fall, linger = forced or "normal", CO.fall, 0
 				if kind == "storm" then
 					fall, linger = fall * 1.4, C.STORM_EGG_LINGER
-				elseif math.random() < C.GOLDEN_CHANCE then
+				elseif math.random() < C.GOLDEN_CHANCE * (eventKey() == "gold" and C.EVENT_GOLD_CHANCE or 1) then
 					kind, fall = "golden", fall * 1.2
 				end
 				eggs[id] = { x = x, z = z, y0 = y0, gy = hit.Position.Y, fall = fall, linger = linger, t0 = os.clock(), zone = zoneIndex, kind = kind }
@@ -1404,9 +1410,10 @@ local function spawnEgg(zoneIndex, near, forced)
 				fall, linger = fall * 1.7, C.STORM_EGG_LINGER
 			else
 				local r = math.random()
-				if r < C.GOLDEN_CHANCE then
+				local gc = C.GOLDEN_CHANCE * (eventKey() == "gold" and C.EVENT_GOLD_CHANCE or 1)
+				if r < gc then
 					kind, fall = "golden", fall * 1.35
-				elseif r < C.GOLDEN_CHANCE + C.ROTTEN_CHANCE then
+				elseif r < gc + C.ROTTEN_CHANCE then
 					kind = "rotten"
 				end
 			end
@@ -1469,13 +1476,21 @@ Catch.OnServerEvent:Connect(function(plr, id)
 	d.comboT = now
 
 	-- the luck is saved with the egg now (combo, storm, golden...), the pet is rolled when the player presses HATCH EGGS
-	local luck = C.luck(d.luck) * C.comboLuck(d.combo) * (storm and C.STORM_LUCK or 1) * (d.passes.luck2 and 2 or 1)
+	local ev = eventKey()
+	local luck = C.luck(d.luck) * C.comboLuck(d.combo) * (storm and C.STORM_LUCK or 1) * (d.passes.luck2 and 2 or 1) * (ev == "luck" and 2 or 1)
+	local tier = nil
 	if e.kind == "golden" then
 		luck = luck * C.GOLDEN_LUCK
+		-- v150 weekly events: golden eggs hatch Gold pets (GOLDEN WEEK) or sometimes Rainbow pets (RAINBOW WEEK)
+		if ev == "gold" then
+			tier = 2
+		elseif ev == "rainbow" and math.random() < C.EVENT_RAINBOW then
+			tier = 3
+		end
 	elseif e.kind == "storm" then
 		luck = luck * C.STORM_EGG_LUCK
 	end
-	table.insert(d.bag, { z = e.zone, kind = e.kind, luck = luck })
+	table.insert(d.bag, { z = e.zone, kind = e.kind, luck = luck, tier = tier })
 	EggGone:FireAllClients(id, plr.UserId, e.kind)
 	if e.kind == "storm" then
 		Notice:FireAllClients(plr.DisplayName .. " caught the STORM EGG!", "storm")
@@ -1501,7 +1516,7 @@ local function hatchBag(plr, only, limit)
 	d.bag = keep
 	for _, egg in ipairs(bag) do
 		local idx = roll(egg.luck)
-		local pet = { z = egg.z, i = idx, t = 1 }
+		local pet = { z = egg.z, i = idx, t = math.clamp(math.floor(egg.tier or 1), 1, #C.TIER) } -- v150: event Gold/Rainbow eggs
 		local def = C.ZONES[egg.z].pets[idx]
 		local odds = C.RARITY[idx].odds
 		table.insert(d.carry, pet)
@@ -1591,7 +1606,7 @@ task.spawn(function()
 			if now >= endAt then
 				storm = false
 				warned = false
-				nextAt = now + math.random(C.STORM_EVERY[1], C.STORM_EVERY[2])
+				nextAt = now + math.random(C.STORM_EVERY[1], C.STORM_EVERY[2]) / (eventKey() == "storm" and 2 or 1)
 				workspace:SetAttribute("StormNext", nextAt)
 				workspace:SetAttribute("StormEnd", 0)
 			end
@@ -1709,9 +1724,9 @@ end)
 local MPS = game:GetService("MarketplaceService")
 
 -- a pet straight into the pen (daily reward egg): same path as walking home with it, the basket is left alone
-local function hatchToPen(plr, d, z, kind, boost)
-	local luck = C.luck(d.luck) * (d.passes.luck2 and 2 or 1) * (boost or 1)
-	local idx = roll(luck)
+local function hatchToPen(plr, d, z, kind, boost, force)
+	local luck = C.luck(d.luck) * (d.passes.luck2 and 2 or 1) * (boost or 1) * (eventKey() == "luck" and 2 or 1)
+	local idx = force or roll(luck)
 	local pet = { z = z, i = idx, t = 1 }
 	local def = C.ZONES[z].pets[idx]
 	d.caught = d.caught + 1
@@ -1736,6 +1751,77 @@ local function hatchToPen(plr, d, z, kind, boost)
 		Notice:FireAllClients(plr.DisplayName .. " hatched a LEGENDARY " .. def.name .. "! (1 in " .. C.comma(C.RARITY[idx].odds) .. ")", "legend")
 	end
 end
+
+-- ============================================================ v150: WELCOME GIFT, FRIENDS, WEEKLY EVENT
+-- welcome gift: a new player gets a golden egg 10 s after joining -> a Rare (sometimes Epic) pet straight into the pen
+local function giveGift(plr)
+	task.wait(C.GIFT_DELAY)
+	local d = data[plr]
+	if not d or d.gift or not plr.Parent then
+		return
+	end
+	d.gift = true
+	say(plr, "WELCOME GIFT! Your first egg is free!", "legend")
+	task.wait(1.2)
+	if data[plr] == d then
+		hatchToPen(plr, d, 1, "golden", nil, math.random() < C.GIFT_EPIC and 4 or 3)
+	end
+end
+-- friends on the same server: +10% cash each (max 4); recount for everybody when someone joins or leaves
+local function countFriends()
+	for plr, d in pairs(data) do
+		local n = 0
+		for other in pairs(data) do
+			if other ~= plr then
+				local ok, yes = pcall(plr.IsFriendsWith, plr, other.UserId)
+				if ok and yes then
+					n = n + 1
+				end
+			end
+		end
+		n = math.min(n, C.FRIEND_MAX)
+		if n ~= (d.friends or 0) then
+			local more = n > (d.friends or 0)
+			d.friends = n
+			plr:SetAttribute("Friends", n)
+			renderPen(plr) -- the $/s tags show the new bonus
+			sync(plr)
+			if more then
+				say(plr, "Playing with friends! +" .. math.floor(C.FRIEND_BONUS * n * 100 + 0.5) .. "% cash", "cash")
+			end
+		end
+	end
+end
+local function onJoin(plr)
+	for _ = 1, 100 do
+		if data[plr] or not plr.Parent then
+			break
+		end
+		task.wait(0.2)
+	end
+	if data[plr] then
+		task.spawn(giveGift, plr)
+		countFriends()
+	end
+end
+Players.PlayerAdded:Connect(onJoin)
+for _, plr in ipairs(Players:GetPlayers()) do
+	task.spawn(onJoin, plr)
+end
+Players.PlayerRemoving:Connect(function()
+	task.defer(countFriends)
+end)
+-- weekly event: the clients read these attributes for the banner
+task.spawn(function()
+	while true do
+		local ev, ends = C.eventAt(os.time())
+		workspace:SetAttribute("EventKey", ev.key)
+		workspace:SetAttribute("EventName", ev.name)
+		workspace:SetAttribute("EventDesc", ev.desc)
+		workspace:SetAttribute("EventEnd", ends)
+		task.wait(30)
+	end
+end)
 
 Action.OnServerEvent:Connect(function(plr, what, kind)
 	local d = data[plr]

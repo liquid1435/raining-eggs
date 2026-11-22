@@ -498,6 +498,54 @@ barBg.Visible = false -- user: no NEXT bar; the next gate shows "$cash / $price"
 stormBanner:GetPropertyChangedSignal("Visible"):Connect(function()
 	TweenService:Create(barBg, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = stormBanner.Visible and BAR_LOW or BAR_HIGH }):Play()
 end)
+
+-- v150: weekly event banner (in the place of the old NEXT bar: under the storm banner, or on top when there is no storm)
+-- + a small chip when Roblox friends play on the same server
+do
+	local EV_COL = { luck = Color3.fromRGB(60, 200, 90), gold = Color3.fromRGB(255, 190, 40), cash = Color3.fromRGB(40, 190, 120),
+		rainbow = Color3.fromRGB(230, 80, 200), storm = Color3.fromRGB(140, 90, 240) }
+	local holder, face, evGrad = lip(top, Color3.fromRGB(255, 190, 40), UDim2.fromScale(0.78, 0.3), BAR_HIGH, nil, 0.3)
+	local nameT = make("TextLabel", {
+		BackgroundTransparency = 1, Size = UDim2.fromScale(0.5, 0.86), Position = UDim2.fromScale(0.04, 0.07), ZIndex = 3,
+		Font = Enum.Font.LuckiestGuy, TextScaled = true, TextColor3 = WHITE, Text = "", TextXAlignment = Enum.TextXAlignment.Left,
+	}, face)
+	make("UIStroke", { Thickness = 2.5, Color = BLACK }, nameT)
+	local infoT = make("TextLabel", {
+		BackgroundTransparency = 1, Size = UDim2.fromScale(0.42, 0.7), Position = UDim2.fromScale(0.55, 0.15), ZIndex = 3,
+		Font = Enum.Font.FredokaOne, TextScaled = true, TextColor3 = WHITE, Text = "", TextXAlignment = Enum.TextXAlignment.Right,
+	}, face)
+	make("UIStroke", { Thickness = 2, Color = BLACK }, infoT)
+	local friendT = make("TextLabel", {
+		BackgroundTransparency = 1, Size = UDim2.fromScale(0.6, 0.2), Position = UDim2.fromScale(0.2, 1.02), ZIndex = 3, Visible = false,
+		Font = Enum.Font.FredokaOne, TextScaled = true, TextColor3 = Color3.fromRGB(120, 230, 255), Text = "",
+	}, top)
+	make("UIStroke", { Thickness = 2, Color = BLACK }, friendT)
+	local showDesc = false
+	stormBanner:GetPropertyChangedSignal("Visible"):Connect(function()
+		TweenService:Create(holder, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = stormBanner.Visible and BAR_LOW or BAR_HIGH }):Play()
+	end)
+	task.spawn(function()
+		while true do
+			local key, name = workspace:GetAttribute("EventKey"), workspace:GetAttribute("EventName")
+			holder.Visible = key ~= nil
+			if key then
+				local left = math.max(0, (workspace:GetAttribute("EventEnd") or 0) - workspace:GetServerTimeNow())
+				local dd, hh, mm = math.floor(left / 86400), math.floor(left % 86400 / 3600), math.floor(left % 3600 / 60)
+				nameT.Text = name
+				showDesc = not showDesc
+				infoT.Text = showDesc and (workspace:GetAttribute("EventDesc") or "") or ("ends in " .. (dd > 0 and (dd .. "d " .. hh .. "h") or (hh .. "h " .. mm .. "m")))
+				local col = EV_COL[key] or YELLOW
+				if evGrad and evGrad:IsA("UIGradient") then
+					evGrad.Color = faceSeq(col)
+				end
+			end
+			local n = plr:GetAttribute("Friends") or 0
+			friendT.Visible = n > 0
+			friendT.Text = n .. (n == 1 and " FRIEND" or " FRIENDS") .. " HERE: +" .. math.floor(C.FRIEND_BONUS * n * 100 + 0.5) .. "% CASH"
+			task.wait(4)
+		end
+	end)
+end
 barText.RichText = true
 barText.ZIndex = 3
 

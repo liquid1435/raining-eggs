@@ -604,4 +604,27 @@ C.DAILY = { -- cash = this many seconds of your income (at least min); day 7 als
 	{ secs = 420, min = 800 }, { secs = 600, min = 1200 }, { secs = 900, min = 2000, egg = true },
 }
 
+-- ============================================================ v150: WEEKLY EVENTS, FRIENDS, WELCOME GIFT
+-- Every week (Monday 00:00 UTC) the next event of this list starts on every server; it runs 7 days.
+C.EVENT_EPOCH = 1704067200 -- Monday 1 Jan 2024 00:00 UTC
+C.EVENTS = {
+	{ key = "luck", name = "LUCKY WEEK", desc = "x2 luck on every egg" },
+	{ key = "gold", name = "GOLDEN WEEK", desc = "x3 golden eggs - they hatch GOLD pets!" },
+	{ key = "cash", name = "CASH WEEK", desc = "x2 cash from all your pets" },
+	{ key = "rainbow", name = "RAINBOW WEEK", desc = "golden eggs can hatch RAINBOW pets!" },
+	{ key = "storm", name = "STORM WEEK", desc = "egg storms come twice as often" },
+}
+C.EVENT_GOLD_CHANCE = 3   -- golden eggs x this in GOLDEN WEEK
+C.EVENT_RAINBOW = 0.25    -- RAINBOW WEEK: part of the golden eggs that hatch a Rainbow pet
+function C.eventAt(t) -- the event running at os.time() t, and when it ends
+	local w = math.floor((t - C.EVENT_EPOCH) / 604800)
+	return C.EVENTS[w % #C.EVENTS + 1], C.EVENT_EPOCH + (w + 1) * 604800
+end
+-- friends: every Roblox friend playing on the same server gives +10% cash (up to 4 friends = +40%)
+C.FRIEND_BONUS = 0.1
+C.FRIEND_MAX = 4
+-- a new player gets a free egg 10 s after joining: Rare (or Epic) pet from Sunny Meadow
+C.GIFT_DELAY = 10
+C.GIFT_EPIC = 0.3
+
 return C
