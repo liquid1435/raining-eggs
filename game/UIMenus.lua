@@ -255,6 +255,87 @@ function M.init(X)
 		face(f, col, 0.12)
 		return f
 	end
+	-- v200 (user: "make these cards better and more professional"): rarity gradient card with a dark outline, a soft
+	-- light behind the pet, a floor shadow, a rarity ribbon at the bottom, a small GOLD / RAINBOW chip and a gloss
+	local function shade(c, k)
+		return Color3.new(c.R * k, c.G * k, c.B * k)
+	end
+	local function lighten(c, k)
+		return c:Lerp(WHITE, k)
+	end
+	local RAINBOW_SEQ = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)), ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255, 180, 50)),
+		ColorSequenceKeypoint.new(0.4, Color3.fromRGB(250, 240, 70)), ColorSequenceKeypoint.new(0.6, Color3.fromRGB(80, 220, 110)),
+		ColorSequenceKeypoint.new(0.8, Color3.fromRGB(70, 160, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(190, 90, 255)),
+	})
+	local function petCard(parent, pet, ribbonH)
+		local rar = C.RARITY[pet.i]
+		local col = rar.color
+		ribbonH = ribbonH or 0.2
+		local c = make("Frame", { BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 2, ClipsDescendants = true }, parent)
+		make("UICorner", { CornerRadius = UDim.new(0.1, 0) }, c)
+		make("UIStroke", { Thickness = 3, Color = Color3.fromRGB(22, 18, 44), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, c)
+		make("UIGradient", { Rotation = 90, Color = ColorSequence.new(lighten(col, 0.45), shade(col, 0.78)) }, c)
+		-- soft light behind the pet
+		local glow = make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromScale(0.95, 0.95),
+			BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 2,
+		}, c)
+		make("UIAspectRatioConstraint", { AspectRatio = 1 }, glow)
+		make("UICorner", { CornerRadius = UDim.new(1, 0) }, glow)
+		make("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.45), NumberSequenceKeypoint.new(1, 1) }) }, glow)
+		-- floor shadow
+		local sh = make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.71), Size = UDim2.fromScale(0.62, 0.07),
+			BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.72, BorderSizePixel = 0, ZIndex = 2,
+		}, c)
+		make("UICorner", { CornerRadius = UDim.new(1, 0) }, sh)
+		-- gloss on the top
+		local gl = make("Frame", { Size = UDim2.fromScale(1, 0.35), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 4 }, c)
+		make("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(0.78, 1) }, gl)
+		-- rarity ribbon
+		local rb = make("Frame", {
+			AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.fromScale(1, ribbonH),
+			BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 4,
+		}, c)
+		make("UIGradient", { Rotation = 90, Color = ColorSequence.new(shade(col, 0.7), shade(col, 0.5)) }, rb)
+		make("Frame", { Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = Color3.fromRGB(22, 18, 44), BackgroundTransparency = 0.4, BorderSizePixel = 0, ZIndex = 5 }, rb)
+		local rt = title(rb, UDim2.fromScale(0.9, 0.66), UDim2.fromScale(0.05, 0.18), 24, rar.name:upper())
+		rt.ZIndex = 6
+		-- GOLD / RAINBOW chip
+		if (pet.t or 1) > 1 then
+			local chip = make("Frame", {
+				Position = UDim2.fromScale(0.06, 0.05), Size = UDim2.fromScale(0.44, 0.11), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 6,
+			}, c)
+			make("UICorner", { CornerRadius = UDim.new(1, 0) }, chip)
+			make("UIStroke", { Thickness = 2, Color = Color3.fromRGB(22, 18, 44), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, chip)
+			make("UIGradient", {
+				Rotation = pet.t == 2 and 90 or 0,
+				Color = pet.t == 2 and ColorSequence.new(Color3.fromRGB(255, 240, 150), Color3.fromRGB(230, 150, 20)) or RAINBOW_SEQ,
+			}, chip)
+			local ct = title(chip, UDim2.fromScale(0.86, 0.74), UDim2.fromScale(0.07, 0.13), 16, pet.t == 2 and "GOLD" or "RAINBOW")
+			ct.ZIndex = 7
+		end
+		-- a little bounce when the mouse is over it / it is pressed
+		local sc = make("UIScale", {}, c)
+		c.MouseEnter:Connect(function()
+			TweenService:Create(sc, TweenInfo.new(0.12), { Scale = 1.04 }):Play()
+		end)
+		c.MouseLeave:Connect(function()
+			TweenService:Create(sc, TweenInfo.new(0.12), { Scale = 1 }):Play()
+		end)
+		return c
+	end
+	local function equippedMark(c)
+		make("UIStroke", { Color = Color3.fromRGB(70, 235, 100), Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, c)
+		local tick = make("Frame", { AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromScale(0.2, 0.2), Position = UDim2.fromScale(0.94, 0.05), BackgroundColor3 = Color3.fromRGB(60, 210, 90), ZIndex = 7 }, c)
+		make("UIAspectRatioConstraint", { AspectRatio = 1 }, tick)
+		make("UICorner", { CornerRadius = UDim.new(1, 0) }, tick)
+		make("UIStroke", { Thickness = 2.5, Color = WHITE }, tick)
+		make("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(130, 255, 140), Color3.fromRGB(30, 170, 70)) }, tick)
+		title(tick, UDim2.fromScale(0.76, 0.76), UDim2.fromScale(0.12, 0.1), 26, "✓").ZIndex = 8
+		return tick
+	end
 	local function scroller(parent, size, pos, cols, aspect)
 		local sf = make("ScrollingFrame", {
 			BackgroundTransparency = 1, BorderSizePixel = 0, Size = size, Position = pos, ScrollBarThickness = 6, ScrollBarImageColor3 = SOFT,
@@ -353,16 +434,10 @@ function M.init(X)
 		incomeInfo.Text = "+$" .. C.fmt(attr("Income", 0)) .. "/s"
 		equipBestBtn.button.Visible = petTab == 1
 		for n, pet in ipairs(list) do
-			local rar = C.RARITY[pet.i]
-			local c = card(petGrid, rar.color, UDim2.new(), UDim2.new())
+			local c = petCard(petGrid, pet) -- v200: new card
 			c.LayoutOrder = n
-			if pet.eq then -- equipped: green frame + round tick (same look as the SELL PETS selection)
-				make("UIStroke", { Color = Color3.fromRGB(60, 230, 90), Thickness = 5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, c)
-				local tick = make("Frame", { Size = UDim2.fromScale(0.26, 0.2), Position = UDim2.fromScale(0.7, 0.03), BackgroundColor3 = Color3.fromRGB(60, 210, 90), ZIndex = 6 }, c)
-				make("UIAspectRatioConstraint", { AspectRatio = 1 }, tick)
-				make("UICorner", { CornerRadius = UDim.new(1, 0) }, tick)
-				make("UIStroke", { Thickness = 3, Color = WHITE }, tick)
-				title(tick, UDim2.fromScale(0.8, 0.8), UDim2.fromScale(0.1, 0.08), 30, "✓").ZIndex = 7
+			if pet.eq then
+				equippedMark(c)
 			end
 			if petTab == 1 then
 				make("TextButton", { BackgroundTransparency = 1, Text = "", Size = UDim2.fromScale(1, 1), ZIndex = 8 }, c).Activated:Connect(function()
@@ -372,17 +447,9 @@ function M.init(X)
 					Action:FireServer("equip", pet.idx)
 				end)
 			end
-			-- v165 (user: too many details): the pet big + only its rarity
-			local v = X.petView(c, pet, UDim2.fromScale(1, 0.78), UDim2.fromScale(0, 0.04))
+			-- v165 (user: too many details): the pet big + only its rarity (v200: ribbon / chip are part of petCard)
+			local v = X.petView(c, pet, UDim2.fromScale(1, 0.78), UDim2.fromScale(0, 0.02))
 			v.ZIndex = 3
-			local rr = title(c, UDim2.fromScale(0.92, 0.14), UDim2.fromScale(0.04, 0.82), 24, rar.name:upper())
-			rr.ZIndex = 3
-			if (pet.t or 1) > 1 then
-				local tag = make("Frame", { Size = UDim2.fromScale(0.5, 0.12), Position = UDim2.fromScale(0.04, 0.04), ZIndex = 4 }, c)
-				face(tag, pet.t == 2 and GOLD or Color3.fromRGB(255, 110, 220), 1)
-				local tt = title(tag, UDim2.fromScale(0.9, 0.8), UDim2.fromScale(0.05, 0.1), 18, pet.t == 2 and "GOLD" or "RAINBOW")
-				tt.ZIndex = 5
-			end
 		end
 		if #list == 0 then
 			local e = ink(petGrid, UDim2.new(), UDim2.new(), 36, petTab == 1 and "No pets yet - catch eggs!" or "Your basket is empty", SOFT)
