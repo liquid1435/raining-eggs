@@ -489,7 +489,16 @@ local function renderPen(plr)
 		local row = math.floor((k - 1) / 3) + 1
 		local s = (1.3 + 0.1 * pet.i + 0.15 * (pet.t - 1)) * C.zoneScale(pet.z) -- v160: bigger every zone
 		local m = C.buildPet(pet, s, true)
-		m:PivotTo(CFrame.new(c.X + SLOT_X[col], c.Y + 0.05 + 1.75 * s, c.Z + SLOT_Z[row]) * CFrame.Angles(0, math.pi, 0))
+		local px, pz = SLOT_X[col] or 0, SLOT_Z[row] or 0
+		local placed = pet.px and math.abs(pet.px) <= base.pen.Size.X / 2 and math.abs(pet.pz) <= base.pen.Size.Z / 2
+		if placed then -- v171: the spot the player chose
+			px, pz = pet.px, pet.pz
+		end
+		m:PivotTo(CFrame.new(c.X + px, c.Y + 0.05 + 1.75 * s, c.Z + pz) * CFrame.Angles(0, math.pi, 0))
+		m:SetAttribute("PenIdx", k)
+		if placed then
+			m:SetAttribute("Home", Vector3.new(c.X + px, c.Y, c.Z + pz))
+		end
 		label(m, pet, mult)
 		m:SetAttribute("Phase", k * 0.7)
 		m:SetAttribute("Kind", C.petDef(pet).kind)
@@ -693,9 +702,7 @@ local function deposit(plr)
 	d.carry = {}
 	local made = C.AUTO_FUSE and fuse(d) or {} -- v143 (user): no automatic fusing into Gold any more
 	byIncome(d.stored)
-	while #d.pets < C.PEN_MAX and #d.stored > 0 do
-		table.insert(d.pets, table.remove(d.stored, 1))
-	end
+	-- v171 (user): new pets are NOT put into the pen automatically: they wait in the hotbar, the player places them
 	local sold = 0
 	while #d.stored > C.STORAGE_MAX do
 		local pet = table.remove(d.stored) -- the weakest (sorted)
@@ -709,8 +716,10 @@ local function deposit(plr)
 		say(plr, C.FUSE .. " pets fused into " .. C.petName(made[#made]) .. "!", "legend")
 	elseif sold > 0 then
 		say(plr, "Storage is full! Weakest pets sold for $" .. C.fmt(sold), "cash")
-	elseif n > 0 and #d.stored > 0 and #d.pets >= C.PEN_MAX then
-		say(plr, "Pen is full! New pets wait in PETS - press EQUIP BEST", "info")
+	elseif n > 0 and #d.pets >= C.PEN_MAX then
+		say(plr, "Pen is full! New pets wait in the bar below", "info")
+	elseif n > 0 then
+		say(plr, "New pet! Pick it in the bar below and place it in your pen", "info")
 	end
 end
 
@@ -1014,6 +1023,67 @@ do
 	end
 end
 
+-- ============================================================ v171: HOTBAR - the player places pets in the pen himself
+-- "place", i, x, z = put stored pet i (the hotbar shows the first 10 stored pets) at world x, z inside your pen
+-- "pickup", k = take pen pet k (attribute PenIdx) back into the hotbar
+local function placeOk(base, lx, lz)
+	local hx, hz = base.pen.Size.X / 2 - 3, base.pen.Size.Z / 2 - 3
+	if math.abs(lx) > hx or math.abs(lz) > hz then
+		return false
+	end
+	return not (lx < -base.pen.Size.X / 2 + 12 and lz > base.pen.Size.Z / 2 - 18) -- the treadmill corner
+end
+local function num(v)
+	return typeof(v) == "number" and v == v and math.abs(v) < 1e6
+end
+Action.OnServerEvent:Connect(function(plr, what, a, x, z)
+	if what ~= "place" and what ~= "pickup" then
+		return
+	end
+	local d = data[plr]
+	local base = d and bases[d.base]
+	if not base or not base.pen then
+		return
+	end
+	local now = os.clock()
+	if now - (d.placeT or 0) < 0.2 then
+		return
+	end
+	d.placeT = now
+	if what == "place" then
+		if not (num(a) and num(x) and num(z)) or a % 1 ~= 0 then
+			return
+		end
+		local pet = d.stored[a]
+		if not pet then
+			return
+		end
+		if #d.pets >= C.PEN_MAX then
+			say(plr, "Your pen is full (" .. C.PEN_MAX .. ")! Pick a pet up first", "bad")
+			return
+		end
+		local c = base.pen.Position
+		local lx, lz = x - c.X, z - c.Z
+		if not placeOk(base, lx, lz) then
+			say(plr, "Place it inside your pen", "bad")
+			return
+		end
+		table.remove(d.stored, a)
+		pet.px, pet.pz = math.floor(lx * 10 + 0.5) / 10, math.floor(lz * 10 + 0.5) / 10
+		table.insert(d.pets, pet)
+	else
+		if not num(a) or a % 1 ~= 0 or not d.pets[a] then
+			return
+		end
+		local pet = table.remove(d.pets, a)
+		pet.px, pet.pz = nil, nil
+		table.insert(d.stored, 1, pet)
+		byIncome(d.stored)
+	end
+	renderPen(plr)
+	sync(plr)
+end)
+
 Action.OnServerEvent:Connect(function(plr, what, kind)
 	local d = data[plr]
 	if not d then
@@ -1246,7 +1316,7 @@ local function load(plr)
 			local t = type(pet) == "table" and (tonumber(pet.t) or 1)
 			if t and C.ZONES[pet.z] and C.ZONES[pet.z].pets[pet.i] and C.TIER[t] then
 				local v = math.clamp(math.floor(tonumber(pet.v) or 1), 1, C.variantCount(pet.z, pet.i))
-				table.insert((into == pets and #pets < C.PEN_MAX) and pets or stored, { z = pet.z, i = pet.i, t = t, v = v > 1 and v or nil })
+				table.insert((into == pets and #pets < C.PEN_MAX) and pets or stored, { z = pet.z, i = pet.i, t = t, v = v > 1 and v or nil, px = tonumber(pet.px), pz = tonumber(pet.pz) })
 			end
 		end
 	end

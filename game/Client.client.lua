@@ -644,7 +644,7 @@ local rebirthBtn = iconButton(menu, Color3.fromRGB(240, 90, 160), "rebirth", "RE
 
 -- ------------------------------------------------------------ HUD: bottom centre (what to do now + basket)
 local bottom = make("Frame", {
-	BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.5, 0.935), Size = UDim2.fromScale(0.42, 0.25),
+	BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.5, 0.86), Size = UDim2.fromScale(0.42, 0.25), -- v171: up, the hotbar is under it
 }, gui)
 make("UIAspectRatioConstraint", { AspectRatio = 3.4 }, bottom)
 local lockGui -- set further down (treadmill)
@@ -2018,6 +2018,7 @@ local function addPenPet(model)
 			cf = cf, phase = model:GetAttribute("Phase") or 0, bodies = bodies,
 			-- v143: walking around the pen (pos on the floor, facing yaw, a target, idle time left)
 			penC = model:GetAttribute("PenC"), lift = model:GetAttribute("Lift") or 2, penSize = model:GetAttribute("PenSize"),
+			home = model:GetAttribute("Home"), -- v171: placed by the player -> stays near that spot
 			pos = cf.Position, yaw = math.atan2(-cf.LookVector.X, -cf.LookVector.Z),
 			target = nil, wait = 1 + (model:GetAttribute("Phase") or 0) % 3, walkT = 0, last = os.clock(),
 		}
@@ -2050,8 +2051,13 @@ local function penTarget(info)
 	end
 	for _ = 1, 12 do
 		local lx, lz = (math.random() * 2 - 1) * PEN_HX, PEN_ZB + math.random() * (PEN_ZF - PEN_ZB)
+		if info.home then -- v171: a few steps around the spot the player chose
+			local a, r = math.random() * math.pi * 2, 2 + math.random() * 4
+			lx = math.clamp(info.home.X - c.X + math.cos(a) * r, -PEN_HX, PEN_HX)
+			lz = math.clamp(info.home.Z - c.Z + math.sin(a) * r, PEN_ZB, PEN_ZF)
+		end
 		local p = Vector3.new(c.X + lx, info.pos.Y, c.Z + lz)
-		local ok = penFree(lx, lz) and (p - info.pos).Magnitude > 6
+		local ok = penFree(lx, lz) and (p - info.pos).Magnitude > (info.home and 1.5 or 6)
 		-- the straight path must not cut through the treadmill corner either
 		for a = 0.25, 0.75, 0.25 do
 			local q = info.pos:Lerp(p, a)
@@ -3739,7 +3745,7 @@ do
 			return
 		end
 		local cam = workspace.CurrentCamera
-		local ray = cam:ViewportPointToRay(input.Position.X, input.Position.Y)
+		local ray = cam:ScreenPointToRay(input.Position.X, input.Position.Y) -- v171: input positions are GUI coordinates (top bar inset)
 		local rp = RaycastParams.new()
 		rp.FilterType = Enum.RaycastFilterType.Include
 		rp.FilterDescendantsInstances = { signPart }
@@ -4910,3 +4916,243 @@ task.spawn(function()
 		end
 	end)
 end)
+
+-- ============================================================ v171: HOTBAR (user: 10 pet slots at the bottom, take one in your
+-- hand, place it in your pen where you want; nothing goes into the pen on its own)
+-- slots = your first 10 stored pets (PetList after the equipped ones). Tap a slot or press 1..0 -> the pet is in your hand,
+-- a ring shows where it would go (green inside your pen, red outside); tap / click the floor -> "place".
+-- Nothing in hand + tap one of your pen pets -> "pickup" (back into the bar).
+do
+	local UIS = game:GetService("UserInputService")
+	local N = 10
+	local bar = make("Frame", {
+		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.fromScale(0.5, 0.085),
+	}, gui)
+	make("UIAspectRatioConstraint", { AspectRatio = N * 1.08 }, bar)
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		Padding = UDim.new(0.008, 0), SortOrder = Enum.SortOrder.LayoutOrder }, bar)
+	local slots, pets, sel = {}, {}, nil
+	local RC = {}
+	for i, r in ipairs(C.RARITY) do
+		RC[i] = r.color
+	end
+	for k = 1, N do
+		local b = make("TextButton", {
+			LayoutOrder = k, Size = UDim2.fromScale(0.092, 1), BackgroundColor3 = Color3.fromRGB(28, 24, 58), BackgroundTransparency = 0.15,
+			AutoButtonColor = true, Text = "",
+		}, bar)
+		make("UIAspectRatioConstraint", { AspectRatio = 1 }, b)
+		make("UICorner", { CornerRadius = UDim.new(0.18, 0) }, b)
+		local st = make("UIStroke", { Thickness = 2.5, Color = BLACK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
+		local num = make("TextLabel", {
+			BackgroundTransparency = 1, Size = UDim2.fromScale(0.34, 0.3), Position = UDim2.fromScale(0.04, 0.02), ZIndex = 4,
+			Font = Enum.Font.LuckiestGuy, TextScaled = true, TextColor3 = WHITE, Text = tostring(k % 10), TextXAlignment = Enum.TextXAlignment.Left,
+		}, b)
+		make("UIStroke", { Thickness = 2, Color = BLACK }, num)
+		slots[k] = { btn = b, stroke = st, view = nil }
+		b.Activated:Connect(function()
+			if pets[k] then
+				pcall(playClick)
+				sel = (sel ~= k) and k or nil
+			end
+		end)
+	end
+	local lastKey = nil
+	local function rebuild()
+		local list, eqN = {}, attr("Equipped", 0)
+		for _, kk in ipairs(string.split(attr("PetList", ""), ",")) do
+			local z, i, t, v = string.match(kk, "^(%d+)_(%d+)_(%d+)_?(%d*)$")
+			if z then
+				table.insert(list, { z = tonumber(z), i = tonumber(i), t = tonumber(t), v = tonumber(v) })
+			end
+		end
+		local key = attr("PetList", "") .. "|" .. eqN
+		if key == lastKey then
+			return
+		end
+		lastKey = key
+		pets = {}
+		for k = 1, N do
+			pets[k] = list[eqN + k]
+			local sl = slots[k]
+			if sl.view then
+				sl.view:Destroy()
+				sl.view = nil
+			end
+			local pet = pets[k]
+			if pet then
+				local ok, vp = pcall(petView, sl.btn, pet, UDim2.fromScale(0.92, 0.92), UDim2.fromScale(0.04, 0.04))
+				if ok and vp then
+					vp.ZIndex = 3
+					sl.view = vp
+				end
+			end
+			sl.btn.Visible = true
+			sl.btn.BackgroundTransparency = pet and 0.15 or 0.55
+		end
+		if sel and not pets[sel] then
+			sel = nil
+		end
+	end
+	plr.AttributeChanged:Connect(function(a)
+		if a == "PetList" or a == "Equipped" then
+			rebuild()
+		end
+	end)
+	task.defer(rebuild)
+	UIS.InputBegan:Connect(function(input, processed)
+		if processed or input.UserInputType ~= Enum.UserInputType.Keyboard then
+			return
+		end
+		local k = ({ [Enum.KeyCode.One] = 1, [Enum.KeyCode.Two] = 2, [Enum.KeyCode.Three] = 3, [Enum.KeyCode.Four] = 4,
+			[Enum.KeyCode.Five] = 5, [Enum.KeyCode.Six] = 6, [Enum.KeyCode.Seven] = 7, [Enum.KeyCode.Eight] = 8,
+			[Enum.KeyCode.Nine] = 9, [Enum.KeyCode.Zero] = 10 })[input.KeyCode]
+		if k and pets[k] then
+			sel = (sel ~= k) and k or nil
+		elseif input.KeyCode == Enum.KeyCode.Q or input.KeyCode == Enum.KeyCode.Escape then
+			sel = nil
+		end
+	end)
+	-- own pen floor (Map.Base<n>.PenFloor) and pets folder
+	local function myPen()
+		local map = workspace:FindFirstChild("Map")
+		local b = map and map:FindFirstChild("Base" .. attr("Base", 0))
+		return b and b:FindFirstChild("PenFloor", true), b and b:FindFirstChild("Pets")
+	end
+	local function floorPoint(sx, sy)
+		local floor = myPen()
+		local cam = workspace.CurrentCamera
+		if not floor or not cam then
+			return nil
+		end
+		local ray = cam:ViewportPointToRay(sx, sy)
+		if math.abs(ray.Direction.Y) < 1e-3 then
+			return nil
+		end
+		local y = floor.Position.Y
+		local t = (y - ray.Origin.Y) / ray.Direction.Y
+		if t <= 0 or t > 400 then
+			return nil
+		end
+		local p = ray.Origin + ray.Direction * t
+		local c, sz = floor.Position, floor.Size
+		local lx, lz = p.X - c.X, p.Z - c.Z
+		local inside = math.abs(lx) <= sz.X / 2 - 3 and math.abs(lz) <= sz.Z / 2 - 3
+			and not (lx < -sz.X / 2 + 12 and lz > sz.Z / 2 - 18)
+		local near = math.abs(lx) <= sz.X / 2 + 6 and math.abs(lz) <= sz.Z / 2 + 6
+		return p, inside, near
+	end
+	-- the pet in your hand (client only) + the placement ring
+	local held, heldFor = nil, nil
+	local ring = make("Part", {
+		Name = "PlaceRing", Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false,
+		Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.15, 7, 7), Material = Enum.Material.Neon, Transparency = 0.35,
+	}, nil)
+	RunService.RenderStepped:Connect(function()
+		for k, sl in ipairs(slots) do
+			local on = sel == k
+			sl.stroke.Color = on and Color3.fromRGB(120, 255, 120) or (pets[k] and RC[pets[k].i] or BLACK)
+			sl.stroke.Thickness = on and 4 or 2.5
+		end
+		local pet = sel and pets[sel]
+		local key = pet and (pet.z .. "_" .. pet.i .. "_" .. pet.t .. "_" .. (pet.v or 1) .. "#" .. sel) or nil
+		if key ~= heldFor then
+			heldFor = key
+			if held then
+				held:Destroy()
+				held = nil
+			end
+			if pet then
+				local ok, m = pcall(C.buildPet, pet, 0.35, true)
+				if ok and m then
+					for _, q in ipairs(m:GetDescendants()) do
+						if q:IsA("BasePart") then
+							q.CanCollide, q.CanQuery, q.CanTouch = false, false, false
+						end
+					end
+					m.Parent = workspace
+					held = m
+				end
+			end
+		end
+		local char = plr.Character
+		local hand = char and (char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm"))
+		if held and hand then
+			held:PivotTo(hand.CFrame * CFrame.new(0, -0.6, -1.2) * CFrame.Angles(0, math.pi, 0))
+		end
+		if pet then
+			local mp = UIS:GetMouseLocation()
+			local p, inside, near = floorPoint(mp.X, mp.Y)
+			if p and near and UIS.MouseEnabled then
+				ring.CFrame = CFrame.new(p + Vector3.new(0, 0.12, 0)) * CFrame.Angles(0, 0, math.pi / 2)
+				ring.Color = inside and Color3.fromRGB(90, 255, 110) or Color3.fromRGB(255, 70, 70)
+				ring.Parent = workspace
+			else
+				ring.Parent = nil
+			end
+		else
+			ring.Parent = nil
+		end
+	end)
+	local function overButton(pos)
+		for _, g in ipairs(plr.PlayerGui:GetGuiObjectsAtPosition(pos.X, pos.Y)) do
+			if g:IsA("GuiButton") and g.Visible and g:FindFirstAncestorWhichIsA("ScreenGui") then
+				return true
+			end
+		end
+		return false
+	end
+	UIS.InputBegan:Connect(function(input, processed)
+		local t = input.UserInputType
+		if t ~= Enum.UserInputType.MouseButton1 and t ~= Enum.UserInputType.Touch then
+			return
+		end
+		if processed and overButton(input.Position) then
+			return
+		end
+		-- GetMouseLocation includes the top bar inset; touch / click positions do not
+		local inset = game:GetService("GuiService"):GetGuiInset()
+		local sx, sy = input.Position.X, input.Position.Y + inset.Y
+		local p, inside, near = floorPoint(sx, sy)
+		if not p or not near then
+			return
+		end
+		if sel and pets[sel] then
+			if inside then
+				Action:FireServer("place", sel, p.X, p.Z)
+				pcall(playClick)
+				sel = nil
+			end
+			return
+		end
+		-- nothing in hand: tap one of your pen pets to take it back
+		local _, folder = myPen()
+		if not folder then
+			return
+		end
+		local best, bd = nil, 1e9
+		for _, m in ipairs(folder:GetChildren()) do
+			if m:IsA("Model") and m:GetAttribute("PenIdx") then
+				local q = m:GetPivot().Position
+				local dd = Vector2.new(q.X - p.X, q.Z - p.Z).Magnitude
+				local reach = math.max(3, (m:GetAttribute("Lift") or 2) * 1.6)
+				if dd < reach and dd < bd then
+					best, bd = m, dd
+				end
+			end
+		end
+		if best then
+			Action:FireServer("pickup", best:GetAttribute("PenIdx"))
+			pcall(playClick)
+		end
+	end)
+	-- Roblox's own tool bar (BIG EGG weapons) sits at the bottom too: lift the hotbar above it while you have tools
+	task.spawn(function()
+		while true do
+			local bp = plr:FindFirstChildOfClass("Backpack")
+			local tools = (bp and #bp:GetChildren() > 0) or (plr.Character and plr.Character:FindFirstChildOfClass("Tool") ~= nil)
+			bar.Position = UDim2.new(0.5, 0, 1, tools and -80 or -8)
+			task.wait(1)
+		end
+	end)
+end
