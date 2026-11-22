@@ -462,7 +462,7 @@ local function renderPen(plr)
 	for k, pet in ipairs(d.pets) do
 		local col = (k - 1) % 3 + 1
 		local row = math.floor((k - 1) / 3) + 1
-		local s = 1.3 + 0.1 * pet.i + 0.15 * (pet.t - 1)
+		local s = (1.3 + 0.1 * pet.i + 0.15 * (pet.t - 1)) * C.zoneScale(pet.z) -- v160: bigger every zone
 		local m = C.buildPet(pet, s, true)
 		m:PivotTo(CFrame.new(c.X + SLOT_X[col], c.Y + 0.05 + 1.75 * s, c.Z + SLOT_Z[row]) * CFrame.Angles(0, math.pi, 0))
 		label(m, pet, mult)

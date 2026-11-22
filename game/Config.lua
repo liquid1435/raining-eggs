@@ -457,6 +457,12 @@ local BLUSH = Color3.fromRGB(255, 140, 165)
 -- The pets and eggs made in Blender live in ReplicatedStorage.Assets (the server moves the imported model there).
 -- Until they are imported the game uses the old block pets and eggs.
 C.MESH_YAW = math.pi -- half a turn: the imported pets look to +Z, the game wants -Z (write 0 if they look backwards)
+-- v160 (user, like Throw Food For Animals): pets of the first zones are small, every next zone they get bigger
+C.PET_ZONE_SCALE = { first = 0.6, step = 0.075, max = 2.1 } -- zone 1 = 0.6x, zone 10 = 1.28x, zone 20 = 2.03x
+function C.zoneScale(z)
+	local k = C.PET_ZONE_SCALE
+	return math.min(k.first + (z - 1) * k.step, k.max)
+end
 C.MESH_SIZE = 10.0 -- studs: the longest side of a pet at normal size (v156: bigger again, was 7; v128 was the first raise)
 C.PROP_YAW = math.pi -- same half turn for the Blender treadmills (write 0 if the console ends up at the wrong end)
 function C.meshOf(name)
