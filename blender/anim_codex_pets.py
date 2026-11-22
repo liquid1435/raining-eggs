@@ -160,7 +160,7 @@ if ZMIN:
 VF = os.environ.get('FBX_PARTS_FILTER', '')          # v153: 'va,vb' = one FBX per half of the variant parts
 if VF:
     for tag in VF.split(','):
-        lo, hi = (1, 5) if tag == 'va' else (6, 10)
+        lo, hi = {'va': (1, 5), 'vb': (6, 10), 'wa': (11, 15), 'wb': (16, 20)}.get(tag, (6, 10))  # v228: wa / wb = world 2
         only = set(tag[5:].split(';')) if tag.startswith('keys=') else None   # v208: 'keys=10_2;2_1_3' = just these pets
         for o in bpy.data.objects:
             k = o.name[4:].split('__')[0].split('_')      # Pet_<z>_<i>[_<v>]__<j>

@@ -60,6 +60,8 @@ def gold(phase, lum):
 LUT['Gold'] = {(ph, lm): gold(ph, lm) for ph in range(256) for lm in range(256)}
 man = json.loads((SRC / 'manifest.json').read_text(encoding='utf-8'))
 import os
+if os.environ.get('FIX_MIN'):  # v228: only models numbered >= FIX_MIN (e.g. 201 = world 2 variants)
+    man = [e for e in man if int(pathlib.Path(e['folder']).name.split('_')[0]) >= int(os.environ['FIX_MIN'])]
 if os.environ.get('FIX_ONLY'):  # v208: only folders containing this text (e.g. models_fix)
     man = [e for e in man if os.environ['FIX_ONLY'] in e['folder']]
 for e in man:
