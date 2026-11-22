@@ -733,7 +733,7 @@ end
 
 -- ------------------------------------------------------------ notifications (bottom centre)
 -- messages (You need $1K, ...): plain text with a black outline under the violet hint at the bottom
-local note = text(gui, UDim2.fromScale(0.6, 0.065), UDim2.fromScale(0.2, 0.9), 44)
+local note = text(gui, UDim2.fromScale(0.6, 0.065), UDim2.fromScale(0.2, 0.29), 44) -- v186 (user): up here, it covered the hotbar slots at the bottom
 note.Font = Enum.Font.LuckiestGuy
 note.ZIndex = 30
 note:FindFirstChildOfClass("UIStroke").Thickness = 3
