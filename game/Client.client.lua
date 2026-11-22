@@ -505,50 +505,88 @@ stormBanner:GetPropertyChangedSignal("Visible"):Connect(function()
 	TweenService:Create(barBg, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = stormBanner.Visible and BAR_LOW or BAR_HIGH }):Play()
 end)
 
--- v150: weekly event banner (in the place of the old NEXT bar: under the storm banner, or on top when there is no storm)
--- + a small chip when Roblox friends play on the same server
+-- v167 (user): the weekly event is a small round button at the bottom left (clover for LUCKY WEEK, other icons for the
+-- other weeks) with the time left under it; tap it -> a bubble "WEEKLY LUCK 2x" (+ what it does). Friends chip above it.
 do
+	local EV_ICON = { luck = "clover", gold = "coin", cash = "coin", rainbow = "sparkle", storm = "storm" }
+	local EV_SHORT = { luck = "WEEKLY LUCK 2x", gold = "GOLDEN WEEK: 3x GOLDEN EGGS", cash = "WEEKLY CASH 2x",
+		rainbow = "RAINBOW WEEK: 2x RAINBOW", storm = "STORM WEEK: 2x STORMS" }
 	local EV_COL = { luck = Color3.fromRGB(60, 200, 90), gold = Color3.fromRGB(255, 190, 40), cash = Color3.fromRGB(40, 190, 120),
 		rainbow = Color3.fromRGB(230, 80, 200), storm = Color3.fromRGB(140, 90, 240) }
-	local holder, face, evGrad = lip(top, Color3.fromRGB(255, 190, 40), UDim2.fromScale(0.78, 0.3), BAR_HIGH, nil, 0.3)
-	local nameT = make("TextLabel", {
-		BackgroundTransparency = 1, Size = UDim2.fromScale(0.5, 0.86), Position = UDim2.fromScale(0.04, 0.07), ZIndex = 3,
-		Font = Enum.Font.LuckiestGuy, TextScaled = true, TextColor3 = WHITE, Text = "", TextXAlignment = Enum.TextXAlignment.Left,
-	}, face)
-	make("UIStroke", { Thickness = 2.5, Color = BLACK }, nameT)
-	local infoT = make("TextLabel", {
-		BackgroundTransparency = 1, Size = UDim2.fromScale(0.42, 0.7), Position = UDim2.fromScale(0.55, 0.15), ZIndex = 3,
-		Font = Enum.Font.FredokaOne, TextScaled = true, TextColor3 = WHITE, Text = "", TextXAlignment = Enum.TextXAlignment.Right,
-	}, face)
-	make("UIStroke", { Thickness = 2, Color = BLACK }, infoT)
-	local friendT = make("TextLabel", {
-		BackgroundTransparency = 1, Size = UDim2.fromScale(0.6, 0.2), Position = UDim2.fromScale(0.2, 1.02), ZIndex = 3, Visible = false,
-		Font = Enum.Font.FredokaOne, TextScaled = true, TextColor3 = Color3.fromRGB(120, 230, 255), Text = "",
-	}, top)
-	make("UIStroke", { Thickness = 2, Color = BLACK }, friendT)
-	local showDesc = false
-	stormBanner:GetPropertyChangedSignal("Visible"):Connect(function()
-		TweenService:Create(holder, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = stormBanner.Visible and BAR_LOW or BAR_HIGH }):Play()
+	local holder = make("Frame", {
+		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(470 / 1920, 1 - 40 / 1080), Size = UDim2.fromScale(84 / 1920, 104 / 1080), -- right of the money block
+	}, gui)
+	make("UIAspectRatioConstraint", { AspectRatio = 0.82 }, holder)
+	local btn = make("ImageButton", {
+		BackgroundColor3 = EV_COL.luck, Size = UDim2.fromScale(1, 0.82), AutoButtonColor = true, Image = "",
+	}, holder)
+	make("UICorner", { CornerRadius = UDim.new(1, 0) }, btn)
+	make("UIStroke", { Thickness = 3, Color = BLACK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, btn)
+	local bgGrad = make("UIGradient", { Rotation = 90 }, btn)
+	local ic = icon(btn, "clover", UDim2.fromScale(0.72, 0.72), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5))
+	ic.ZIndex = 3
+	local timerT = make("TextLabel", {
+		BackgroundTransparency = 1, Size = UDim2.fromScale(1.5, 0.22), Position = UDim2.fromScale(-0.25, 0.8),
+		Font = Enum.Font.FredokaOne, TextScaled = true, TextColor3 = WHITE, Text = "",
+	}, holder)
+	make("UIStroke", { Thickness = 2, Color = BLACK }, timerT)
+	-- the bubble that opens on tap
+	local bubble = make("Frame", {
+		Visible = false, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, -0.06), Size = UDim2.fromScale(4.2, 0.55),
+		BackgroundColor3 = Color3.fromRGB(28, 24, 58), ZIndex = 5,
+	}, holder)
+	make("UICorner", { CornerRadius = UDim.new(0.3, 0) }, bubble)
+	make("UIStroke", { Thickness = 3, Color = Color3.fromRGB(255, 200, 60), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, bubble)
+	local bTitle = make("TextLabel", {
+		BackgroundTransparency = 1, Size = UDim2.fromScale(0.92, 0.55), Position = UDim2.fromScale(0.04, 0.06), ZIndex = 6,
+		Font = Enum.Font.LuckiestGuy, TextScaled = true, TextColor3 = Color3.fromRGB(140, 255, 120), Text = "",
+	}, bubble)
+	make("UIStroke", { Thickness = 2.5, Color = BLACK }, bTitle)
+	local bSub = make("TextLabel", {
+		BackgroundTransparency = 1, Size = UDim2.fromScale(0.92, 0.32), Position = UDim2.fromScale(0.04, 0.62), ZIndex = 6,
+		Font = Enum.Font.FredokaOne, TextScaled = true, TextColor3 = WHITE, Text = "",
+	}, bubble)
+	local bubbleUntil = 0
+	btn.Activated:Connect(function()
+		pcall(playClick)
+		bubble.Visible = not bubble.Visible
+		bubbleUntil = os.clock() + 5
+		local sc = bubble:FindFirstChildOfClass("UIScale") or make("UIScale", {}, bubble)
+		sc.Scale = 0.6
+		TweenService:Create(sc, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 	end)
+	local friendT = make("TextLabel", {
+		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromScale(3.2, 0.2), Position = UDim2.fromScale(1.1, 0.4),
+		Visible = false, Font = Enum.Font.FredokaOne, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = Color3.fromRGB(120, 230, 255), Text = "",
+	}, holder)
+	make("UIStroke", { Thickness = 2, Color = BLACK }, friendT)
 	task.spawn(function()
+		local lastKey
 		while true do
-			local key, name = workspace:GetAttribute("EventKey"), workspace:GetAttribute("EventName")
+			local key = workspace:GetAttribute("EventKey")
 			holder.Visible = key ~= nil
 			if key then
-				local left = math.max(0, (workspace:GetAttribute("EventEnd") or 0) - workspace:GetServerTimeNow())
-				local dd, hh, mm = math.floor(left / 86400), math.floor(left % 86400 / 3600), math.floor(left % 3600 / 60)
-				nameT.Text = name
-				showDesc = not showDesc
-				infoT.Text = showDesc and (workspace:GetAttribute("EventDesc") or "") or ("ends in " .. (dd > 0 and (dd .. "d " .. hh .. "h") or (hh .. "h " .. mm .. "m")))
-				local col = EV_COL[key] or YELLOW
-				if evGrad and evGrad:IsA("UIGradient") then
-					evGrad.Color = faceSeq(col)
+				if key ~= lastKey then
+					lastKey = key
+					local sheet, off, sz = iconRect(EV_ICON[key] or "clover")
+					ic.Image, ic.ImageRectOffset, ic.ImageRectSize = sheet, off, sz
+					local col = EV_COL[key] or YELLOW
+					bgGrad.Color = faceSeq(col)
+					bTitle.Text = EV_SHORT[key] or (workspace:GetAttribute("EventName") or "")
+					bSub.Text = workspace:GetAttribute("EventDesc") or ""
 				end
+				local left = math.max(0, (workspace:GetAttribute("EventEnd") or 0) - workspace:GetServerTimeNow())
+				local dd, hh, mm, ss = math.floor(left / 86400), math.floor(left % 86400 / 3600), math.floor(left % 3600 / 60), math.floor(left % 60)
+				timerT.Text = dd > 0 and string.format("%dd %02dh", dd, hh) or string.format("%02d:%02d:%02d", hh, mm, ss)
+			end
+			if bubble.Visible and os.clock() > bubbleUntil then
+				bubble.Visible = false
 			end
 			local n = plr:GetAttribute("Friends") or 0
 			friendT.Visible = n > 0
-			friendT.Text = n .. (n == 1 and " FRIEND" or " FRIENDS") .. " HERE: +" .. math.floor(C.FRIEND_BONUS * n * 100 + 0.5) .. "% CASH"
-			task.wait(4)
+			friendT.Text = n .. (n == 1 and " FRIEND" or " FRIENDS") .. ": +" .. math.floor(C.FRIEND_BONUS * n * 100 + 0.5) .. "% CASH"
+			task.wait(1)
 		end
 	end)
 end
