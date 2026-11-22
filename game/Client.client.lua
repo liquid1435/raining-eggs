@@ -787,9 +787,20 @@ local noteScale = make("UIScale", {}, note)
 note.TextTransparency = 1
 local noteStroke = note:FindFirstChildOfClass("UIStroke")
 noteStroke.Transparency = 1
+NOTE_QUIET_UNTIL = os.clock() + 60 -- v212: silent until 12 s after the loading screen is gone (global: main chunk near 200 locals)
+task.spawn(function()
+	local pg = plr:WaitForChild("PlayerGui")
+	local t0 = os.clock()
+	task.wait(1)
+	while pg:FindFirstChild("LoadingScreen") and os.clock() - t0 < 40 do
+		task.wait(0.25)
+	end
+	NOTE_QUIET_UNTIL = os.clock() + 12
+end)
 local NOTE_COL = {
 	info = WHITE, good = Color3.fromRGB(120, 240, 120), bad = Color3.fromRGB(255, 60, 60), cash = YELLOW,
 	legend = Color3.fromRGB(255, 204, 40), storm = Color3.fromRGB(200, 150, 255), buy = Color3.fromRGB(120, 240, 120),
+	gift = Color3.fromRGB(255, 214, 70), -- v212: the welcome-gift message (gold, silent)
 }
 local noteId = 0
 local function showNote(msg, kind)
@@ -818,7 +829,9 @@ local function showNote(msg, kind)
 	noteStroke.Transparency = 0
 	noteScale.Scale = 1.25
 	TweenService:Create(noteScale, TweenInfo.new(0.2, Enum.EasingStyle.Back), { Scale = 1 }):Play()
-	if kind == "legend" then
+	if os.clock() < NOTE_QUIET_UNTIL or kind == "gift" then
+		-- v212 (user): no sounds right after the loading screen (welcome messages, synced levels, the gift)
+	elseif kind == "legend" then
 		sfx("reveal_legend", 0.6)
 	elseif kind == "sold" and C.SELL_SOUND and C.SELL_SOUND ~= "" then
 		-- selling pets has its own sound (v110, user); uploaded id in Config C.SELL_SOUND
