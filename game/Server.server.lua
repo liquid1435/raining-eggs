@@ -1742,8 +1742,8 @@ local function hatchBag(plr, only, limit)
 			Notice:FireAllClients(plr.DisplayName .. " hatched a LEGENDARY " .. def.name .. "! (1 in " .. C.comma(odds) .. ")", "legend")
 		end
 	end
-	renderCarry(plr)
-	sync(plr)
+	-- v188 (user: the pet showed up in the bar only back at the pen): hatched pets go straight into your pets / hotbar
+	deposit(plr)
 end
 
 local function occupied()

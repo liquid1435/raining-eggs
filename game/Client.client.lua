@@ -1771,17 +1771,9 @@ local function refresh()
 	local trainLv = attr("TrainLv", 0)
 	-- the violet hint is only a short TUTORIAL: catch an egg -> bring it home -> train on the treadmill, then it is gone
 	-- (old players: they already caught, have pets and speed, or did a rebirth -> never shown)
-	if attr("Rebirth", 0) > 0 or (attr("Caught", 0) > 0 and pets > 0 and attr("Speed", 0) > 0) then
-		hint.Text = ""
-	elseif eggsNow > 0 and pets == 0 then
-		hint.Text = "Open EGGS on the left and hatch your eggs!"
-	elseif carry == 0 and pets == 0 then
-		hint.Text = "Run into the zone and catch a falling egg!"
-	elseif carry > 0 and pets == 0 then
-		hint.Text = "Bring your pets to your base!"
-	else
-		hint.Text = "Step on your treadmill to get speed!"
-	end
+	-- v188 (user): the violet pill at the top shows the steps of the introduction (UI.tutText, set by the INTRODUCTION
+	-- block at the end of this script); nothing when the introduction is done
+	hint.Text = UI.tutText or ""
 	markerText.Text = "YOUR BASE" -- no "BRING PETS HERE" (user)
 
 	-- combo
@@ -5284,7 +5276,7 @@ do
 			finger.Position = UDim2.fromOffset(ap.X + as.X / 2, ap.Y - 6 - bob)
 			hl.Visible, finger.Visible = true, true
 		end
-		tip.Visible, tipT.Text = true, text
+		UI.tutText = text
 	end
 	local function pointWorld(pos, text)
 		hl.Visible, finger.Visible = false, false
@@ -5297,10 +5289,11 @@ do
 		else
 			wPart.Parent = nil
 		end
-		tip.Visible, tipT.Text = true, text
+		UI.tutText = text
 	end
 	local function hide()
-		hl.Visible, finger.Visible, tip.Visible = false, false, false
+		hl.Visible, finger.Visible = false, false
+		UI.tutText = nil
 		wPart.Parent = nil
 	end
 	local function myBase()
