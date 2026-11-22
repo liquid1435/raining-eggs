@@ -38,7 +38,7 @@ end
 local UI = {} -- UI kit functions shared with the UIMenus module (filled further down)
 -- v190 (user: upgrade buttons had a delay): buy at once on this screen - new level + cash shown locally right away,
 -- the server does the real buy and its numbers replace these (a refused buy sends the real numbers back)
-UI.buyUpgrade = function(kind)
+UI.buyUpgrade = function(kind, viaShop)
 	local p = game:GetService("Players").LocalPlayer
 	local attrName = ({ train = "TrainLv", luck = "LuckLv", basket = "BasketLv" })[kind]
 	local cfg = require(game:GetService("ReplicatedStorage"):WaitForChild("Config"))
@@ -51,7 +51,11 @@ UI.buyUpgrade = function(kind)
 			p:SetAttribute(attrName, lv + 1)
 		end
 	end
-	Remotes:WaitForChild("Action"):FireServer("upgrade", kind)
+	if viaShop then
+		Remotes:WaitForChild("Action"):FireServer("shop", kind)
+	else
+		Remotes:WaitForChild("Action"):FireServer("upgrade", kind)
+	end
 end
 
 local function attr(name, default)
@@ -1496,7 +1500,9 @@ buy.button.Activated:Connect(function()
 		end
 		selBasket = nil
 	end
-	if shopKind then
+	if shopKind == "basket" or shopKind == "luck" then
+		UI.buyUpgrade(shopKind, true) -- v190: instant
+	elseif shopKind then
 		Action:FireServer("shop", shopKind)
 	end
 end)
