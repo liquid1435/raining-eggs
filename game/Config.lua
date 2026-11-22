@@ -258,7 +258,7 @@ C.PET_COUNT = C.NZ * #C.RARITY
 -- (old) v119 balance (tools/sim_economy.py, target between medium and slow): a normal player opens zone 2 after ~4 min,
 -- zone 3 ~14 min, zone 4 ~40 min, zone 5 ~2 h, zone 6 ~3.5 h, zone 7 ~5.5 h, zone 8 ~8 h, zone 9 ~11 h, zone 10 ~15 h of play.
 -- (v118 prices { 0, 1e3, 1e4, 7.5e4, 5e5, 4e6, 3e7, 2.5e8, 2e9, 1.5e10 } let players open all 10 zones in ~15 minutes.)
-C.ZONE_PRICE = { 0, 190, 1.2e4, 4.5e5, 1.3e7, 2.7e8, 9.1e9, 1.2e11, 2.4e12, 5.6e13, 0, 9.2e15, 1.2e17, 1.4e18, 1.8e19, 3e20, 4.2e21, 4.6e22, 6.7e23, 8e24 } -- 11-20 = world 2 (11 free: the Golden Portal)
+C.ZONE_PRICE = { 0, 430, 3.4e4, 1e6, 3.1e7, 1e9, 2.6e10, 3.6e11, 7.9e12, 1.5e14, 0, 2.3e16, 2.9e17, 3.1e18, 7.9e19, 1.1e21, 1e22, 1.9e23, 2.3e24, 3.4e25 } -- 11-20 = world 2 (11 free: the Golden Portal)
 for i, z in ipairs(C.ZONES) do
 	z.price = C.ZONE_PRICE[i] or 0
 end
@@ -319,25 +319,25 @@ C.MAX_LV = { train = 60, basket = 19, luck = 20 }
 -- BasketLv 0 = basket 1 (free), BasketLv 19 = basket 20
 C.BASKETS = {
 	{ name = "Old Basket", price = 0 },
-	{ name = "Straw Basket", price = 26 },
-	{ name = "Picnic Basket", price = 60 },
-	{ name = "Flower Basket", price = 200 },
-	{ name = "Honey Pot", price = 990 },
-	{ name = "Mushroom Basket", price = 6.5e3 },
-	{ name = "Candy Bucket", price = 4.7e4 },
-	{ name = "Sand Pail", price = 3.4e5 },
-	{ name = "Cookie Jar", price = 2.4e6 },
-	{ name = "Pumpkin Pack", price = 1.8e7 },
-	{ name = "Ice Bucket", price = 1.4e8 },
-	{ name = "Tech Pack", price = 1.1e9 },
-	{ name = "Ocean Basket", price = 9.4e9 },
-	{ name = "Lava Basket", price = 8.8e10 },
-	{ name = "Thunder Pack", price = 1e12 },
-	{ name = "Neon Basket", price = 1.8e13 },
-	{ name = "Cloud Basket", price = 4.6e14 },
-	{ name = "Crystal Basket", price = 1.4e16 },
-	{ name = "Rainbow Basket", price = 4.3e17 },
-	{ name = "Royal Basket", price = 1.3e19 },
+	{ name = "Straw Basket", price = 40 },
+	{ name = "Picnic Basket", price = 110 },
+	{ name = "Flower Basket", price = 410 },
+	{ name = "Honey Pot", price = 2.5e3 },
+	{ name = "Mushroom Basket", price = 1.8e4 },
+	{ name = "Candy Bucket", price = 1.3e5 },
+	{ name = "Sand Pail", price = 9.9e5 },
+	{ name = "Cookie Jar", price = 7.6e6 },
+	{ name = "Pumpkin Pack", price = 6.1e7 },
+	{ name = "Ice Bucket", price = 4.8e8 },
+	{ name = "Tech Pack", price = 3.6e9 },
+	{ name = "Ocean Basket", price = 2.9e10 },
+	{ name = "Lava Basket", price = 2.9e11 },
+	{ name = "Thunder Pack", price = 3.9e12 },
+	{ name = "Neon Basket", price = 7.8e13 },
+	{ name = "Cloud Basket", price = 2.2e15 },
+	{ name = "Crystal Basket", price = 7e16 },
+	{ name = "Rainbow Basket", price = 2.5e18 },
+	{ name = "Royal Basket", price = 9.7e19 },
 }
 function C.basketRim(k) -- top of basket k, seen from the torso centre (same numbers as blender\gen_baskets20.py)
 	local t = (k - 1) / 19
@@ -345,8 +345,8 @@ function C.basketRim(k) -- top of basket k, seen from the torso centre (same num
 	return Vector3.new(0, y0 + h + 0.1, 0.55 + rt + 0.05)
 end
 -- v148: price of the next treadmill / luck level (index = level you have + 1); fitted by tools/tune_economy.py
-C.TRAIN_COST = { 28, 36, 47, 61, 81, 120, 240, 550, 1.1e3, 1.9e3, 3.2e3, 6.6e3, 1.7e4, 4e4, 7.9e4, 1.3e5, 2.3e5, 4.8e5, 1.1e6, 2.3e6, 4.2e6, 7.3e6, 1.4e7, 3.1e7, 6.5e7, 1.3e8, 2.7e8, 6.1e8, 1.4e9, 3e9, 6.6e9, 1.5e10, 3.4e10, 7.2e10, 1.5e11, 3.5e11, 8.4e11, 2.2e12, 6.6e12, 2.5e13, 1.1e14, 4.4e14, 1.6e15, 4.9e15, 1.5e16, 5e16, 1.8e17, 6.6e17, 2.6e18, 1.1e19, 4.9e19, 2.4e20, 1.2e21, 5.6e21, 2.6e22, 1.1e23, 5e23, 2.2e24, 9.7e24, 4.3e25 }
-C.LUCK_COST = { 60, 210, 1e3, 6.4e3, 4.5e4, 3.2e5, 2.3e6, 1.6e7, 1.2e8, 1e9, 8.3e9, 7.8e10, 9e11, 1.4e13, 3.1e14, 9.2e15, 3.1e17, 1.2e19, 5.6e20, 3.1e22 }
+C.TRAIN_COST = { 35, 48, 65, 89, 130, 230, 450, 1e3, 2.2e3, 4.5e3, 8.6e3, 1.8e4, 4e4, 9.2e4, 1.8e5, 3.1e5, 5.4e5, 1.1e6, 2.6e6, 5.7e6, 1.1e7, 1.9e7, 3.9e7, 9.4e7, 2.2e8, 4.4e8, 8.2e8, 1.6e9, 3.5e9, 7.2e9, 1.5e10, 3.2e10, 7.4e10, 1.7e11, 3.9e11, 1e12, 2.5e12, 5.7e12, 1.3e13, 3.3e13, 1.1e14, 4.6e14, 1.9e15, 6.7e15, 2e16, 6.1e16, 2e17, 7.2e17, 2.8e18, 1.2e19, 5.4e19, 2.5e20, 1.2e21, 5.5e21, 2.7e22, 1.4e23, 7.6e23, 4.3e24, 2.5e25, 1.6e26 }
+C.LUCK_COST = { 67, 370, 2.4e3, 1.7e4, 1.3e5, 8.9e5, 6.5e6, 5.1e7, 4.2e8, 3.3e9, 2.7e10, 2.7e11, 3.7e12, 6.8e13, 1.7e15, 5e16, 1.8e18, 8.4e19, 5.3e21, 4.1e23 }
 function C.cost(kind, lv)
 	if kind == "train" and C.TRAIN_COST[lv + 1] then
 		return C.TRAIN_COST[lv + 1]
@@ -609,13 +609,29 @@ C.DAILY = { -- cash = this many seconds of your income (at least min); day 7 als
 C.EVENT_EPOCH = 1704067200 -- Monday 1 Jan 2024 00:00 UTC
 C.EVENTS = {
 	{ key = "luck", name = "LUCKY WEEK", desc = "x2 luck on every egg" },
-	{ key = "gold", name = "GOLDEN WEEK", desc = "x3 golden eggs - they hatch GOLD pets!" },
+	{ key = "gold", name = "GOLDEN WEEK", desc = "x3 golden eggs (Gold or Rainbow pets!)" },
 	{ key = "cash", name = "CASH WEEK", desc = "x2 cash from all your pets" },
-	{ key = "rainbow", name = "RAINBOW WEEK", desc = "golden eggs can hatch RAINBOW pets!" },
+	{ key = "rainbow", name = "RAINBOW WEEK", desc = "x2 chance of RAINBOW pets" },
 	{ key = "storm", name = "STORM WEEK", desc = "egg storms come twice as often" },
 }
 C.EVENT_GOLD_CHANCE = 3   -- golden eggs x this in GOLDEN WEEK
-C.EVENT_RAINBOW = 0.25    -- RAINBOW WEEK: part of the golden eggs that hatch a Rainbow pet
+C.EVENT_RAINBOW = 2       -- RAINBOW WEEK: Rainbow chance x this
+-- v152 (user): every egg rolls the coat of its pet: { normal, Gold, Rainbow } chances (golden egg = Gold guaranteed)
+C.TIER_ODDS = {
+	normal = { 0.7, 0.2, 0.1 },
+	golden = { 0, 0.8, 0.2 },
+}
+function C.rollTier(kind, rainbowWeek)
+	local o = C.TIER_ODDS[kind] or C.TIER_ODDS.normal
+	local rb = math.min(o[3] * (rainbowWeek and C.EVENT_RAINBOW or 1), 0.9)
+	local r = math.random()
+	if r < rb then
+		return 3
+	elseif r < rb + o[2] then
+		return 2
+	end
+	return 1
+end
 function C.eventAt(t) -- the event running at os.time() t, and when it ends
 	local w = math.floor((t - C.EVENT_EPOCH) / 604800)
 	return C.EVENTS[w % #C.EVENTS + 1], C.EVENT_EPOCH + (w + 1) * 604800

@@ -43,6 +43,8 @@ PEN_MAX, STORAGE_MAX = int(num('PEN_MAX')), int(num('STORAGE_MAX'))
 REBIRTH_BONUS, INDEX_BONUS, FUSE = num('REBIRTH_BONUS'), num('INDEX_BONUS'), int(num('FUSE'))
 GOLDEN_CHANCE, GOLDEN_LUCK = 1 / 30, num('GOLDEN_LUCK')
 MAX_LV = dict(train=60, basket=len(BASKETS) - 1, luck=20)
+_t = re.search(r'normal = \{ ([0-9.]+), ([0-9.]+), ([0-9.]+) \}', CFG)
+TIER_ODDS = [float(x) for x in _t.groups()] if _t else [1, 0, 0]
 AUTO_FUSE = bool(re.search(r'^C\.AUTO_FUSE\s*=\s*true', CFG, re.M))
 TRAIN_COST = arr('TRAIN_COST') if re.search(r'^C\.TRAIN_COST', CFG, re.M) else None   # v148: price tables
 LUCK_COST = arr('LUCK_COST') if re.search(r'^C\.LUCK_COST', CFG, re.M) else None
@@ -144,7 +146,8 @@ def play(rng, hours=30.0, verbose=False):
             combo = 1 + min(k, 20) * 0.05
             luck = (1 + 0.25 * lv['luck']) * combo * (GOLDEN_LUCK if rng.random() < GOLDEN_CHANCE else 1)
             i = roll(luck, rng)
-            pets.append((z, i, 0))
+            r = rng.random()                                   # v152 coat roll: C.TIER_ODDS (golden eggs ignored here)
+            pets.append((z, i, 2 if r < TIER_ODDS[2] else 1 if r < TIER_ODDS[2] + TIER_ODDS[1] else 0))
             index.add((z, i))
         if AUTO_FUSE:
             fuse()

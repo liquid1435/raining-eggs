@@ -1481,12 +1481,6 @@ Catch.OnServerEvent:Connect(function(plr, id)
 	local tier = nil
 	if e.kind == "golden" then
 		luck = luck * C.GOLDEN_LUCK
-		-- v150 weekly events: golden eggs hatch Gold pets (GOLDEN WEEK) or sometimes Rainbow pets (RAINBOW WEEK)
-		if ev == "gold" then
-			tier = 2
-		elseif ev == "rainbow" and math.random() < C.EVENT_RAINBOW then
-			tier = 3
-		end
 	elseif e.kind == "storm" then
 		luck = luck * C.STORM_EGG_LUCK
 	end
@@ -1516,7 +1510,8 @@ local function hatchBag(plr, only, limit)
 	d.bag = keep
 	for _, egg in ipairs(bag) do
 		local idx = roll(egg.luck)
-		local pet = { z = egg.z, i = idx, t = math.clamp(math.floor(egg.tier or 1), 1, #C.TIER) } -- v150: event Gold/Rainbow eggs
+		-- v152: the coat (normal / Gold / Rainbow) is rolled at hatch: C.TIER_ODDS by egg kind
+		local pet = { z = egg.z, i = idx, t = math.clamp(math.floor(egg.tier or C.rollTier(egg.kind, eventKey() == "rainbow")), 1, #C.TIER) }
 		local def = C.ZONES[egg.z].pets[idx]
 		local odds = C.RARITY[idx].odds
 		table.insert(d.carry, pet)
@@ -1727,7 +1722,7 @@ local MPS = game:GetService("MarketplaceService")
 local function hatchToPen(plr, d, z, kind, boost, force)
 	local luck = C.luck(d.luck) * (d.passes.luck2 and 2 or 1) * (boost or 1) * (eventKey() == "luck" and 2 or 1)
 	local idx = force or roll(luck)
-	local pet = { z = z, i = idx, t = 1 }
+	local pet = { z = z, i = idx, t = C.rollTier(kind, eventKey() == "rainbow") } -- v152
 	local def = C.ZONES[z].pets[idx]
 	d.caught = d.caught + 1
 	if C.RARITY[idx].odds > d.bestOdds then
