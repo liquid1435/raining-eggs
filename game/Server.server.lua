@@ -834,6 +834,7 @@ buyTrain = function(plr)
 		return
 	end
 	lastTrain[plr] = os.clock()
+	print("[treadmill] upgrade press from " .. plr.Name .. " (level " .. tostring(d.train) .. ", cash " .. math.floor(d.cash) .. ")")
 	buy(plr, "train", bases[d.base] and bases[d.base].tread)
 end
 Players.PlayerRemoving:Connect(function(plr)
@@ -847,6 +848,22 @@ for _, b in pairs(bases) do
 		cd.MaxActivationDistance = 45
 		cd.Parent = sign
 		cd.MouseClick:Connect(function(plr)
+			local d = data[plr]
+			print("[treadmill] board click from " .. plr.Name .. (d and bases[d.base] == b and "" or " (not his base)"))
+			if d and bases[d.base] == b then
+				buyTrain(plr)
+			end
+		end)
+		-- v176 (user: the board button still does nothing): a prompt right at the board too - E on PC, tap on phones
+		local pp = Instance.new("ProximityPrompt")
+		pp.Name = "TreadUpgrade"
+		pp.ActionText, pp.ObjectText = "Upgrade", "Treadmill"
+		pp.HoldDuration = 0
+		pp.MaxActivationDistance = 12
+		pp.RequiresLineOfSight = false
+		pp.KeyboardKeyCode = Enum.KeyCode.E
+		pp.Parent = sign
+		pp.Triggered:Connect(function(plr)
 			local d = data[plr]
 			if d and bases[d.base] == b then
 				buyTrain(plr)
@@ -2129,7 +2146,9 @@ local function startBigEgg()
 	for _, d in pairs(data) do
 		maxUnlocked = math.max(maxUnlocked, d.unlocked or 1)
 	end
-	local zi = #zones > 0 and zones[math.random(#zones)] or math.random(1, math.min(maxUnlocked, C.NZ))
+	-- v176 (user: "a big egg is falling" but nothing falls): with nobody in a zone it went to a random far zone ->
+	-- zone 1, right next to the plaza and the bases
+	local zi = #zones > 0 and zones[math.random(#zones)] or 1
 	local w2 = zi > C.NZ
 	local spot = { 0, (w2 and C.w2Z0(zi) or (zi - 1) * C.ZONE_LEN) + C.ZONE_LEN * (0.4 + math.random() * 0.2) }
 	local top = w2 and C.COSMIC.y or 0

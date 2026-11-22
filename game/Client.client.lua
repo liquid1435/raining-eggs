@@ -3849,6 +3849,17 @@ do
 			build(part)
 			refresh()
 		end
+		-- v176: the server's "Upgrade Treadmill" prompt shows only at YOUR board
+		task.spawn(function()
+			for k = 1, 8 do
+				local bk = map and map:FindFirstChild("Base" .. k)
+				local sg = bk and bk:FindFirstChild("TreadSign", true)
+				local pp = sg and sg:WaitForChild("TreadUpgrade", 10)
+				if pp then
+					pp.Enabled = (k == i)
+				end
+			end
+		end)
 	end
 	task.spawn(function()
 		workspace:WaitForChild("Map", 30)
