@@ -85,6 +85,27 @@ local function frames(key, clip)
 		end
 		list[f] = row
 	end
+	-- v143: pets now walk around the pen themselves, so a Walk clip that moves forward on its own (root motion)
+	-- would slide them and snap back each loop: take out a steady horizontal drift, keep the steps and the sway
+	if clip == "Walk" and c.n > 1 then
+		local function mid(row)
+			local x, z = 0, 0
+			for j = 1, #row do
+				x, z = x + row[j][1], z + row[j][3]
+			end
+			return x / #row, z / #row
+		end
+		local x0, z0 = mid(list[1])
+		local x1, z1 = mid(list[c.n])
+		if (x1 - x0) ^ 2 + (z1 - z0) ^ 2 > 0.04 then
+			for f = 1, c.n do
+				local a = (f - 1) / (c.n - 1)
+				for _, e in ipairs(list[f]) do
+					e[1], e[3] = e[1] - (x1 - x0) * a, e[3] - (z1 - z0) * a
+				end
+			end
+		end
+	end
 	local entry = { n = c.n, len = c.len, list = list }
 	cache[ck] = entry
 	return entry

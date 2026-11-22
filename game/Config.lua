@@ -8,6 +8,7 @@ C.PEN_MAX = 10          -- equipped pets: they stand in your pen and earn cash (
 C.STORAGE_MAX = 50      -- your other pets wait in storage (PETS menu: tap to equip, EQUIP BEST); a full storage sells its weakest
 C.SELL_MULT = 30        -- sell price = income per second * this
 C.FUSE = 3              -- same pets needed for the next tier
+C.AUTO_FUSE = false     -- v143 (user): 3 same pets no longer fuse into Gold on their own
 
 C.GOLDEN_CHANCE = 1 / 30
 C.GOLDEN_LUCK = 8

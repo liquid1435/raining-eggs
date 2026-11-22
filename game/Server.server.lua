@@ -440,6 +440,9 @@ local function renderPen(plr)
 		label(m, pet, mult)
 		m:SetAttribute("Phase", k * 0.7)
 		m:SetAttribute("Kind", C.ZONES[pet.z].pets[pet.i].kind)
+		-- v143: the client lets the pet walk around the pen (centre of the pen floor + how high the pivot sits)
+		m:SetAttribute("PenC", Vector3.new(c.X, c.Y + 0.05, c.Z))
+		m:SetAttribute("Lift", 1.75 * s)
 		m.Parent = base.folder
 		CS:AddTag(m, "PenPet")
 	end
@@ -634,7 +637,7 @@ local function deposit(plr)
 		table.insert(d.stored, pet)
 	end
 	d.carry = {}
-	local made = fuse(d)
+	local made = C.AUTO_FUSE and fuse(d) or {} -- v143 (user): no automatic fusing into Gold any more
 	byIncome(d.stored)
 	while #d.pets < C.PEN_MAX and #d.stored > 0 do
 		table.insert(d.pets, table.remove(d.stored, 1))

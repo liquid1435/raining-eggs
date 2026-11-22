@@ -1921,7 +1921,14 @@ local function addPenPet(model)
 				end
 			end
 		end
-		penPets[model] = { cf = model:GetPivot(), phase = model:GetAttribute("Phase") or 0, bodies = bodies }
+		local cf = model:GetPivot()
+		penPets[model] = {
+			cf = cf, phase = model:GetAttribute("Phase") or 0, bodies = bodies,
+			-- v143: walking around the pen (pos on the floor, facing yaw, a target, idle time left)
+			penC = model:GetAttribute("PenC"), lift = model:GetAttribute("Lift") or 2,
+			pos = cf.Position, yaw = math.atan2(-cf.LookVector.X, -cf.LookVector.Z),
+			target = nil, wait = 1 + (model:GetAttribute("Phase") or 0) % 3, walkT = 0, last = os.clock(),
+		}
 	end)
 end
 for _, m in ipairs(CS:GetTagged("PenPet")) do
@@ -1931,6 +1938,71 @@ CS:GetInstanceAddedSignal("PenPet"):Connect(addPenPet)
 CS:GetInstanceRemovedSignal("PenPet"):Connect(function(m)
 	penPets[m] = nil
 end)
+
+-- v143 (user): pets walk around their pen instead of playing an animation on one spot.
+-- Pen = PenFloor 34 x 52 (front = +Z towards the plaza); the treadmill stands in the front left corner.
+local penWalk -- one main-chunk local only (the chunk is near the 200-local limit)
+do
+local PEN_HX, PEN_ZB, PEN_ZF = 12.5, -20, 21
+local function penFree(lx, lz)
+	return not (lx < -4.5 and lz > 6.5) -- the treadmill corner
+end
+local function penTarget(info)
+	local c = info.penC
+	for _ = 1, 12 do
+		local lx, lz = (math.random() * 2 - 1) * PEN_HX, PEN_ZB + math.random() * (PEN_ZF - PEN_ZB)
+		local p = Vector3.new(c.X + lx, info.pos.Y, c.Z + lz)
+		local ok = penFree(lx, lz) and (p - info.pos).Magnitude > 6
+		-- the straight path must not cut through the treadmill corner either
+		for a = 0.25, 0.75, 0.25 do
+			local q = info.pos:Lerp(p, a)
+			ok = ok and penFree(q.X - c.X, q.Z - c.Z)
+		end
+		-- keep a little space from where the other pets are going
+		if ok then
+			for m2, o in pairs(penPets) do
+				if o ~= info and o.penC == c and (o.target or o.pos) and ((o.target or o.pos) - p).Magnitude < 5 then
+					ok = false
+					break
+				end
+			end
+		end
+		if ok then
+			return p
+		end
+	end
+	return nil
+end
+penWalk = function(model, info, now)
+	local dt = math.min(now - info.last, 0.1)
+	info.last = now
+	if info.target then
+		local d = info.target - info.pos
+		local dist = Vector3.new(d.X, 0, d.Z).Magnitude
+		if dist < 0.6 then
+			info.target = nil
+			info.wait = 2 + math.random() * 4
+		else
+			local want = math.atan2(-d.X, -d.Z)
+			local diff = (want - info.yaw + math.pi) % (2 * math.pi) - math.pi
+			info.yaw = info.yaw + math.clamp(diff, -dt * 4, dt * 4)
+			local speed = (math.abs(diff) > 1.2 and 1.2 or 5) * math.clamp(info.lift / 2.5, 0.8, 1.6)
+			local step = math.min(dist, speed * dt)
+			info.pos = info.pos + Vector3.new(d.X, 0, d.Z).Unit * step
+			info.walkT = info.walkT + dt * speed / 5
+		end
+	else
+		info.wait = info.wait - dt
+		if info.wait <= 0 then
+			info.target = info.penC and penTarget(info)
+			if not info.target then
+				info.wait = 1.5
+			end
+		end
+	end
+	return CFrame.new(info.pos) * CFrame.Angles(0, info.yaw, 0), info.target ~= nil
+end
+end
 
 -- ------------------------------------------------------------ eggs
 local PROF = { 0.62, 0.92, 1.0, 0.84, 0.52 }
@@ -3057,7 +3129,22 @@ RunService.RenderStepped:Connect(function()
 					info.sang = false
 				end
 				local PA = model:GetAttribute("AnimKey") and C.petAnim()
-				if PA then
+				if info.penC then
+					-- v143: walk around the pen: Walk clip while moving, Idle / PenLife while standing
+					local cf, moving = penWalk(model, info, now)
+					local done = false
+					if PA then
+						if moving then
+							done = PA.pose(model, "Walk", info.walkT, cf)
+						else
+							done = PA.pose(model, (info.phase * 7 + math.floor(now / 6)) % 3 == 0 and "PenLife" or "Idle", now + info.phase * 3, cf)
+						end
+					end
+					if not done then
+						local b = moving and math.abs(math.sin(info.walkT * 9)) * 0.5 or hop * 0.5
+						model:PivotTo(cf * CFrame.new(0, b, 0) * CFrame.Angles(moving and 0 or lean, 0, math.sin(t * 2) * 0.05))
+					end
+				elseif PA then
 					-- v129: Codex pet: its own PenLife animation (walks, looks around, sits...) + a slow turn now and then
 					PA.pose(model, "PenLife", now + info.phase * 3, info.cf * CFrame.Angles(0, math.sin(now * 0.15 + info.phase) * 0.9, 0))
 				else
