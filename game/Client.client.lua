@@ -4054,7 +4054,7 @@ task.spawn(function()
 	local egg, pos = nil, nil
 	local function makeEgg()
 		local A = RS:FindFirstChild("Assets")
-		local src = A and (A:FindFirstChild("BigEgg") or A:FindFirstChild("Egg_Gold"))
+		local src = A and (A:FindFirstChild("Egg_Secret") or A:FindFirstChild("BigEgg") or A:FindFirstChild("Egg_Gold")) -- v224: violet SECRET EGG
 		local e
 		if src then
 			e = src:Clone()
@@ -4204,14 +4204,14 @@ task.spawn(function()
 	local ind = nil
 	local function indicator(show, p)
 		if not ind and show then
-			local holder, face = lip(top, Color3.fromRGB(255, 160, 40), UDim2.fromScale(0.78, 0.36), BAR_HIGH, nil, 0.3)
+			local holder, face = lip(top, Color3.fromRGB(150, 70, 240), UDim2.fromScale(0.78, 0.36), BAR_HIGH, nil, 0.3) -- v224: violet SECRET EGG
 			holder.ZIndex = 4
 			-- v196 (user screenshot): the egg sits inside the banner, a big clear arrow in the pill
 			local eggIc = icon(face, "egg", UDim2.fromScale(0.13, 0.86), UDim2.fromScale(0.03, 0.5), Vector2.new(0, 0.5))
 			eggIc.ZIndex = 6
 			make("UIAspectRatioConstraint", { AspectRatio = 1 }, eggIc)
-			local tl = title(face, UDim2.fromScale(0.4, 0.66), UDim2.fromScale(0.17, 0.17), 32, "BIG EGG")
-			tl.TextColor3 = Color3.fromRGB(255, 240, 120)
+			local tl = title(face, UDim2.fromScale(0.42, 0.66), UDim2.fromScale(0.17, 0.17), 32, "SECRET EGG")
+			tl.TextColor3 = Color3.fromRGB(255, 225, 255)
 			tl.TextXAlignment = Enum.TextXAlignment.Left
 			tl.ZIndex = 5
 			local pill = make("Frame", {
@@ -5311,7 +5311,7 @@ do
 	RunService.RenderStepped:Connect(function()
 		for k, sl in ipairs(slots) do
 			local on = sel == k
-			sl.stroke.Color = on and Color3.fromRGB(120, 255, 120) or (pets[k] and RC[pets[k].i] or BLACK)
+			sl.stroke.Color = on and Color3.fromRGB(120, 255, 120) or BLACK -- v224 (user): black rims, not the rarity colours
 			sl.stroke.Thickness = on and 4 or 2.5
 		end
 		local pet = sel and pets[sel]

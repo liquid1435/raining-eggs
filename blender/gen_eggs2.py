@@ -787,6 +787,33 @@ def egg_galaxy_throne():  # 20 Galaxy Throne: royal galaxy (dark blue, gold star
     return e
 
 
+def egg_secret():  # v224: SECRET EGG (the rare event egg): royal violet, gold lattice, magenta gems, crystal crown, orbiting orbs
+    e = Egg()
+    V1, V2, GOLDL, MAG = (64, 20, 120), (118, 46, 210), (255, 206, 80), (255, 90, 220)
+
+    def pat(th, t, c):
+        a = math.sin(th * 4 + t * 6.0)
+        b = math.sin(th * 4 - t * 6.0)
+        if abs(a) < 0.07 or abs(b) < 0.07:
+            return GOLDL
+        return mix(V1, V2, 0.5 + 0.5 * math.sin(t * 3 + th))
+    e.shell(pat)
+    for k in range(8):  # gems where the gold lines cross round the middle
+        p, n = e.surf(k * math.tau / 8 + math.tau / 16, 0.0, 0.03)
+        e.gem(p, 0.15, 0.22, MAG if k % 2 == 0 else (130, 230, 255), normal=-n)
+    tip, n = e.surf(0, 1)
+    for k in range(6):  # crown of violet crystals + a big pink one
+        a = k * math.tau / 6
+        d = Vector((math.cos(a) * 0.5, math.sin(a) * 0.5, 1)).normalized()
+        e.cone(tip + Vector((0.32 * math.cos(a), 0.32 * math.sin(a), -0.28)) + d * 0.3, 0.15, 0.0, 0.7, (190, 120, 255), normal=d, seg=6)
+    e.cone(tip + Vector((0, 0, 0.5)), 0.22, 0.0, 1.05, (255, 150, 240), seg=6)
+    for k in range(10):  # floating orbs on a tilted ring
+        a = k * math.tau / 10
+        e.sph(Vector((R * 1.35 * math.cos(a), R * 1.35 * math.sin(a), 0.25 * math.sin(a) - 0.1)), 0.13, MAG if k % 2 else GOLDL, seg=12)
+    e.torus(Vector((0, 0, -0.1)), R * 1.35, 0.035, (220, 170, 255), rot=(10, 0, 0), seg=60)
+    return e
+
+
 EGGS_W2 = [('Egg_11', egg_cosmic_nest), ('Egg_12', egg_moon_craters), ('Egg_13', egg_nebula_reef), ('Egg_14', egg_asteroid_belt),
            ('Egg_15', egg_solar_forge), ('Egg_16', egg_comet_glacier), ('Egg_17', egg_alien_jungle), ('Egg_18', egg_black_hole),
            ('Egg_19', egg_star_station), ('Egg_20', egg_galaxy_throne)]
@@ -796,6 +823,8 @@ EGGS = [('Egg_1', egg_meadow), ('Egg_2', egg_mushroom), ('Egg_3', egg_candy), ('
         ('Egg_Gold', egg_gold), ('Egg_Rotten', egg_rotten), ('Egg_Storm', egg_storm)]
 if 'w2' in ARGS:  # v208: only the world 2 eggs (own FBX + renders)
     EGGS = EGGS_W2
+if 'secret' in ARGS:  # v224: only the SECRET EGG
+    EGGS = [('Egg_Secret', egg_secret)]
 
 # ======================================================================= scene
 for o in list(bpy.data.objects):
@@ -819,7 +848,7 @@ if 'nofbx' not in ARGS:
     for o in bpy.data.objects:
         o.select_set(o in objs)
     bpy.context.view_layer.objects.active = objs[0]
-    fbx = HERE / 'out' / ('RainingEggsEggsW2.fbx' if 'w2' in ARGS else 'RainingEggsEggs2.fbx')
+    fbx = HERE / 'out' / ('RainingEggsSecretEgg.fbx' if 'secret' in ARGS else 'RainingEggsEggsW2.fbx' if 'w2' in ARGS else 'RainingEggsEggs2.fbx')
     bpy.ops.export_scene.fbx(filepath=str(fbx), use_selection=True, object_types={'MESH'}, apply_scale_options='FBX_SCALE_UNITS',
                              mesh_smooth_type='FACE', colors_type='NONE', add_leaf_bones=False, bake_anim=False, path_mode='COPY', embed_textures=True)
     desk = pathlib.Path(os.environ['USERPROFILE']) / 'Desktop' / 'RAINING EGGS NOU' / fbx.name
@@ -871,7 +900,7 @@ if 'norender' not in ARGS:
         bpy.ops.render.render(write_still=True)
 
     # lineup: all eggs in two rows
-    shot(out / ('eggsw2_all.png' if 'w2' in ARGS else 'eggs2_all.png'), (15, -46, 13), (15, -3, 1.4), (1800, 1000), 40)
+    shot(out / ('eggsecret_all.png' if 'secret' in ARGS else 'eggsw2_all.png' if 'w2' in ARGS else 'eggs2_all.png'), (15, -46, 13), (15, -3, 1.4), (1800, 1000), 40)
     # close-ups, one by one
     for o in objs:
         for q in objs:

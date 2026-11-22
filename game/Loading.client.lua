@@ -188,7 +188,7 @@ local TIPS = {
 	"TIP: Run on your treadmill to reach the far zones faster",
 	"TIP: Every egg has 3 different animals for each rarity",
 	"TIP: Play with friends for up to +40% cash",
-	"TIP: The BIG EGG drops every few minutes - grab a weapon!",
+	"TIP: A rare SECRET EGG can fall in any zone - grab a bat!",
 	"TIP: Put your best pets in your pen - they earn while you play",
 }
 local tipK = rng:NextInteger(1, #TIPS)

@@ -2105,7 +2105,7 @@ local function weaponTool(kind)
 	local t = Instance.new("Tool")
 	t.Name = kind == "Hammer" and "Bonk Hammer" or "Pillow Bat"
 	t.CanBeDropped = false
-	t.ToolTip = "Hit players to stop them taking the BIG EGG"
+	t.ToolTip = "Hit players to stop them taking the SECRET EGG"
 	t:SetAttribute("BigEggWeapon", kind)
 	local h = Instance.new("Part")
 	h.Name = "Handle"
@@ -2142,7 +2142,7 @@ local function batTool()
 	local t = Instance.new("Tool")
 	t.Name = "Bat"
 	t.CanBeDropped = false
-	t.ToolTip = "Hit players to stop them taking the BIG EGG"
+	t.ToolTip = "Hit players to stop them taking the SECRET EGG"
 	t:SetAttribute("BigEggWeapon", "Bat")
 	local WOOD, DARKW, TAPE = Color3.fromRGB(214, 160, 96), Color3.fromRGB(150, 98, 52), Color3.fromRGB(40, 36, 52)
 	-- the handle runs along Y (like the old weapons: Grip (0, -1, 0)); round looks come from cylinders turned upright
@@ -2224,9 +2224,18 @@ local function startBigEgg()
 	end
 	-- v176 (user: "a big egg is falling" but nothing falls): with nobody in a zone it went to a random far zone ->
 	-- zone 1, right next to the plaza and the bases
-	local zi = #zones > 0 and zones[math.random(#zones)] or 1
+	-- v224 (user): a random zone (RNG) of the zones the players have opened - never the last zone of a world
+	local pool = {}
+	for z = 1, math.min(maxUnlocked, C.TOTAL) do
+		if z ~= C.NZ and z ~= C.TOTAL then
+			table.insert(pool, z)
+		end
+	end
+	local zi = #pool > 0 and pool[math.random(#pool)] or 1
 	local w2 = zi > C.NZ
-	local spot = { 0, (w2 and C.w2Z0(zi) or (zi - 1) * C.ZONE_LEN) + C.ZONE_LEN * (0.4 + math.random() * 0.2) }
+	-- v224 (user): in the Golden Nest the middle is the fenced giant golden egg -> the big egg lands near the zone start
+	local frac = (zi == C.NZ) and (0.14 + math.random() * 0.08) or (0.4 + math.random() * 0.2)
+	local spot = { 0, (w2 and C.w2Z0(zi) or (zi - 1) * C.ZONE_LEN) + C.ZONE_LEN * frac }
 	local top = w2 and C.COSMIC.y or 0
 	local params = RaycastParams.new()
 	local chars = {}
@@ -2242,7 +2251,7 @@ local function startBigEgg()
 	local ev = bigEv
 	workspace:SetAttribute("BigEggActive", true)
 	BigEgg:FireAllClients("incoming", pos)
-	Notice:FireAllClients("A BIG EGG is falling in " .. C.ZONES[zi].name .. "! Grab a weapon!", "storm")
+	Notice:FireAllClients("A SECRET EGG is falling in " .. C.ZONES[zi].name .. "! Grab a bat!", "storm")
 	giveWeapons()
 	task.wait(10)
 	if bigEv ~= ev then
@@ -2262,7 +2271,7 @@ local function startBigEgg()
 	target.Parent = workspace
 	ev.target = target
 	local pp = Instance.new("ProximityPrompt")
-	pp.ActionText, pp.ObjectText = "CLAIM", "BIG EGG"
+	pp.ActionText, pp.ObjectText = "CLAIM", "SECRET EGG"
 	pp.HoldDuration = C.BIGEGG_CLAIM
 	pp.MaxActivationDistance = 22
 	pp.RequiresLineOfSight = false
@@ -2305,7 +2314,7 @@ local function startBigEgg()
 	end)
 	task.delay(C.BIGEGG_LIFE, function()
 		if bigEv == ev and not ev.won then
-			Notice:FireAllClients("Nobody claimed the BIG EGG... it sank into the ground", "info")
+			Notice:FireAllClients("Nobody claimed the SECRET EGG... it sank into the ground", "info")
 			BigEgg:FireAllClients("clear")
 			endBigEgg()
 		end

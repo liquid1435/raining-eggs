@@ -366,7 +366,7 @@ local function incomingCard(pos)
 	local pillW = h * 0.92
 	local title = text(inner, UDim2.new(1, -textX - pillW - h * 0.12, 0.42, 0), UDim2.new(0, textX, 0.1, 0), Enum.Font.LuckiestGuy,
 		Color3.new(1, 1, 1), 2.5)
-	title.Text = "BIG EGG INCOMING!"
+	title.Text = "SECRET EGG INCOMING!"
 	title.ZIndex = 2
 	local tg = grad(title, Color3.fromRGB(255, 250, 200), Color3.fromRGB(255, 186, 40))
 	local sub = text(inner, UDim2.new(1, -textX - pillW - h * 0.12, 0.28, 0), UDim2.new(0, textX, 0.54, 0), Enum.Font.FredokaOne,
@@ -966,7 +966,7 @@ local function buildBadge(s, root)
 	line2.Font = Enum.Font.GothamBold
 	line2.TextColor3 = FX.gold
 	line2.TextStrokeTransparency = 1
-	line2.Text = "BIG EGG  ·  x25 LUCK"
+	line2.Text = "SECRET EGG  ·  x25 LUCK"
 	-- touch / click: hold the badge = hold the prompt (keyboard E and gamepad still work as before)
 	local hit = Instance.new("TextButton")
 	hit.BackgroundTransparency = 1

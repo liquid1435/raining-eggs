@@ -20,11 +20,11 @@ C.COMBO_TIME = 7        -- seconds to catch the next egg
 C.COMBO_STEP = 0.05     -- luck per combo step
 C.COMBO_MAX = 20
 
-C.STORM_FIRST = { 360, 900 }   -- random seconds after the server starts (6-15 min)
-C.STORM_EVERY = { 900, 2400 }  -- random time between storms (15-40 min)
+C.STORM_FIRST = { 900, 1800 }  -- v224 (user: rare): random seconds after the server starts (15-30 min)
+C.STORM_EVERY = { 2400, 4200 } -- v224: random time between storms (40-70 min)
 -- BIG EGG DROP: a giant egg falls in the plaza, players fight with weapons, holding E for 5 s claims it
-C.BIGEGG_FIRST = { 300, 300 }   -- seconds after the server starts (user: every 5 minutes)
-C.BIGEGG_EVERY = { 300, 300 }   -- between drops: every 5 minutes
+C.BIGEGG_FIRST = { 600, 1200 }  -- v224 (user: SECRET EGG, rare): seconds after the server starts (10-20 min)
+C.BIGEGG_EVERY = { 1500, 2700 } -- v224: random time between drops (25-45 min)
 C.TEST_ALL_ZONES_FREE = true    -- Studio only: all 10 zones open for free (to test the Golden Nest portal); the real game is not affected
 C.MUSIC_ID = "1848049490" -- v206: Strauss II "Voices of Spring" (Roblox Toolbox audio, chosen by the user); v204: calm background music (audio/rainingeggs_music.ogg uploaded to Roblox), "" = no music
 C.MUSIC_VOLUME = 0.13 -- v208 (user): a bit quieter (was 0.22)
