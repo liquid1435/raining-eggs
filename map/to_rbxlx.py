@@ -207,7 +207,10 @@ def assets_folder():
                      f'<Content name="MeshContent"><uri>{m["id"]}</uri></Content>' + (f'<Content name="TextureContent"><uri>{m["tex"]}</uri></Content>' if m.get('tex') else '') + v3('InitialSize', m['size']) + v3('size', m['size']) +
                      cframe([k % 8 * 7, 3, k // 8 * 7], [1, 0, 0, 0, 1, 0, 0, 0, 1]) +
                      '<Color3uint8 name="Color3uint8">4294967295</Color3uint8><token name="Material">272</token>'
-                     '<bool name="CanCollide">false</bool><bool name="CanTouch">false</bool><bool name="CanQuery">false</bool>')
+                     '<bool name="CanCollide">false</bool><bool name="CanTouch">false</bool><bool name="CanQuery">false</bool>' +
+                     # v158 (user: pet textures 'glitch' like the candy did): pets/eggs keep their full mesh at any
+                     # distance (RenderFidelity Precise; Automatic swaps in simpler LOD meshes and the texture tears)
+                     ('<token name="RenderFidelity">1</token>' if name.startswith(('Pet_', 'Egg_')) else ''))
     return item('Folder', '<string name="Name">Assets</string>', kids) + props_meta()
 
 
