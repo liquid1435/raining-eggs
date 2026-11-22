@@ -4123,12 +4123,11 @@ task.spawn(function()
 			}, face)
 			make("UICorner", { CornerRadius = UDim.new(1, 0) }, pill)
 			make("UIStroke", { Thickness = 2.5, Color = BLACK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, pill)
-			local arrow = make("TextLabel", {
-				BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromScale(0.3, 1.25), Position = UDim2.fromScale(0.2, 0.5), ZIndex = 6,
-				Font = Enum.Font.GothamBlack, TextScaled = true, Text = "\u{25B2}", TextColor3 = Color3.fromRGB(240, 120, 20),
-			}, pill)
+			-- v202 (user): the green arrow of the game (UPGRADE icon) points to the egg
+			local arrow = icon(pill, "upgrade", UDim2.fromScale(0.3, 1.3), UDim2.fromScale(0.2, 0.5), Vector2.new(0.5, 0.5))
+			arrow.ZIndex = 6
+			wobbly[arrow] = nil
 			make("UIAspectRatioConstraint", { AspectRatio = 1 }, arrow)
-			make("UIStroke", { Thickness = 1.5, Color = BLACK }, arrow)
 			local dist = make("TextLabel", {
 				BackgroundTransparency = 1, Size = UDim2.fromScale(0.56, 0.8), Position = UDim2.fromScale(0.4, 0.1), ZIndex = 6,
 				Font = Enum.Font.FredokaOne, TextScaled = true, Text = "", TextColor3 = Color3.fromRGB(38, 42, 120),
@@ -4138,7 +4137,15 @@ task.spawn(function()
 				if not ind.holder.Visible or not ind.pos then
 					return
 				end
-				ind.holder.Position = stormBanner.Visible and BAR_LOW or BAR_HIGH
+				-- v202 (user: it covered the violet pill): stack under the storm banner and the violet pill when they show
+				local y = 0.02
+				if stormBanner.Visible then
+					y = 0.6
+				end
+				if hintPill.Visible then
+					y = y + 0.45
+				end
+				ind.holder.Position = UDim2.fromScale(BAR_HIGH.X.Scale, y)
 				local cam = workspace.CurrentCamera
 				local ch = LP.Character
 				local root = ch and ch:FindFirstChild("HumanoidRootPart")

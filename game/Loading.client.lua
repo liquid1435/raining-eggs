@@ -73,37 +73,36 @@ new("UIGradient", {
 	Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.75), NumberSequenceKeypoint.new(1, 1) }),
 }, glow)
 
--- raining eggs
-local EGG_COLS = {
-	{ Color3.fromRGB(255, 250, 236), Color3.fromRGB(150, 200, 120) }, { Color3.fromRGB(190, 130, 255), WHITE },
-	{ Color3.fromRGB(255, 150, 180), WHITE }, { Color3.fromRGB(240, 70, 70), WHITE }, { Color3.fromRGB(80, 230, 255), WHITE },
-	{ Color3.fromRGB(255, 132, 30), Color3.fromRGB(24, 28, 52) }, { Color3.fromRGB(255, 226, 60), Color3.fromRGB(24, 28, 52) },
-	{ Color3.fromRGB(255, 60, 200), WHITE }, { Color3.fromRGB(255, 204, 40), WHITE },
-}
+-- raining eggs: the real egg models of the game (ReplicatedStorage.Assets Egg_1..Egg_10, Egg_Gold) falling in 3D
+-- (v202, user). They appear as soon as the meshes are downloaded; until then the sky and the rays show.
+local eggVp = new("ViewportFrame", {
+	Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 2,
+	Ambient = Color3.fromRGB(190, 180, 220), LightColor = WHITE, LightDirection = Vector3.new(-0.5, -1, -0.7),
+}, bg)
+local eggCam = new("Camera", { FieldOfView = 50, CFrame = CFrame.lookAt(Vector3.new(0, 0, 60), Vector3.zero) }, eggVp)
+eggVp.CurrentCamera = eggCam
 local eggs = {}
 local rng = Random.new()
-for k = 1, 22 do
-	local c = EGG_COLS[(k - 1) % #EGG_COLS + 1]
-	local size = rng:NextNumber(0.035, 0.07)
-	local e = new("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromScale(size, size * 1.6), BackgroundColor3 = c[1],
-		BorderSizePixel = 0, ZIndex = 2,
-	}, bg)
-	new("UIAspectRatioConstraint", { AspectRatio = 0.78 }, e)
-	corner(e, UDim.new(0.5, 0))
-	stroke(e, 3)
-	new("UIGradient", { Rotation = 120, Color = ColorSequence.new(WHITE, Color3.fromRGB(200, 200, 215)) }, e)
-	for _, d in ipairs({ { 0.32, 0.32, 0.24 }, { 0.64, 0.52, 0.18 }, { 0.38, 0.7, 0.14 } }) do
-		local sp = new("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(d[1], d[2]), Size = UDim2.fromScale(d[3], d[3] * 0.78),
-			BackgroundColor3 = c[2], BorderSizePixel = 0, ZIndex = 2,
-		}, e)
-		corner(sp)
-	end
-	eggs[k] = { f = e, x = rng:NextNumber(0.03, 0.97), y = rng:NextNumber(-0.3, 1.1), v = rng:NextNumber(0.08, 0.2),
-		rot = rng:NextNumber(-60, 60), r0 = rng:NextNumber(0, 360), sway = rng:NextNumber(0, 6.28) }
-	-- eggs in the back are smaller and dimmer
-	e.BackgroundTransparency = size < 0.05 and 0.25 or 0
+local function spawnEggs()
+	task.spawn(function()
+		local assets = RS:WaitForChild("Assets", 30)
+		if not assets then
+			return
+		end
+		local names = { "Egg_1", "Egg_2", "Egg_3", "Egg_4", "Egg_5", "Egg_6", "Egg_7", "Egg_8", "Egg_9", "Egg_10", "Egg_Gold" }
+		for k = 1, 20 do
+			local src = assets:FindFirstChild(names[(k - 1) % #names + 1], true)
+			if src and src:IsA("BasePart") then
+				local e = src:Clone()
+				local sz = rng:NextNumber(4, 7.5)
+				e.Size = src.Size * (sz / math.max(src.Size.X, src.Size.Y, src.Size.Z))
+				e.Anchored = true
+				e.Parent = eggVp
+				eggs[#eggs + 1] = { p = e, x = rng:NextNumber(-48, 48), y = rng:NextNumber(-40, 45), z = rng:NextNumber(-25, 8),
+					v = rng:NextNumber(7, 15), spin = rng:NextNumber(-1.5, 1.5), tilt = rng:NextNumber(-0.5, 0.5), a0 = rng:NextNumber(0, 6.28) }
+			end
+		end
+	end)
 end
 
 -- logo
@@ -139,16 +138,6 @@ local sub = new("TextLabel", {
 	TextColor3 = Color3.fromRGB(230, 220, 255), ZIndex = 6,
 }, bg)
 stroke(sub, 3)
-
--- spinning pet (once Config / PetAnim / meshes are there)
-local vp = new("ViewportFrame", {
-	AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.3, 0.3),
-	BackgroundTransparency = 1, Ambient = Color3.fromRGB(200, 195, 220), LightColor = WHITE, LightDirection = Vector3.new(-0.4, -1, -0.6), ZIndex = 5,
-}, bg)
-new("UIAspectRatioConstraint", { AspectRatio = 1.3 }, vp)
-local vcam = new("Camera", { FieldOfView = 35 }, vp)
-vp.CurrentCamera = vcam
-local petModel, petR = nil, 1
 
 -- bottom panel: dark glass with gold rim
 local panel = new("Frame", {
@@ -215,12 +204,11 @@ local anim = RunService.RenderStepped:Connect(function(dt)
 	rays.Rotation = t * 6
 	glow.Size = UDim2.fromScale(0.55 + math.sin(t * 2) * 0.03, 0.55 + math.sin(t * 2) * 0.03)
 	for _, e in ipairs(eggs) do
-		e.y = e.y + e.v * dt
-		if e.y > 1.15 then
-			e.y, e.x = -0.15, rng:NextNumber(0.03, 0.97)
+		e.y = e.y - e.v * dt
+		if e.y < -45 then
+			e.y, e.x = 45, rng:NextNumber(-48, 48)
 		end
-		e.f.Position = UDim2.fromScale(e.x + math.sin(t * 1.3 + e.sway) * 0.01, e.y)
-		e.f.Rotation = e.r0 + t * e.rot
+		e.p.CFrame = CFrame.new(e.x, e.y, e.z) * CFrame.Angles(e.tilt, e.a0 + t * e.spin, e.tilt * 0.5)
 	end
 	local bob = math.sin(t * 2.2) * 0.008
 	logo.Position = UDim2.fromScale(0.5, 0.2 + bob)
@@ -229,10 +217,6 @@ local anim = RunService.RenderStepped:Connect(function(dt)
 	local k = (t % 2.6) / 2.6
 	shineGrad.Offset = Vector2.new(-1 + k * 2, 0)
 	stripes.Position = UDim2.new(-((t * 0.35) % 0.05) * 2, 0, 0, 0)
-	if petModel then
-		local cf = CFrame.Angles(0, t * 0.8, 0)
-		vcam.CFrame = CFrame.lookAt(cf * Vector3.new(0, petR * 0.35, -petR * 2.4), Vector3.new(0, 0, 0))
-	end
 	if os.clock() - lastTip > 3.2 then
 		lastTip = os.clock()
 		tipK = tipK % #TIPS + 1
@@ -250,34 +234,13 @@ local function setProgress(p, text)
 	end
 end
 
-local function showPet()
-	task.spawn(function()
-		local ok = pcall(function()
-			local C = require(RS:WaitForChild("Config", 15))
-			local pet = { z = math.random(1, 10), i = 5, t = 3 } -- a Rainbow legendary of a random world 1 zone
-			local m = C.buildPet(pet, 1, true)
-			if not m then
-				return
-			end
-			local cf, size = m:GetBoundingBox()
-			m:PivotTo(m:GetPivot() * CFrame.new(-cf.Position))
-			petR = size.Magnitude / 2
-			m.Parent = vp
-			petModel = m
-		end)
-		if not ok then
-			vp.Visible = false
-		end
-	end)
-end
-
 -- 1) the place itself
 if not game:IsLoaded() then
 	setProgress(0.1, "Loading the world...")
 	game.Loaded:Wait()
 end
 setProgress(0.3, "Loading the map...")
-showPet()
+spawnEggs()
 workspace:WaitForChild("Map", 20)
 -- 2) your character
 setProgress(0.45, "Getting you ready...")
