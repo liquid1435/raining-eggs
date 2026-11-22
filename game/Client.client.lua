@@ -4953,9 +4953,13 @@ task.spawn(function()
 		return
 	end
 	local TIERS = { [2] = "Gold", [3] = "Rainbow" }
+	local known = setmetatable({}, { __mode = "k" }) -- v192: every pet model seen, for the 2 s safety net
 	local function try(m)
 		if not m:IsA("Model") then
 			return
+		end
+		if m:GetAttribute("Species") then
+			known[m] = true
 		end
 		local sp, tier = m:GetAttribute("Species"), TIERS[m:GetAttribute("Tier") or 1]
 		if sp and tier and maps:FindFirstChild(sp) then
@@ -4970,6 +4974,31 @@ task.spawn(function()
 		try(d)
 	end
 	workspace.DescendantAdded:Connect(try)
+	-- v192 (user: some Gold/Rainbow pets had no flowing coat): safety net - every 2 s every Gold/Rainbow pet in the world
+	-- that has no coat yet gets one (pets that streamed in late, changed tier, or were missed); Output line for checking
+	local said = false
+	task.spawn(function()
+		while true do
+			task.wait(2)
+			local missing = 0
+			for m in pairs(known) do
+				if m.Parent and m:IsDescendantOf(workspace) and m:GetAttribute("Species") and TIERS[m:GetAttribute("Tier") or 1] and not (Coat.has and Coat.has(m)) then
+					missing += 1
+					local sp, tier = m:GetAttribute("Species"), TIERS[m:GetAttribute("Tier")]
+					if maps:FindFirstChild(sp) then
+						pcall(Coat.apply, m, sp, tier)
+					else
+						warn("[coat] no flow map for", sp)
+					end
+				end
+			end
+			if not said and Coat.stats and os.clock() > 20 then
+				said = true
+				local n, img, bad = Coat.stats()
+				print(("[coat] Gold/Rainbow pets live: %d, flowing images: %d, failed images: %d, fixed now: %d"):format(n, img, bad, missing))
+			end
+		end
+	end)
 	workspace.DescendantRemoving:Connect(function(d)
 		if d:IsA("Model") and d:GetAttribute("Species") then
 			pcall(Coat.clear, d)
@@ -5290,7 +5319,7 @@ do
 		if pos and root then
 			wPart.CFrame = CFrame.new(pos)
 			a0.Parent = root
-			wPart.Parent = workspace
+			wPart.Parent = nil -- v192 (user): no guide line / arrow in the world any more, only the text
 			bbT.Position = UDim2.fromOffset(0, -math.abs(math.sin(os.clock() * 3)) * 14)
 		else
 			wPart.Parent = nil

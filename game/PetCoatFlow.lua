@@ -271,4 +271,17 @@ function Coat.apply(model, petName, tier)
 	if not heartbeat then heartbeat = RunService.Heartbeat:Connect(tickCoats) end
 end
 
+-- v192: numbers for the Output check (live pets, groups with a flowing image, groups that failed to make one)
+function Coat.stats()
+	local n, img, bad = 0, 0, 0
+	for _ in models do n += 1 end
+	for _, g in groups do
+		if g.image then img += 1 elseif g.retry > 0 then bad += 1 end
+	end
+	return n, img, bad
+end
+function Coat.has(model)
+	return models[model] ~= nil
+end
+
 return Coat

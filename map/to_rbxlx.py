@@ -253,6 +253,7 @@ if TAG:
     GAME = (item('ReplicatedStorage', '<string name="Name">ReplicatedStorage</string>', scr('ModuleScript', 'Config', SRC / 'Config.lua') + scr('ModuleScript', 'Sfx', SRC / 'Sfx.lua') + scr('ModuleScript', 'UIMenus', SRC / 'UIMenus.lua') + scr('ModuleScript', 'HatchVFX', SRC / 'HatchVFX.lua') + scr('ModuleScript', 'PetAnim', SRC / 'PetAnim.lua') + scr('ModuleScript', 'PetAnimData', SRC / 'PetAnimData.lua') + scr('ModuleScript', 'PetCoatFlow', SRC / 'PetCoatFlow.lua') + coat_maps() + assets_folder() + bigegg() +
                  item('Folder', '<string name="Name">Shared</string>', ''.join(
                      scr('ModuleScript', n, SRC / 'treadmills' / f'{n}.lua') for n in ('TreadmillData', 'TreadmillBuilder', 'TreadmillConfig')))) +
+            item('ReplicatedFirst', '<string name="Name">ReplicatedFirst</string>', scr('LocalScript', 'Loading', SRC / 'Loading.client.lua')) +   # v192 loading screen
             item('ServerScriptService', '<string name="Name">ServerScriptService</string>', scr('Script', 'GameServer', SRC / 'Server.server.lua')) +
             item('StarterPlayer', '<string name="Name">StarterPlayer</string>',
                  item('StarterPlayerScripts', '<string name="Name">StarterPlayerScripts</string>', scr('LocalScript', 'GameClient', SRC / 'Client.client.lua'))))
