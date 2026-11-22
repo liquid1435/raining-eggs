@@ -2011,8 +2011,7 @@ def w2_cosmic(cr, z0):
         # exit portal pad at z -28 (the portal itself is Codex's GoldenPortalVFX, made by the game client)
         vcyl(0, 0, -28, 0.3, 30, DARK, 'Slate', **NC)
         vcyl(0, 0.05, -28, 0.3, 24, VIO, 'Neon', name='ExitPad', **NC)
-        b = blk(0, 0, -50, 34, 7, 2, DARK, 'Slate')
-        sign(b, 'Back', 'BACK TO THE GOLDEN NEST', 'walk into the portal', fg=(255, 255, 255), bg1=(120, 70, 230), bg2=(60, 30, 140), pps=16)
+        # v165 (user): no "BACK TO THE GOLDEN NEST" banner behind the exit portal any more
 
 
 def w2_moon(cr, z0):

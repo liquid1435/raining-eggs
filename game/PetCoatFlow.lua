@@ -22,6 +22,19 @@ local function channels(tier, phase)
 	return (c.R*value)^(1/2.2), (c.G*value)^(1/2.2), (c.B*value)^(1/2.2)
 end
 
+local GOLD = {{0, 96, 58, 8}, {.35, 196, 128, 20}, {.65, 255, 196, 46}, {.85, 255, 226, 110}, {1, 255, 246, 196}}
+local function goldRamp(phase, lum)
+	local t = math.min(1, (lum/255)^0.75*1.08 + 0.12*math.max(0, math.cos(phase/256*2*math.pi))^8)
+	for i = 1, #GOLD - 1 do
+		local a, b = GOLD[i], GOLD[i+1]
+		if t <= b[1] then
+			local k = (t - a[1])/(b[1] - a[1])
+			return math.round(a[2] + (b[2]-a[2])*k), math.round(a[3] + (b[3]-a[3])*k), math.round(a[4] + (b[4]-a[4])*k)
+		end
+	end
+	return 255, 246, 196
+end
+
 local function palette(tier)
 	if palettes[tier] then return palettes[tier] end
 	-- Repeat each phase row so a moving offset needs no modulus inside the pixel loop.
@@ -39,6 +52,10 @@ local function palette(tier)
 				return math.clamp(math.round(value*(1 + chroma*(c-1))), 0, 255)
 			end
 			local pixel = channel(r) + channel(g)*256 + channel(b)*65536 + 0xff000000
+			if tier == "Gold" then -- v165: bright gold ramp (same as blender/fix_pet_textures.py), the old one was olive
+				local gr, gg, gb = goldRamp(phase, lum)
+				pixel = gr + gg*256 + gb*65536 + 0xff000000
+			end
 			local offset = (lum*512 + phase)*4
 			buffer.writeu32(lut, offset, pixel)
 			buffer.writeu32(lut, offset+1024, pixel)

@@ -69,7 +69,8 @@ for k, e in enumerate(manifest):
             bpy.context.scene.collection.objects.link(o)
         o.name = o.data.name = base + suffix
         o.data.materials.clear()
-        o.data.materials.append(material(base + suffix, folder / png))
+        fixed = pathlib.Path('E:/rainingeggs/pet_tex') / pathlib.Path(e['folder']).name / png   # v165: crisp x4 + coloured Gold/Rainbow
+        o.data.materials.append(material(base + suffix, fixed if fixed.exists() else folder / png))
         o.location = ((k % 10) * 8, (k // 10) * 8, {'': 0, '_G': 20, '_R': 40}[suffix])
         made.append(o.name)
 

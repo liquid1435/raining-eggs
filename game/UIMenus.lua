@@ -372,16 +372,11 @@ function M.init(X)
 					Action:FireServer("equip", pet.idx)
 				end)
 			end
-			local v = X.petView(c, pet, UDim2.fromScale(1, 0.6), UDim2.fromScale(0, 0.04))
+			-- v165 (user: too many details): the pet big + only its rarity
+			local v = X.petView(c, pet, UDim2.fromScale(1, 0.78), UDim2.fromScale(0, 0.04))
 			v.ZIndex = 3
-			local nm = title(c, UDim2.fromScale(0.92, 0.13), UDim2.fromScale(0.04, 0.64), 22, C.petName(pet))
-			nm.ZIndex = 3
-			local rr = title(c, UDim2.fromScale(0.92, 0.1), UDim2.fromScale(0.04, 0.77), 18, rar.name:upper())
+			local rr = title(c, UDim2.fromScale(0.92, 0.14), UDim2.fromScale(0.04, 0.82), 24, rar.name:upper())
 			rr.ZIndex = 3
-			rr.Font = Enum.Font.FredokaOne
-			local inc = title(c, UDim2.fromScale(0.92, 0.1), UDim2.fromScale(0.04, 0.88), 20, "$" .. C.fmt(C.petIncome(pet)) .. "/s")
-			inc.TextColor3 = YELLOW
-			inc.ZIndex = 3
 			if (pet.t or 1) > 1 then
 				local tag = make("Frame", { Size = UDim2.fromScale(0.5, 0.12), Position = UDim2.fromScale(0.04, 0.04), ZIndex = 4 }, c)
 				face(tag, pet.t == 2 and GOLD or Color3.fromRGB(255, 110, 220), 1)

@@ -423,10 +423,16 @@ local function petView(parent, pet, size, pos)
 		Size = size, Position = pos, BackgroundTransparency = 1, Ambient = Color3.fromRGB(190, 190, 200),
 		LightColor = WHITE, LightDirection = Vector3.new(0.4, -1, 1),
 	}, parent)
-	local cam = make("Camera", { CFrame = CFrame.new(Vector3.new(-3.2, 2.2, -9), Vector3.new(0, 0.1, -0.4)), FieldOfView = 40 }, vp)
+	local cam = make("Camera", { FieldOfView = 40 }, vp)
 	vp.CurrentCamera = cam
 	local model = C.buildPet(pet, 1, true)
 	model.Parent = vp
+	-- v165 (user: the pets did not fit in the cards): the camera frames the whole pet, whatever its size
+	local bcf, bsize = model:GetBoundingBox()
+	local r = bsize.Magnitude / 2
+	local dist = r / math.sin(math.rad(cam.FieldOfView / 2)) * 0.92
+	local dir = Vector3.new(-3.2, 2.1, -8.6).Unit
+	cam.CFrame = CFrame.lookAt(bcf.Position + dir * dist, bcf.Position)
 	return vp, model
 end
 
