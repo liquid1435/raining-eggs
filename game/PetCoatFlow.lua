@@ -151,8 +151,16 @@ local function display(state, step)
 			if p.bound then p.tint.Color = white end
 		end
 		if not p.bound then
-			local r,gc,b = channels(g.tier,(p.phase-step)%256)
-			p.tint.Color = Color3.new(math.min(1,r),math.min(1,gc),math.min(1,b))
+			if g.tier == "Gold" then
+				-- v194 (user: Gold pets had no moving effect): no live image -> a bright shine band runs head -> tail over the
+				-- baked gold texture (Color only darkens a texture, so the parts dim and the band is full white)
+				local d = math.abs(((p.phase-step)%256)/256 - .5)*2 -- 0 = band centre, 1 = far
+				local L = .5 + .5*(1-d)^5
+				p.tint.Color = Color3.new(L, L*.97, L*.9)
+			else
+				local r,gc,b = channels(g.tier,(p.phase-step)%256)
+				p.tint.Color = Color3.new(math.min(1,r),math.min(1,gc),math.min(1,b))
+			end
 		end
 	end
 end
@@ -198,6 +206,11 @@ local function tickCoats()
 	if not g.image and now >= g.retry then
 		local ok, made = pcall(makeImage,g)
 		if not ok or not made then
+			if not Coat.warned then
+				Coat.warned = true
+				warn("[coat] no live image (shine fallback used):", ok and "CreateEditableImage returned nil" or made,
+					"- check Game Settings > Security > Allow Mesh / Image APIs")
+			end
 			release(g)
 			g.retry = now+10
 		end
