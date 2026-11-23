@@ -2050,21 +2050,22 @@ def w2_moon(cr, z0):
         for _ in range(26):                                   # moon rocks (v131: Blender rock meshes over the whole zone)
             x, z = cr.choice((-1, 1)) * cr.uniform(20, H - 14), cr.uniform(z0 + 6, z0 + 134)
             space_rock(cr, x, z, cr.uniform(0.8, 2.0), cr.choice((GREY, GREY2, (160, 164, 180))), (120, 200, 255) if cr.random() < 0.25 else None)
-        for _ in range(6):                                    # moon base domes with a glowing ring
-            x, z = cr.choice((-1, 1)) * cr.uniform(40, H - 30), cr.uniform(z0 + 20, z0 + 120)
-            sph(x, 2, z, cr.uniform(10, 16), (226, 230, 240), 'SmoothPlastic')
-            vcyl(x, 0, z, 0.4, 17, (120, 200, 255), 'Neon', **NC)
-        for sx in (-1, 1):                                    # flags
-            x, z = sx * 60, z0 + 70
-            blk(x, 0, z, 0.6, 14, 0.6, WHITE, 'Metal')
-            blk(x + sx * 3.2, 10, z, 6, 4, 0.3, (70, 130, 250) if sx < 0 else RED, **NC)
-        rx, rz = 92, z0 + 104                                 # small rocket
-        blk(rx, 0, rz, 6, 18, 6, WHITE, 'Metal')
-        blk(rx, 18, rz, 4.4, 4, 4.4, RED)
-        blk(rx, 22, rz, 2.4, 3, 2.4, RED)
-        for sx, sz in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-            blk(rx + sx * 4, 0, rz + sz * 4, 2.2 if sx else 1, 6, 1 if sx else 2.2, RED)
-        blk(rx - 3.05, 12, rz, 0.2, 3, 3, (90, 230, 255), 'Neon', **NC)
+        if not w2p(12):   # v230: Codex meshes replace these blocks once imported (w2_props)
+            for _ in range(6):                                    # moon base domes with a glowing ring
+                x, z = cr.choice((-1, 1)) * cr.uniform(40, H - 30), cr.uniform(z0 + 20, z0 + 120)
+                sph(x, 2, z, cr.uniform(10, 16), (226, 230, 240), 'SmoothPlastic')
+                vcyl(x, 0, z, 0.4, 17, (120, 200, 255), 'Neon', **NC)
+            for sx in (-1, 1):                                    # flags
+                x, z = sx * 60, z0 + 70
+                blk(x, 0, z, 0.6, 14, 0.6, WHITE, 'Metal')
+                blk(x + sx * 3.2, 10, z, 6, 4, 0.3, (70, 130, 250) if sx < 0 else RED, **NC)
+            rx, rz = 92, z0 + 104                                 # small rocket
+            blk(rx, 0, rz, 6, 18, 6, WHITE, 'Metal')
+            blk(rx, 18, rz, 4.4, 4, 4.4, RED)
+            blk(rx, 22, rz, 2.4, 3, 2.4, RED)
+            for sx, sz in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                blk(rx + sx * 4, 0, rz + sz * 4, 2.2 if sx else 1, 6, 1 if sx else 2.2, RED)
+            blk(rx - 3.05, 12, rz, 0.2, 3, 3, (90, 230, 255), 'Neon', **NC)
         egg(-92, 8, z0 + 30, 2.2, (220, 225, 245), (120, 140, 255), beam=True, name='Decor')
 
 
@@ -2076,15 +2077,16 @@ def w2_nebula(cr, z0):
         w2_floor(z0, z0 + 140, TEAL, TEAL2, DEEP)
         w2_walls(z0, z0 + 140, (60, 150, 170), (22, 52, 80))
         w2_dots(cr, z0, z0 + 140, (PINK, CYAN, GOLDN), 90)
-        for _ in range(18):                                   # glowing coral: stacked neon branches
-            x, z = cr.choice((-1, 1)) * cr.uniform(18, H - 8), cr.uniform(z0 + 8, z0 + 132)
-            col = cr.choice((PINK, CYAN, (190, 120, 255), GOLDN))
-            h = 0
-            for j in range(cr.randint(3, 6)):
-                hh = cr.uniform(2.5, 4.5)
-                blk(x + cr.uniform(-1.2, 1.2), h, z + cr.uniform(-1.2, 1.2), 1.6, hh, 1.6, col, 'Neon')
-                h += hh * 0.9
-            blk(x + 1.8, h * 0.5, z, 3, 1.2, 1.2, col, 'Neon', **NC)
+        if not w2p(13):   # v230: Codex meshes replace these blocks once imported (w2_props)
+            for _ in range(18):                                   # glowing coral: stacked neon branches
+                x, z = cr.choice((-1, 1)) * cr.uniform(18, H - 8), cr.uniform(z0 + 8, z0 + 132)
+                col = cr.choice((PINK, CYAN, (190, 120, 255), GOLDN))
+                h = 0
+                for j in range(cr.randint(3, 6)):
+                    hh = cr.uniform(2.5, 4.5)
+                    blk(x + cr.uniform(-1.2, 1.2), h, z + cr.uniform(-1.2, 1.2), 1.6, hh, 1.6, col, 'Neon')
+                    h += hh * 0.9
+                blk(x + 1.8, h * 0.5, z, 3, 1.2, 1.2, col, 'Neon', **NC)
         for _ in range(9):                                    # floating jellyfish (soft, up in the air)
             x, y, z = cr.uniform(-H + 20, H - 20), cr.uniform(18, 40), cr.uniform(z0 + 15, z0 + 125)
             col = cr.choice((PINK, CYAN, (190, 120, 255)))
@@ -2119,12 +2121,13 @@ def w2_asteroid(cr, z0):
             part((s2 * 1.3, s2, s2 * 1.1), C(x, y, z) * R(cr.uniform(0, 40), cr.uniform(0, 90), cr.uniform(0, 40)),
                  shade(DUST, cr.uniform(0.8, 1.2)), 'Slate', **NC)
             blk(x, y + s2 / 2, z, 1, 1, 1, ORE, 'Neon', **NC)
-        for sx in (-1, 1):                                    # mining drill towers
-            x, z = sx * 70, z0 + 50 + sx * 20
-            for k in range(4):
-                blk(x, k * 6, z, 7 - k, 6, 7 - k, (70, 74, 84) if k % 2 else (230, 170, 40), 'Metal')
-            blk(x, 24, z, 1, 10, 1, (200, 200, 210), 'Metal')
-            light(blk(x, 34, z, 1.6, 1.6, 1.6, (255, 70, 70), 'Neon', **NC), (255, 70, 70), 14, 1.4)
+        if not w2p(14):   # v230: Codex meshes replace these blocks once imported (w2_props)
+            for sx in (-1, 1):                                    # mining drill towers
+                x, z = sx * 70, z0 + 50 + sx * 20
+                for k in range(4):
+                    blk(x, k * 6, z, 7 - k, 6, 7 - k, (70, 74, 84) if k % 2 else (230, 170, 40), 'Metal')
+                blk(x, 24, z, 1, 10, 1, (200, 200, 210), 'Metal')
+                light(blk(x, 34, z, 1.6, 1.6, 1.6, (255, 70, 70), 'Neon', **NC), (255, 70, 70), 14, 1.4)
         egg(-92, 8, z0 + 92, 2.2, (150, 120, 100), ORE, beam=True, name='Decor')
 
 
@@ -2138,17 +2141,18 @@ def w2_solar(cr, z0):
             z = z0 + 14 + k * 28 + cr.uniform(-4, 4)
             for sx in (-1, 1):
                 blk(sx * (H / 2 + 6), 0, z, H - 28, 0.25, 3.5, LAVA, 'Neon', yaw=cr.uniform(-8, 8), **NC)
-        for _ in range(12):                                   # magma pillars with a glowing top
-            x, z = cr.choice((-1, 1)) * cr.uniform(26, H - 18), cr.uniform(z0 + 10, z0 + 130)
-            h = cr.uniform(8, 20)
-            blk(x, 0, z, 5, h, 5, ROCK2, 'Basalt')
-            light(blk(x, h, z, 5.4, 1.4, 5.4, LAVA, 'Neon'), LAVA, 20, 1.6)
-        for sx in (-1, 1):                                    # anvils of the forge
-            x, z = sx * 64, z0 + 96
-            blk(x, 0, z, 10, 4, 6, (60, 60, 70), 'Metal')
-            blk(x, 4, z, 6, 3, 4, (80, 80, 92), 'Metal')
-            blk(x, 7, z, 14, 2.4, 5, (90, 90, 104), 'Metal')
-            light(blk(x, 9.4, z, 4, 0.6, 2, GOLDS, 'Neon', **NC), GOLDS, 16, 1.5)
+        if not w2p(15):   # v230: Codex meshes replace these blocks once imported (w2_props)
+            for _ in range(12):                                   # magma pillars with a glowing top
+                x, z = cr.choice((-1, 1)) * cr.uniform(26, H - 18), cr.uniform(z0 + 10, z0 + 130)
+                h = cr.uniform(8, 20)
+                blk(x, 0, z, 5, h, 5, ROCK2, 'Basalt')
+                light(blk(x, h, z, 5.4, 1.4, 5.4, LAVA, 'Neon'), LAVA, 20, 1.6)
+            for sx in (-1, 1):                                    # anvils of the forge
+                x, z = sx * 64, z0 + 96
+                blk(x, 0, z, 10, 4, 6, (60, 60, 70), 'Metal')
+                blk(x, 4, z, 6, 3, 4, (80, 80, 92), 'Metal')
+                blk(x, 7, z, 14, 2.4, 5, (90, 90, 104), 'Metal')
+                light(blk(x, 9.4, z, 4, 0.6, 2, GOLDS, 'Neon', **NC), GOLDS, 16, 1.5)
         for _ in range(26):                                   # embers in the air
             blk(cr.uniform(-H + 10, H - 10), cr.uniform(5, 40), cr.uniform(z0 + 4, z0 + 136), 0.6, 0.6, 0.6, cr.choice((LAVA, GOLDS)), 'Neon', **NC)
         light(sph(0, 140, z0 + 70, 60, (255, 170, 50), 'Neon', **NC), (255, 170, 60), 60, 2)   # the sun overhead
@@ -2162,16 +2166,17 @@ def w2_ice(cr, z0):
         w2_floor(z0, z0 + 140, ICE, ICE2, DEEP)
         w2_walls(z0, z0 + 140, (230, 244, 255), (120, 160, 200))
         w2_dots(cr, z0, z0 + 140, (WHITE, GLOW), 60)
-        for _ in range(22):                                   # ice spikes
-            x, z = cr.choice((-1, 1)) * cr.uniform(22, H - 14), cr.uniform(z0 + 6, z0 + 134)
-            for j in range(cr.randint(1, 3)):
-                h = cr.uniform(6, 16)
-                part((cr.uniform(2, 3.4), h, cr.uniform(2, 3.4)), C(x + cr.uniform(-3, 3), h / 2 - 1, z + cr.uniform(-3, 3)) *
-                     R(cr.uniform(-12, 12), cr.uniform(0, 90), cr.uniform(-12, 12)), cr.choice((GLOW, (180, 230, 255), WHITE)), 'Glass',
-                     transparency=0.2)
-        for _ in range(10):                                   # snow mounds
-            x, z = cr.choice((-1, 1)) * cr.uniform(30, H - 24), cr.uniform(z0 + 10, z0 + 130)
-            sph(x, -1, z, cr.uniform(8, 14), WHITE, 'Snow')
+        if not w2p(16):   # v230: Codex meshes replace these blocks once imported (w2_props)
+            for _ in range(22):                                   # ice spikes
+                x, z = cr.choice((-1, 1)) * cr.uniform(22, H - 14), cr.uniform(z0 + 6, z0 + 134)
+                for j in range(cr.randint(1, 3)):
+                    h = cr.uniform(6, 16)
+                    part((cr.uniform(2, 3.4), h, cr.uniform(2, 3.4)), C(x + cr.uniform(-3, 3), h / 2 - 1, z + cr.uniform(-3, 3)) *
+                         R(cr.uniform(-12, 12), cr.uniform(0, 90), cr.uniform(-12, 12)), cr.choice((GLOW, (180, 230, 255), WHITE)), 'Glass',
+                         transparency=0.2)
+            for _ in range(10):                                   # snow mounds
+                x, z = cr.choice((-1, 1)) * cr.uniform(30, H - 24), cr.uniform(z0 + 10, z0 + 130)
+                sph(x, -1, z, cr.uniform(8, 14), WHITE, 'Snow')
         cx, cy, cz = -60, 70, z0 + 60                         # a comet flying over the zone, with its tail
         light(sph(cx, cy, cz, 12, (220, 245, 255), 'Neon', **NC), GLOW, 40, 2)
         for j in range(1, 12):
@@ -2187,21 +2192,22 @@ def w2_jungle(cr, z0):
         w2_floor(z0, z0 + 140, MOSS, MOSS2, DEEP)
         w2_walls(z0, z0 + 140, (90, 170, 110), (30, 64, 50))
         w2_dots(cr, z0, z0 + 140, (LIME, VIO, PINK), 80)
-        for _ in range(16):                                   # alien stalks with glowing bulbs
-            x, z = cr.choice((-1, 1)) * cr.uniform(20, H - 12), cr.uniform(z0 + 8, z0 + 132)
-            h = cr.uniform(10, 22)
-            blk(x, 0, z, 1.4, h, 1.4, (60, 120, 80), 'Grass')
-            col = cr.choice((LIME, VIO, PINK))
-            light(sph(x, h + 1.5, z, cr.uniform(3, 5), col, 'Neon'), col, 16, 1.3)
-        for _ in range(8):                                    # giant alien mushrooms
-            x, z = cr.choice((-1, 1)) * cr.uniform(30, H - 24), cr.uniform(z0 + 12, z0 + 128)
-            mushroom(x, z, cr.uniform(8, 14), cr.uniform(10, 16), cr.choice((VIO, (90, 230, 200), PINK)), LIME, glow=True)
-        ux, uz = 66, z0 + 100                                 # a crashed UFO
-        part((26, 3, 26), C(ux, 3, uz) * R(14, 0, 8), (180, 186, 200), 'Metal')
-        sph(ux, 5, uz, 11, (140, 230, 255), 'Glass', transparency=0.3)
-        for j in range(8):
-            a = j * 0.785
-            blk(ux + math.cos(a) * 12, 3, uz + math.sin(a) * 12, 1.4, 1, 1.4, LIME, 'Neon', **NC)
+        if not w2p(17):   # v230: Codex meshes replace these blocks once imported (w2_props)
+            for _ in range(16):                                   # alien stalks with glowing bulbs
+                x, z = cr.choice((-1, 1)) * cr.uniform(20, H - 12), cr.uniform(z0 + 8, z0 + 132)
+                h = cr.uniform(10, 22)
+                blk(x, 0, z, 1.4, h, 1.4, (60, 120, 80), 'Grass')
+                col = cr.choice((LIME, VIO, PINK))
+                light(sph(x, h + 1.5, z, cr.uniform(3, 5), col, 'Neon'), col, 16, 1.3)
+            for _ in range(8):                                    # giant alien mushrooms
+                x, z = cr.choice((-1, 1)) * cr.uniform(30, H - 24), cr.uniform(z0 + 12, z0 + 128)
+                mushroom(x, z, cr.uniform(8, 14), cr.uniform(10, 16), cr.choice((VIO, (90, 230, 200), PINK)), LIME, glow=True)
+            ux, uz = 66, z0 + 100                                 # a crashed UFO
+            part((26, 3, 26), C(ux, 3, uz) * R(14, 0, 8), (180, 186, 200), 'Metal')
+            sph(ux, 5, uz, 11, (140, 230, 255), 'Glass', transparency=0.3)
+            for j in range(8):
+                a = j * 0.785
+                blk(ux + math.cos(a) * 12, 3, uz + math.sin(a) * 12, 1.4, 1, 1.4, LIME, 'Neon', **NC)
         egg(-92, 8, z0 + 40, 2.2, LIME, VIO, beam=True, name='Decor')
 
 
@@ -2219,12 +2225,13 @@ def w2_blackhole(cr, z0):
             x, y, z = cr.uniform(-H + 14, H - 14), cr.uniform(10, 55), cr.uniform(z0 + 8, z0 + 132)
             s2 = cr.uniform(1.5, 4)
             part((s2, s2, s2), C(x, y, z) * R(cr.uniform(0, 90), cr.uniform(0, 90), cr.uniform(0, 90)), cr.choice((VOID2, (70, 60, 90))), 'Slate', **NC)
-        for sx in (-1, 1):                                    # gravity pillars
-            for k in range(3):
-                x, z = sx * 56, z0 + 25 + k * 45
-                blk(x, 0, z, 4, 26, 4, (40, 30, 64), 'Slate')
-                for j in range(3):
-                    blk(x, 6 + j * 8, z, 5.2, 0.8, 5.2, PINK if j % 2 else VIO, 'Neon', **NC)
+        if not w2p(18):   # v230: Codex meshes replace these blocks once imported (w2_props)
+            for sx in (-1, 1):                                    # gravity pillars
+                for k in range(3):
+                    x, z = sx * 56, z0 + 25 + k * 45
+                    blk(x, 0, z, 4, 26, 4, (40, 30, 64), 'Slate')
+                    for j in range(3):
+                        blk(x, 6 + j * 8, z, 5.2, 0.8, 5.2, PINK if j % 2 else VIO, 'Neon', **NC)
         bx, by, bz = 0, 150, z0 + 70                          # the black hole in the sky + its glowing disk
         sph(bx, by, bz, 50, (0, 0, 0), 'SmoothPlastic', **NC)
         for r0, col, tr in ((34, GOLDS, 0.1), (42, (255, 140, 60), 0.3), (52, VIO, 0.5)):
@@ -2245,24 +2252,25 @@ def w2_station(cr, z0):
         for z in range(int(z0) + 7, int(z0) + 140, 14):      # neon conduits on the floor
             for sx in (-1, 1):
                 blk(sx * (H / 2 + 8), 0.02, z, H - 40, 0.12, 0.5, CYAN, 'Neon', **NC)
-        for _ in range(18):                                   # cargo crates
-            x, z = cr.choice((-1, 1)) * cr.uniform(26, H - 16), cr.uniform(z0 + 8, z0 + 132)
-            s2 = cr.uniform(4, 7)
-            blk(x, 0, z, s2, s2, s2, cr.choice(((230, 150, 50), (90, 110, 140), (200, 60, 60))), 'DiamondPlate', yaw=cr.choice((0, 15, 45)))
-            blk(x, s2, z, s2 * 0.6, 0.2, 0.4, YEL, 'Neon', **NC)
-        for sx in (-1, 1):                                    # antenna towers with blinking tips
-            for k in range(2):
-                x, z = sx * 110, z0 + 30 + k * 70
-                blk(x, 0, z, 6, 4, 6, (70, 74, 86), 'Metal')
-                blk(x, 4, z, 1.2, 26, 1.2, (200, 204, 216), 'Metal')
-                part((10, 0.6, 10), C(x, 26, z) * R(30, 0, 0), (225, 228, 238), 'Metal')
-                light(blk(x, 30, z, 1.4, 1.4, 1.4, RED, 'Neon', **NC), RED, 12, 1.2)
-        for sx in (-1, 1):                                    # robot arms
-            x, z = sx * 60, z0 + 70
-            blk(x, 0, z, 5, 3, 5, (60, 64, 76), 'Metal')
-            part((2, 14, 2), C(x, 9, z) * R(0, 0, sx * 25), YEL, 'Metal')
-            part((2, 10, 2), C(x - sx * 6, 17, z) * R(0, 0, -sx * 60), YEL, 'Metal')
-            light(blk(x - sx * 10, 19, z, 2, 2, 2, CYAN, 'Neon', **NC), CYAN, 14, 1.4)
+        if not w2p(19):   # v230: Codex meshes replace these blocks once imported (w2_props)
+            for _ in range(18):                                   # cargo crates
+                x, z = cr.choice((-1, 1)) * cr.uniform(26, H - 16), cr.uniform(z0 + 8, z0 + 132)
+                s2 = cr.uniform(4, 7)
+                blk(x, 0, z, s2, s2, s2, cr.choice(((230, 150, 50), (90, 110, 140), (200, 60, 60))), 'DiamondPlate', yaw=cr.choice((0, 15, 45)))
+                blk(x, s2, z, s2 * 0.6, 0.2, 0.4, YEL, 'Neon', **NC)
+            for sx in (-1, 1):                                    # antenna towers with blinking tips
+                for k in range(2):
+                    x, z = sx * 110, z0 + 30 + k * 70
+                    blk(x, 0, z, 6, 4, 6, (70, 74, 86), 'Metal')
+                    blk(x, 4, z, 1.2, 26, 1.2, (200, 204, 216), 'Metal')
+                    part((10, 0.6, 10), C(x, 26, z) * R(30, 0, 0), (225, 228, 238), 'Metal')
+                    light(blk(x, 30, z, 1.4, 1.4, 1.4, RED, 'Neon', **NC), RED, 12, 1.2)
+            for sx in (-1, 1):                                    # robot arms
+                x, z = sx * 60, z0 + 70
+                blk(x, 0, z, 5, 3, 5, (60, 64, 76), 'Metal')
+                part((2, 14, 2), C(x, 9, z) * R(0, 0, sx * 25), YEL, 'Metal')
+                part((2, 10, 2), C(x - sx * 6, 17, z) * R(0, 0, -sx * 60), YEL, 'Metal')
+                light(blk(x - sx * 10, 19, z, 2, 2, 2, CYAN, 'Neon', **NC), CYAN, 14, 1.4)
         light(sph(-70, 24, z0 + 110, 16, CYAN, 'Glass', transparency=0.45, **NC), CYAN, 30, 1.5)   # hologram planet
         blk(-70, 0, z0 + 110, 8, 1.2, 8, (60, 64, 76), 'Metal')
         egg(92, 8, z0 + 40, 2.2, PLATE2, CYAN, beam=True, name='Decor')
@@ -2290,13 +2298,14 @@ def w2_throne(cr, z0):
         tz = z0 + 124                                         # the throne of stars at the end of the road
         blk(0, 0, tz, 40, 2, 20, GOLD1, 'Metal')
         blk(0, 2, tz, 34, 2, 16, GOLD2, 'Metal')
-        blk(0, 4, tz + 2, 12, 6, 8, (120, 40, 160), 'Fabric')
-        blk(0, 10, tz + 5, 12, 22, 2, GOLD1, 'Metal')
-        for sx in (-1, 1):
-            blk(sx * 7, 4, tz + 2, 2, 10, 8, GOLD2, 'Metal')
-        for j in range(7):                                    # star crown on the back of the throne
-            a = math.radians(-60 + j * 20)
-            part((1.4, 7, 1.4), C(math.sin(a) * 7, 34 + math.cos(a) * 3, tz + 5) * R(0, 0, -math.degrees(a)), GOLD2, 'Neon', **NC)
+        if not w2p(20):   # v230: Codex meshes replace these blocks once imported (w2_props)
+            blk(0, 4, tz + 2, 12, 6, 8, (120, 40, 160), 'Fabric')
+            blk(0, 10, tz + 5, 12, 22, 2, GOLD1, 'Metal')
+            for sx in (-1, 1):
+                blk(sx * 7, 4, tz + 2, 2, 10, 8, GOLD2, 'Metal')
+            for j in range(7):                                    # star crown on the back of the throne
+                a = math.radians(-60 + j * 20)
+                part((1.4, 7, 1.4), C(math.sin(a) * 7, 34 + math.cos(a) * 3, tz + 5) * R(0, 0, -math.degrees(a)), GOLD2, 'Neon', **NC)
         light(sph(0, 42, tz + 5, 6, (255, 240, 170), 'Neon', **NC), (255, 230, 150), 50, 2.4)
         egg(-26, 4, tz, 4, GOLD2, VIO, beam=True, name='Decor')
         egg(26, 4, tz, 4, VIO, GOLD2, beam=True, name='Decor')
@@ -2534,6 +2543,65 @@ def w2_scenery(cr):
                         blk(x, s2, z, 0.8, 0.8, 0.8, glow, 'Neon', **NC)
 
 
+
+# ------------------------------------------------------------------ v230: Codex world 2 props (codex_w2props, 6 per zone)
+def w2p(zone):
+    """names of the 6 Codex props of world 2 zone 11..20, or [] while they are not imported yet (then the old blocks stay)"""
+    pm = mesh_db()[1]
+    names = sorted(k for k in pm if k.startswith(f'Map_W2_{zone}_') and not k.endswith('Neon'))
+    return names if names and has_mesh(*names) else []
+
+
+def w2_props(cr, start):
+    """scatter each zone's 6 meshes over both sides of the road (clear of the road, the terraces, the hero and
+    whatever already stands there), big ones 2x, small ones 3-4x; the Neon companion mesh goes on the same spot"""
+    H = WORLD2['half']
+    for zone in range(11, 21):
+        names = w2p(zone)
+        if not names:
+            continue
+        k = zone - 10
+        z0 = (k - 1) * 140
+        xmax = H - 56 if k >= 4 else H - 18                  # zones 14-20 have terraces along the walls
+        taken = [(q["p"][0], q["p"][2], max(q["size"][0], q["size"][2]) / 2) for q in PARTS[start:]
+                 if z0 - 10 < q['p'][2] < z0 + 150 and q['p'][1] < 30 and 2.5 < max(q['size']) < 34 and q['m'] != 'Neon'
+                 and q.get('transparency', 0) < 0.9 and abs(q['p'][0]) > 16]
+        grp = [g for g in ('Zone11_CosmicNest', 'Zone12_MoonCraters', 'Zone13_NebulaReef', 'Zone14_AsteroidBelt', 'Zone15_SolarForge',
+                           'Zone16_CometGlacier', 'Zone17_AlienJungle', 'Zone18_BlackHole', 'Zone19_StarStation', 'Zone20_GalaxyThrone')][k - 1]
+        pm = mesh_db()[1]
+        order = sorted(names, key=lambda n: -max(pm[n]['size'][0], pm[n]['size'][2]))
+        with group(grp, unique=False):
+            if zone == 20:                                    # the throne mesh on the gold steps at the end of the carpet
+                n = 'Map_W2_20_GalaxyThrone'
+                mpart(n, 0, 4, z0 + 126, 0, 1.0)
+                if n + 'Neon' in pm and has_mesh(n + 'Neon'):
+                    mpart(n + 'Neon', 0, 4, z0 + 126, 0, 1.0, mat='Neon', cancollide=False)
+                order.remove(n)
+            for n in order:
+                sz = pm[n]['size']
+                r = max(sz[0], sz[2]) / 2
+                want = 2 if r > 11 else (3 if r > 6 else 4)
+                placed = 0
+                for tries in range(160):
+                    if placed >= want:
+                        break
+                    sx = (1 if placed % 2 == 0 else -1) * (1 if tries < 80 else -1)
+                    x = sx * cr.uniform(22 + r, max(23 + r, xmax - r))
+                    z = cr.uniform(z0 + 8 + r, z0 + 132 - r)
+                    if zone == 20 and abs(x) < 42:            # keep the carpet and the gold pillars free
+                        continue
+                    if k >= 4 and abs(x - W2_PRO[k][4] * 100) < 40 + r and abs(z - (z0 + 70)) < 40 + r:
+                        continue                              # the hero landmark
+                    if any(math.hypot(x - tx, z - tz) < r + tr + 3 for tx, tz, tr in taken):
+                        continue
+                    yaw = cr.uniform(-30, 30) + (90 if sx > 0 else -90)   # face the road roughly
+                    mpart(n, x, 0, z, yaw, 1.0)
+                    if n + 'Neon' in pm and has_mesh(n + 'Neon'):
+                        mpart(n + 'Neon', x, 0, z, yaw, 1.0, mat='Neon', cancollide=False)
+                    taken.append((x, z, r))
+                    placed += 1
+
+
 def world2():
     cr = random.Random(119)
     start = len(PARTS)
@@ -2544,6 +2612,7 @@ def world2():
         fn(cr, 420 + k * 140)
     w2_pro(random.Random(139))
     w2_scenery(random.Random(121))
+    w2_props(random.Random(230), start)   # v230
     with group('W2Gates', unique=False):
         for k, (title, c1, c2) in enumerate(W2_GATES):
             gate(140 * (k + 1), title, None, c1, c2, n=k + 12)   # v139: Blender arch like world 1 (Map_ZoneArch_12..20) once imported
