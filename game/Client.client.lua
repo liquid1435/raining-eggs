@@ -874,6 +874,12 @@ local function showNote(msg, kind)
 	TweenService:Create(noteScale, TweenInfo.new(0.2, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 	if os.clock() < NOTE_QUIET_UNTIL or kind == "gift" then
 		-- v212 (user): no sounds right after the loading screen (welcome messages, synced levels, the gift)
+	elseif kind == "legend" and msg:find(" reached REBIRTH ", 1, true) then
+		-- v238 (user): no rebirth sound, only fireworks (silent) round the player who did the rebirth
+		local mine = plr.DisplayName .. " reached REBIRTH "
+		if msg:sub(1, #mine) == mine and UI.fireworks then
+			UI.fireworks(16, true)
+		end
 	elseif kind == "legend" then
 		sfx("reveal_legend", 0.6)
 	elseif kind == "sold" and C.SELL_SOUND and C.SELL_SOUND ~= "" then
@@ -1947,7 +1953,7 @@ end
 
 -- fireworks around you when you open a new zone: rockets fly up from around the player and burst into coloured sparks
 local FW_COLS = { Color3.fromRGB(255, 70, 90), Color3.fromRGB(255, 210, 60), Color3.fromRGB(80, 220, 255), Color3.fromRGB(120, 255, 120), Color3.fromRGB(200, 120, 255), Color3.fromRGB(255, 150, 40) }
-local function fireworks(count)
+local function fireworks(count, silent)
 	local ch = plr.Character
 	local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
 	if not hrp then
@@ -1984,12 +1990,15 @@ local function fireworks(count)
 				burst:Emit(90)
 				local glow = make("PointLight", { Color = col, Brightness = 6, Range = 30 }, rocket)
 				TweenService:Create(glow, TweenInfo.new(0.7), { Brightness = 0 }):Play()
-				sfx("egg_pop", 0.35, 0.55 + math.random() * 0.25, rocket)
+				if not silent then -- v238: the rebirth fireworks are silent (user)
+					sfx("egg_pop", 0.35, 0.55 + math.random() * 0.25, rocket)
+				end
 				Debris:AddItem(rocket, 2.5)
 			end)
 		end)
 	end
 end
+UI.fireworks = fireworks -- v238: showNote (above) uses it for the rebirth
 
 local function onUnlocked()
 	local unlocked = attr("Unlocked", 1)
