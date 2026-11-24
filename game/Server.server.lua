@@ -67,6 +67,10 @@ for i = 1, 8 do
 end
 
 local buyTrain -- v162: defined next to buy()
+-- v232: pen space upgrade (UPGRADES menu): every level = one more pet in your pen
+local function penMax(d)
+	return C.PEN_MAX + (d and d.pen or 0)
+end
 
 -- treadmills from TreadmillPack (ReplicatedStorage.Shared): 20 models, a better one every 3 training levels
 local Shared = RS:FindFirstChild("Shared")
@@ -378,6 +382,8 @@ local function sync(plr)
 	end
 	plr:SetAttribute("BasketLv", d.basket)
 	plr:SetAttribute("LuckLv", d.luck)
+	plr:SetAttribute("PenLv", d.pen or 0)
+	plr:SetAttribute("PenMax", penMax(d))
 	plr:SetAttribute("Rebirth", d.rebirth)
 	plr:SetAttribute("Income", income(d))
 	plr:SetAttribute("Pets", #d.pets)
@@ -714,7 +720,7 @@ local function fuse(d)
 	end
 	d.pets, d.stored = {}, {}
 	for _, e in ipairs(all) do
-		table.insert((e.eq and #d.pets < C.PEN_MAX) and d.pets or d.stored, e.pet)
+		table.insert((e.eq and #d.pets < penMax(d)) and d.pets or d.stored, e.pet)
 	end
 	return made
 end
@@ -744,7 +750,7 @@ local function deposit(plr)
 		say(plr, C.FUSE .. " pets fused into " .. C.petName(made[#made]) .. "!", "legend")
 	elseif sold > 0 then
 		say(plr, "Storage is full! Weakest pets sold for $" .. C.fmt(sold), "cash")
-	elseif n > 0 and #d.pets >= C.PEN_MAX then
+	elseif n > 0 and #d.pets >= penMax(d) then
 		say(plr, "Pen is full! New pets wait in the bar below", "info")
 	elseif n > 0 then
 		say(plr, "New pet! Pick it in the bar below and place it in your pen", "info")
@@ -761,8 +767,8 @@ local function equipPet(plr, i)
 	if list == d.pets then
 		table.insert(d.stored, table.remove(d.pets, j))
 		byIncome(d.stored)
-	elseif #d.pets >= C.PEN_MAX then
-		say(plr, "Your pen is full (" .. C.PEN_MAX .. ")! Unequip a pet first", "bad")
+	elseif #d.pets >= penMax(d) then
+		say(plr, "Your pen is full (" .. penMax(d) .. ")! Unequip a pet first", "bad")
 		return
 	else
 		table.insert(d.pets, table.remove(d.stored, j))
@@ -783,7 +789,7 @@ local function equipBest(plr)
 	byIncome(all)
 	d.pets, d.stored = {}, {}
 	for k, pet in ipairs(all) do
-		table.insert(k <= C.PEN_MAX and d.pets or d.stored, pet)
+		table.insert(k <= penMax(d) and d.pets or d.stored, pet)
 	end
 	renderPen(plr)
 	sync(plr)
@@ -808,7 +814,7 @@ local function sellCarry(plr)
 end
 
 -- ------------------------------------------------------------ upgrades (ProximityPrompts; the client writes the price on them)
-local UP_NAME = { train = "Training", basket = "Basket", luck = "Luck" }
+local UP_NAME = { train = "Training", basket = "Basket", luck = "Luck", pen = "Pen" }
 local function buy(plr, kind, part)
 	local d = data[plr]
 	if not d then
@@ -846,6 +852,10 @@ local function buy(plr, kind, part)
 			task.spawn(addBasket, plr, plr.Character)
 		end
 		say(plr, C.BASKETS[lv + 2].name .. "! Holds " .. C.basketMax(lv + 1) .. " pets", "buy")
+		return
+	end
+	if kind == "pen" then
+		say(plr, "Bigger pen! It holds " .. penMax(d) .. " pets now", "buy")
 		return
 	end
 	if kind == "train" and TList and treadTier(lv + 1) ~= treadTier(lv) then
@@ -1103,8 +1113,8 @@ Action.OnServerEvent:Connect(function(plr, what, a, x, z)
 		if not pet then
 			return
 		end
-		if #d.pets >= C.PEN_MAX then
-			say(plr, "Your pen is full (" .. C.PEN_MAX .. ")! Pick a pet up first", "bad")
+		if #d.pets >= penMax(d) then
+			say(plr, "Your pen is full (" .. penMax(d) .. ")! Pick a pet up first", "bad")
 			return
 		end
 		local c = base.pen.Position
@@ -1356,12 +1366,13 @@ local function load(plr)
 	-- equipped pets (saved.pets) and stored pets (saved.stored, v119); an old pen bigger than C.PEN_MAX keeps
 	-- its extra pets in storage instead of losing them
 	local pets, stored = {}, {}
+	local penLv = math.clamp(math.floor(tonumber(saved.pen) or 0), 0, C.MAX_LV.pen)
 	local function readPets(list, into)
 		for _, pet in ipairs(type(list) == "table" and list or {}) do
 			local t = type(pet) == "table" and (tonumber(pet.t) or 1)
 			if t and C.ZONES[pet.z] and C.ZONES[pet.z].pets[pet.i] and C.TIER[t] then
 				local v = math.clamp(math.floor(tonumber(pet.v) or 1), 1, C.variantCount(pet.z, pet.i))
-				table.insert((into == pets and #pets < C.PEN_MAX) and pets or stored, { z = pet.z, i = pet.i, t = t, v = v > 1 and v or nil, px = tonumber(pet.px), pz = tonumber(pet.pz) })
+				table.insert((into == pets and #pets < C.PEN_MAX + penLv) and pets or stored, { z = pet.z, i = pet.i, t = t, v = v > 1 and v or nil, px = tonumber(pet.px), pz = tonumber(pet.pz) })
 			end
 		end
 	end
@@ -1389,6 +1400,7 @@ local function load(plr)
 		train = tonumber(saved.train) or 0,
 		basket = tonumber(saved.basket) or 0,
 		luck = tonumber(saved.luck) or 0,
+		pen = penLv, -- v232: pen space level (optional save key)
 		rebirth = tonumber(saved.rebirth) or 0,
 		caught = tonumber(saved.caught) or 0,
 		bestOdds = tonumber(saved.bestOdds) or 0,
@@ -1467,7 +1479,7 @@ local function save(plr)
 	end
 	pcall(function()
 		store:SetAsync("u" .. plr.UserId, {
-			cash = d.cash, speed = d.speed, train = d.train, basket = d.basket, luck = d.luck, rebirth = d.rebirth,
+			cash = d.cash, speed = d.speed, train = d.train, basket = d.basket, luck = d.luck, pen = d.pen, rebirth = d.rebirth,
 			caught = d.caught, bestOdds = d.bestOdds, bestName = d.bestName, pets = d.pets, stored = d.stored, index = keys,
 			unlocked = d.unlocked, dailyDay = d.dailyDay, dailyLast = d.dailyLast, eggs = d.bag, altar = altarList(d), gift = d.gift, tut = d.tut,
 		})
@@ -2034,7 +2046,7 @@ Action.OnServerEvent:Connect(function(plr, what, kind)
 	elseif what == "hatch1" then
 		hatchBag(plr, kind, 1) -- the EGGS menu: the player picks which egg to open, one at a time
 	elseif what == "upgrade" then
-		if kind == "basket" or kind == "luck" then
+		if kind == "basket" or kind == "luck" or kind == "pen" then
 			buy(plr, kind, nil)
 		elseif kind == "train" then
 			buyTrain(plr)

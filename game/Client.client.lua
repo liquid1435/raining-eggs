@@ -65,7 +65,7 @@ end
 -- the server does the real buy and its numbers replace these (a refused buy sends the real numbers back)
 UI.buyUpgrade = function(kind, viaShop)
 	local p = game:GetService("Players").LocalPlayer
-	local attrName = ({ train = "TrainLv", luck = "LuckLv", basket = "BasketLv" })[kind]
+	local attrName = ({ train = "TrainLv", luck = "LuckLv", basket = "BasketLv", pen = "PenLv" })[kind]
 	local cfg = require(game:GetService("ReplicatedStorage"):WaitForChild("Config"))
 	local lv = attrName and p:GetAttribute(attrName) or nil
 	if lv and lv < cfg.MAX_LV[kind] then
@@ -3967,6 +3967,47 @@ do
 	end)
 	plr:GetAttributeChangedSignal("Base"):Connect(attach)
 	plr.AttributeChanged:Connect(refresh)
+	task.spawn(function() -- v232: the base may load later than the script (retry until the board is there)
+		while true do
+			task.wait(2)
+			if not signPart or not signPart.Parent then
+				attach()
+			end
+		end
+	end)
+	-- v232 fix (user: the fence button still did nothing): an invisible SCREEN button is laid exactly over the board's
+	-- buy button every frame. Screen buttons always get the click / tap (SurfaceGui + ClickDetector clicks were swallowed).
+	local ov = make("ScreenGui", { Name = "TreadBtnOverlay", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = -5 }, plr:WaitForChild("PlayerGui"))
+	local hitBtn = make("TextButton", { Name = "TreadBuy", Text = "", BackgroundTransparency = 1, AutoButtonColor = false, Visible = false }, ov)
+	hitBtn.Activated:Connect(function()
+		buyTrain()
+	end)
+	local CORNERS = { { 0.08, 0.71 }, { 0.92, 0.71 }, { 0.08, 0.93 }, { 0.92, 0.93 } }
+	game:GetService("RunService").RenderStepped:Connect(function()
+		local part, cam = signPart, workspace.CurrentCamera
+		local show = false
+		if part and part.Parent and cam and btn then
+			local toCam = cam.CFrame.Position - part.Position
+			if toCam.Magnitude < 80 and toCam.Unit:Dot(-part.CFrame.LookVector) > 0.15 then -- in front of the Back face
+				local x0, y0, x1, y1 = math.huge, math.huge, -math.huge, -math.huge
+				show = true
+				for _, uv in ipairs(CORNERS) do
+					local w = part.CFrame:PointToWorldSpace(Vector3.new((uv[1] - 0.5) * part.Size.X, (0.5 - uv[2]) * part.Size.Y, part.Size.Z / 2))
+					local sp = cam:WorldToViewportPoint(w)
+					if sp.Z <= 0 then
+						show = false
+						break
+					end
+					x0, y0, x1, y1 = math.min(x0, sp.X), math.min(y0, sp.Y), math.max(x1, sp.X), math.max(y1, sp.Y)
+				end
+				if show then
+					hitBtn.Position = UDim2.fromOffset(x0, y0)
+					hitBtn.Size = UDim2.fromOffset(x1 - x0, y1 - y0)
+				end
+			end
+		end
+		hitBtn.Visible = show
+	end)
 end
 
 

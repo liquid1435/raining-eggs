@@ -420,7 +420,7 @@ function M.init(X)
 		end
 		clear(petGrid)
 		local list = parsePets(attr(petTab == 1 and "PetList" or "CarryList", ""))
-		local eqN = petTab == 1 and attr("Equipped", math.min(#list, C.PEN_MAX)) or 0
+		local eqN = petTab == 1 and attr("Equipped", math.min(#list, attr("PenMax", C.PEN_MAX))) or 0
 		for k, pet in ipairs(list) do
 			pet.idx, pet.eq = k, k <= eqN -- k = place in PetList, sent with "equip"
 		end
@@ -430,7 +430,7 @@ function M.init(X)
 			end
 			return C.petIncome(a) > C.petIncome(b)
 		end)
-		petsInfo.Text = (petTab == 1 and "EQUIPPED " .. eqN .. " / " .. C.PEN_MAX) or ("BASKET " .. #list .. " / " .. attr("CarryMax", 3))
+		petsInfo.Text = (petTab == 1 and "EQUIPPED " .. eqN .. " / " .. attr("PenMax", C.PEN_MAX)) or ("BASKET " .. #list .. " / " .. attr("CarryMax", 3))
 		incomeInfo.Text = "+$" .. C.fmt(attr("Income", 0)) .. "/s"
 		equipBestBtn.button.Visible = petTab == 1
 		for n, pet in ipairs(list) do
@@ -864,7 +864,8 @@ function M.init(X)
 	local upPanel = panel("UPGRADES", "upgrade", Color3.fromRGB(70, 200, 160), 0.62, 1.45)
 	local ui_ = upPanel.inner
 	local UPS = {
-		{ kind = "train", name = "TRAINING", icon = "bolt", attrName = "TrainLv", fx = function(lv) return "+" .. C.fmt(C.trainPower(lv) * C.rebirthMult(attr("Rebirth", 0))) .. " speed" end },
+		-- v232 (user): TRAINING is bought on the fence board only; here = PEN SPACE, one more pet in your pen per level
+		{ kind = "pen", name = "PEN SPACE", icon = "basket", attrName = "PenLv", fx = function(lv) return (C.PEN_MAX + lv) .. " pets" end },
 		{ kind = "luck", name = "LUCK", icon = "clover", attrName = "LuckLv", fx = function(lv) return "x" .. C.luck(lv) .. " luck" end },
 	}
 	local upRows = {}
@@ -1000,7 +1001,7 @@ function M.init(X)
 		if a == "Cash" then
 			refreshUp()
 		end
-		if a == "TrainLv" or a == "BasketLv" or a == "LuckLv" or a == "Rebirth" then
+		if a == "TrainLv" or a == "BasketLv" or a == "LuckLv" or a == "PenLv" or a == "Rebirth" then
 			refreshUp()
 		end
 		if a == "Passes" and storePanel.frame.Visible then

@@ -360,7 +360,9 @@ function C.petKey(pet) -- index key; also the asset key: Pet_<key>, Pet_<key>__<
 end
 
 -- upgrades: level starts at 0
-C.MAX_LV = { train = 60, basket = 19, luck = 20 }
+C.MAX_LV = { train = 60, basket = 19, luck = 20, pen = 10 }
+-- v232: PEN SPACE upgrade (UPGRADES menu, replaces TRAINING there): level n = C.PEN_MAX + n pets in your pen
+C.PEN_COST = { 300, 4e3, 6e4, 9e5, 1.5e7, 2.5e8, 5e9, 1e11, 2.5e12, 7e13 }
 -- 20 baskets you BUY one after another (no upgrades); basket k holds 2 + k pets and hangs on your back (Blender mesh Basket_k)
 -- BasketLv 0 = basket 1 (free), BasketLv 19 = basket 20
 C.BASKETS = {
@@ -396,6 +398,8 @@ C.LUCK_COST = { 67, 370, 2.4e3, 1.7e4, 1.3e5, 8.9e5, 6.5e6, 5.1e7, 4.2e8, 3.3e9,
 function C.cost(kind, lv)
 	if kind == "train" and C.TRAIN_COST[lv + 1] then
 		return C.TRAIN_COST[lv + 1]
+	elseif kind == "pen" then
+		return C.PEN_COST[lv + 1] or math.huge
 	elseif kind == "luck" then
 		return C.LUCK_COST[lv + 1] or math.huge
 	elseif kind == "train" then
