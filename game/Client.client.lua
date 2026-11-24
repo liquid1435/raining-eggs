@@ -1790,6 +1790,16 @@ local marker = make("BillboardGui", {
 }, plr:WaitForChild("PlayerGui"))
 local markerText = text(marker, UDim2.fromScale(1, 1), UDim2.fromScale(0, 0), 30, "YOUR BASE")
 markerText.TextColor3 = Color3.fromRGB(120, 240, 120)
+do -- v232 (user): YOUR BASE only shows while you are at the bases / plaza or in zone 1 (world 1, z below the end of zone 1)
+	task.spawn(function()
+		while true do
+			local ch = plr.Character
+			local root = ch and ch:FindFirstChild("HumanoidRootPart")
+			markerText.Visible = root ~= nil and root.Position.Y < 300 and root.Position.Z < C.ZONE_LEN
+			task.wait(0.25)
+		end
+	end)
+end
 
 local function refreshMarker()
 	local n = attr("Base", 0)
