@@ -139,7 +139,7 @@ function M.init(X)
 		return f, h
 	end
 	local left, leftH = column(4, 0, 40 / 1920)
-	local right, rightH = column(4, 1, 1 - 40 / 1920)
+	local right, rightH = column(3, 1, 1 - 40 / 1920) -- v240 (user): no UPGRADE button any more
 	local COL = {
 		orange = Color3.fromRGB(255, 138, 30), blue = Color3.fromRGB(46, 155, 255), red = Color3.fromRGB(242, 70, 78),
 		purple = Color3.fromRGB(154, 92, 255), green = Color3.fromRGB(63, 207, 90), pink = Color3.fromRGB(255, 92, 173), gold = Color3.fromRGB(255, 194, 30),
@@ -174,8 +174,9 @@ function M.init(X)
 	local dailyBtn, dailyBadge = wideBtn(left, leftH, 3, COL.red, "gift", "DAILY")
 	local idxBtn, idxBadge = wideBtn(right, rightH, 0, COL.purple, "book", "INDEX")
 	local upBtn = wideBtn(right, rightH, 1, COL.green, "upgrade", "UPGRADE")
-	local rbBtn = wideBtn(right, rightH, 2, COL.pink, "rebirth", "REBIRTH")
-	local topBtn = wideBtn(right, rightH, 3, COL.gold, "trophy", "TOP")
+	upBtn.Visible = false -- v240 (user): the UPGRADES menu is gone (training = fence board, luck = LUCK SHOP)
+	local rbBtn = wideBtn(right, rightH, 1, COL.pink, "rebirth", "REBIRTH")
+	local topBtn = wideBtn(right, rightH, 2, COL.gold, "trophy", "TOP")
 	idxBtn.Activated:Connect(function()
 		if X.UI.openIndex then
 			X.UI.openIndex()
