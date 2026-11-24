@@ -878,7 +878,7 @@ local function showNote(msg, kind)
 		-- v238 (user): no rebirth sound, only fireworks (silent) round the player who did the rebirth
 		local mine = plr.DisplayName .. " reached REBIRTH "
 		if msg:sub(1, #mine) == mine and UI.fireworks then
-			UI.fireworks(16, true)
+			UI.fireworks(16) -- v242 (user): with the firework pops, like a new zone
 		end
 	elseif kind == "legend" then
 		sfx("reveal_legend", 0.6)
