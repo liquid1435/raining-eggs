@@ -11,7 +11,7 @@ C.FUSE = 3              -- same pets needed for the next tier
 C.AUTO_FUSE = false     -- v143 (user): 3 same pets no longer fuse into Gold on their own
 
 C.GOLDEN_CHANCE = 1 / 30
-C.GOLDEN_LUCK = 8
+C.GOLDEN_LUCK = 1 -- v244 (user): a golden egg = a normal egg of its zone, only the coat is 80% Gold / 20% Rainbow
 C.ROTTEN_CHANCE = 0.1
 C.ROTTEN_SLOW = 3       -- seconds
 C.ROTTEN_FACTOR = 0.45  -- walk speed while slowed
@@ -23,8 +23,8 @@ C.COMBO_MAX = 20
 C.STORM_FIRST = { 900, 1800 }  -- v224 (user: rare): random seconds after the server starts (15-30 min)
 C.STORM_EVERY = { 2400, 4200 } -- v224: random time between storms (40-70 min)
 -- BIG EGG DROP: a giant egg falls in the plaza, players fight with weapons, holding E for 5 s claims it
-C.BIGEGG_FIRST = { 600, 1200 }  -- v224 (user: SECRET EGG, rare): seconds after the server starts (10-20 min)
-C.BIGEGG_EVERY = { 1500, 2700 } -- v224: random time between drops (25-45 min)
+C.BIGEGG_FIRST = { 1200, 2400 } -- v244 (user: rarer): 20-40 min  -- v224 (user: SECRET EGG, rare): seconds after the server starts (10-20 min)
+C.BIGEGG_EVERY = { 3000, 5400 } -- v244 (user: rarer): 50-90 min -- v224: random time between drops (25-45 min)
 C.TEST_ALL_ZONES_FREE = true    -- Studio only: all 20 zones (world 1 + world 2) and the Golden Portal open for free; the real game is not affected
 C.MUSIC_ID = "1848049490" -- v206: Strauss II "Voices of Spring" (Roblox Toolbox audio, chosen by the user); v204: calm background music (audio/rainingeggs_music.ogg uploaded to Roblox), "" = no music
 C.MUSIC_VOLUME = 0.13 -- v208 (user): a bit quieter (was 0.22)
@@ -49,6 +49,7 @@ C.STORM_EGG_LINGER = 5  -- seconds the storm egg waits on the ground
 
 C.INDEX_BONUS = 0.1     -- cash per completed zone
 C.REBIRTH_BONUS = 0.5   -- cash and training per rebirth
+C.REBIRTH_PRICE = { 1e13, 6e13, 3.8e14, 2.6e15, 1.8e16, 1.4e17, 1.1e18, 9.5e18, 8.6e19, 8.2e20, 8.3e21, 8.9e22, 1e24, 1.2e25, 1.6e26, 2.1e27, 1e28, 4e28, 1.5e29, 6e29 } -- v244 (user): 20 rebirths, cash price from small to big, each takes longer (tools/sim_economy.py)
 C.REBIRTH_SPEED_SCALE = 1e13 -- v148 balance: first rebirth after ~3 h of play (the faster early treadmill needed a bigger scale; was 1e6)
 
 C.RARITY = {
@@ -434,7 +435,10 @@ end
 function C.rebirthMult(n)
 	return 1 + C.REBIRTH_BONUS * n
 end
-function C.rebirthNeed(n) -- speed needed for rebirth number n + 1
+function C.rebirthNeed(n) -- v244 (user): CASH price of rebirth number n + 1 (math.huge after the last one)
+	if C.REBIRTH_PRICE then
+		return C.REBIRTH_PRICE[n + 1] or math.huge
+	end
 	local zi = math.min(3 + n, C.NZ) -- the 10 normal zones (world 2 zones have no speed number)
 	return C.ZONES[zi].req * 10 ^ math.max(0, 3 + n - C.NZ) * C.REBIRTH_SPEED_SCALE
 end
@@ -677,6 +681,7 @@ C.EVENT_RAINBOW = 2       -- RAINBOW WEEK: Rainbow chance x this
 C.TIER_ODDS = {
 	normal = { 0.7, 0.2, 0.1 },
 	golden = { 0, 0.8, 0.2 },
+	secret = { 0, 0.8, 0.2 }, -- v244: the SECRET (big) egg hatches as itself, same coats as a golden egg
 }
 function C.rollTier(kind, rainbowWeek)
 	local o = C.TIER_ODDS[kind] or C.TIER_ODDS.normal

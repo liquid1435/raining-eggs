@@ -47,6 +47,7 @@ _t = re.search(r'normal = \{ ([0-9.]+), ([0-9.]+), ([0-9.]+) \}', CFG)
 TIER_ODDS = [float(x) for x in _t.groups()] if _t else [1, 0, 0]
 AUTO_FUSE = bool(re.search(r'^C\.AUTO_FUSE\s*=\s*true', CFG, re.M))
 TRAIN_COST = arr('TRAIN_COST') if re.search(r'^C\.TRAIN_COST', CFG, re.M) else None   # v148: price tables
+REB_PRICE = arr('REBIRTH_PRICE') if re.search(r'^C\.REBIRTH_PRICE', CFG, re.M) else None   # v244: cash price per rebirth
 LUCK_COST = arr('LUCK_COST') if re.search(r'^C\.LUCK_COST', CFG, re.M) else None
 
 
@@ -169,7 +170,12 @@ def play(rng, hours=30.0, verbose=False):
             cash -= c
             lv[k] += 1
             mark(f'{k} {lv[k]}')
-        if speed >= rebirth_need(reb):
+        if REB_PRICE is not None:                               # v244: rebirth = pay its cash price (cash, speed, training reset)
+            if reb < len(REB_PRICE) and cash >= REB_PRICE[reb]:
+                reb += 1
+                mark(f'rebirth {reb}')
+                cash, speed, lv['train'] = 0.0, 0.0, 0
+        elif speed >= rebirth_need(reb):
             mark(f'rebirth {reb + 1} possible')
         for zd in range(1, zones_done() + 1):
             mark(f'index {zd} zones')
@@ -187,7 +193,7 @@ if __name__ == '__main__':
     runs = int(sys.argv[sys.argv.index('--runs') + 1]) if '--runs' in sys.argv else 20
     hours = float(sys.argv[sys.argv.index('--hours') + 1]) if '--hours' in sys.argv else 30
     logs = [play(random.Random(s), hours)[0] for s in range(runs)]
-    keys = [f'zone {z}' for z in range(2, NT + 1)] + ['rebirth 1 possible', 'rebirth 2 possible']
+    keys = [f'zone {z}' for z in range(2, NT + 1)] + ([f'rebirth {n}' for n in range(1, len(REB_PRICE) + 1)] if REB_PRICE is not None else ['rebirth 1 possible', 'rebirth 2 possible'])
     print(f'{runs} players, {hours:.0f} h each; median time of play to reach:')
     for k in keys:
         ts = sorted(l[k] for l in logs if k in l)

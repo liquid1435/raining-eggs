@@ -1743,16 +1743,17 @@ rbGo.label.Text = "REBIRTH"
 refreshRebirth = function()
 	local n = attr("Rebirth", 0)
 	local need = C.rebirthNeed(n)
-	local speed = attr("Speed", 0)
-	local ready = speed >= need
+	local speed = attr("Cash", 0) -- v244: rebirths cost cash now (C.REBIRTH_PRICE)
+	local maxed = need == math.huge
+	local ready = not maxed and speed >= need
 	rbNow.Text, rbNext.Text = tostring(n), tostring(n + 1)
 	local m0, m1 = "x" .. C.rebirthMult(n), "x" .. C.rebirthMult(n + 1)
 	rbCash.Text = m0 .. " > " .. m1
 	rbTrain.Text = m0 .. " > " .. m1
-	rbNeed.Text = "Needs SPEED " .. C.fmt(need)
-	rbProg.Text = C.fmt(speed) .. " / " .. C.fmt(need)
+	rbNeed.Text = maxed and "MAX REBIRTH" or ("REBIRTH " .. (n + 1) .. "/" .. #C.REBIRTH_PRICE .. "  costs $" .. C.fmt(need))
+	rbProg.Text = maxed and "" or ("$" .. C.fmt(speed) .. " / $" .. C.fmt(need))
 	rbProg.TextColor3 = ready and Color3.fromRGB(40, 170, 60) or RED
-	setBar(rbFill, speed / math.max(need, 1))
+	setBar(rbFill, maxed and 1 or speed / math.max(need, 1))
 	rbGo.color(ready and GREEN or GREY)
 end
 rebirthBtn.Activated:Connect(function()
@@ -1764,11 +1765,11 @@ UI.openRebirth = function()
 	rebirthPanel.toggle()
 end
 rbGo.button.Activated:Connect(function()
-	if attr("Speed", 0) >= C.rebirthNeed(attr("Rebirth", 0)) then
+	if attr("Cash", 0) >= C.rebirthNeed(attr("Rebirth", 0)) then
 		Action:FireServer("rebirth")
 		rebirthPanel.close()
 	else
-		showNote("Train more SPEED on your treadmill first", "bad")
+		showNote("You need more cash for the next rebirth", "bad")
 	end
 end)
 
@@ -2282,8 +2283,10 @@ end
 -- egg model made in Blender (ReplicatedStorage.Assets). Returns nil when the models are not imported yet -> block egg.
 local EGG_H = LAYER * #PROF
 local function eggMesh(zoneIndex, kind)
-	local name = (kind == "golden" and "Egg_Gold") or (kind == "rotten" and "Egg_Rotten") or (kind == "storm" and "Egg_Storm") or ("Egg_" .. zoneIndex)
-	local src = C.meshOf(name)
+	local name = (kind == "golden" and "Egg_Gold") or (kind == "rotten" and "Egg_Rotten") or (kind == "storm" and "Egg_Storm")
+		or (kind == "secret" and "Egg_Secret") or ("Egg_" .. zoneIndex)
+	-- v244 (user): a golden egg is the zone's own egg with a gold coating (Egg_<zone>_G), Egg_Gold only as a fallback
+	local src = (kind == "golden" and C.meshOf("Egg_" .. zoneIndex .. "_G")) or C.meshOf(name)
 	if not src then
 		return nil
 	end

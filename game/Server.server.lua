@@ -1258,8 +1258,11 @@ Action.OnServerEvent:Connect(function(plr, what, kind)
 		return
 	end
 	local need = C.rebirthNeed(d.rebirth)
-	if d.speed < need then
-		say(plr, "Rebirth needs SPEED " .. C.fmt(need), "bad")
+	if need == math.huge then
+		say(plr, "You reached the MAX rebirth!", "info")
+		return
+	elseif d.cash < need then -- v244 (user): every rebirth has its own cash price (small to big)
+		say(plr, "Rebirth costs $" .. C.fmt(need), "bad")
 		return
 	end
 	d.rebirth = d.rebirth + 1
@@ -1789,8 +1792,9 @@ task.spawn(function()
 		local now = workspace:GetServerTimeNow()
 		if not storm then
 			-- v208 (user): never an EGG STORM while a BIG EGG is out - the storm waits until the big egg is gone
-			if workspace:GetAttribute("BigEggActive") and now >= nextAt - 12 then
-				nextAt = now + 30
+			-- v244 (user: never both at once): a big egg out -> the storm stays at least 4 minutes away (no warning yet)
+			if workspace:GetAttribute("BigEggActive") and now >= nextAt - 240 then
+				nextAt = now + 240
 				warned = false
 				workspace:SetAttribute("StormNext", nextAt)
 			end
@@ -2319,7 +2323,7 @@ local function startBigEgg()
 		BigEgg:FireAllClients("win", plr.UserId, plr.DisplayName)
 		-- v174 (user): no "claimed the BIG EGG" message
 		task.delay(1.2, function()
-			hatchToPen(plr, d, d.unlocked, "golden", C.BIGEGG_LUCK)
+			hatchToPen(plr, d, d.unlocked, "secret", C.BIGEGG_LUCK) -- v244 (user): the hatch shows the violet SECRET EGG, not a golden one
 			save(plr)
 		end)
 		task.delay(6, function()
@@ -2425,7 +2429,9 @@ task.spawn(function()
 	task.wait(math.random(C.BIGEGG_FIRST[1], C.BIGEGG_FIRST[2]))
 	while true do
 		-- every 5 minutes (C.BIGEGG_EVERY); during an egg storm it waits until the storm is over
-		while #Players:GetPlayers() == 0 or storm or bigEv do
+		-- v244 (user): never together with an EGG STORM - also not when a storm starts in the next 4 minutes
+		while #Players:GetPlayers() == 0 or storm or bigEv
+			or (workspace:GetAttribute("StormNext") or 0) - workspace:GetServerTimeNow() < 240 do
 			task.wait(5)
 		end
 		task.spawn(startBigEgg)

@@ -1,4 +1,4 @@
-"""Raining Eggs - new themed eggs (v2): one smooth egg per zone + Gold / Rotten / Storm, vertex coloured, with 3D decor.
+﻿"""Raining Eggs - new themed eggs (v2): one smooth egg per zone + Gold / Rotten / Storm, vertex coloured, with 3D decor.
   blender -b -P gen_eggs2.py -- [nofbx] [norender]
 Names stay Egg_1..Egg_10, Egg_Gold, Egg_Rotten, Egg_Storm (the game picks them up after import + harvest_meshes.py).
 Renders -> out/eggs2_*.png, FBX -> RainingEggsEggs2.fbx (+ copy on the Desktop/RAINING EGGS NOU)."""
@@ -219,6 +219,14 @@ class Egg:
         for c, k in self.swatch.items():
             x0, y0 = (k % 32) * 32, rows + (k // 32) * 32
             px[y0:y0 + 32, x0:x0 + 32, :3] = lin(c)[:3]
+        if GOLD:  # v244 (user): golden egg = the zone's own egg with a gold coating (pattern kept as light/dark gold)
+            lum = (0.2126 * px[..., 0] + 0.7152 * px[..., 1] + 0.0722 * px[..., 2]) ** (1 / 2.2)
+            lum = np.clip((lum - 0.08) / 0.85, 0, 1) * 0.75 + 0.25
+            lo, hi = np.array(lin((186, 122, 22))[:3]), np.array(lin((255, 238, 150))[:3])
+            mid = np.array(lin((240, 178, 34))[:3])
+            a = np.clip(lum * 2, 0, 1)[..., None]
+            b = np.clip(lum * 2 - 1, 0, 1)[..., None]
+            px[..., :3] = np.where(lum[..., None] < 0.5, lo + (mid - lo) * a, mid + (hi - mid) * b)
         img = bpy.data.images.new('Tex_' + name, TW, TH)
         img.pixels.foreach_set(px.ravel())
         img.filepath_raw = str(HERE / 'out' / 'eggtex' / f'{name}.png')
@@ -823,6 +831,9 @@ EGGS = [('Egg_1', egg_meadow), ('Egg_2', egg_mushroom), ('Egg_3', egg_candy), ('
         ('Egg_Gold', egg_gold), ('Egg_Rotten', egg_rotten), ('Egg_Storm', egg_storm)]
 if 'w2' in ARGS:  # v208: only the world 2 eggs (own FBX + renders)
     EGGS = EGGS_W2
+GOLD = 'goldcoat' in ARGS
+if GOLD:  # v244: Egg_<z>_G = the 20 zone eggs with a gold coating (golden eggs of that zone)
+    EGGS = [(n + '_G', f) for n, f in EGGS[:10] + EGGS_W2]
 if 'secret' in ARGS:  # v224: only the SECRET EGG
     EGGS = [('Egg_Secret', egg_secret)]
 
@@ -848,7 +859,7 @@ if 'nofbx' not in ARGS:
     for o in bpy.data.objects:
         o.select_set(o in objs)
     bpy.context.view_layer.objects.active = objs[0]
-    fbx = HERE / 'out' / ('RainingEggsSecretEgg.fbx' if 'secret' in ARGS else 'RainingEggsEggsW2.fbx' if 'w2' in ARGS else 'RainingEggsEggs2.fbx')
+    fbx = HERE / 'out' / ('RainingEggsGoldEggs.fbx' if GOLD else 'RainingEggsSecretEgg.fbx' if 'secret' in ARGS else 'RainingEggsEggsW2.fbx' if 'w2' in ARGS else 'RainingEggsEggs2.fbx')
     bpy.ops.export_scene.fbx(filepath=str(fbx), use_selection=True, object_types={'MESH'}, apply_scale_options='FBX_SCALE_UNITS',
                              mesh_smooth_type='FACE', colors_type='NONE', add_leaf_bones=False, bake_anim=False, path_mode='COPY', embed_textures=True)
     desk = pathlib.Path(os.environ['USERPROFILE']) / 'Desktop' / 'RAINING EGGS NOU' / fbx.name
@@ -900,7 +911,7 @@ if 'norender' not in ARGS:
         bpy.ops.render.render(write_still=True)
 
     # lineup: all eggs in two rows
-    shot(out / ('eggsecret_all.png' if 'secret' in ARGS else 'eggsw2_all.png' if 'w2' in ARGS else 'eggs2_all.png'), (15, -46, 13), (15, -3, 1.4), (1800, 1000), 40)
+    shot(out / ('eggsgold_all.png' if GOLD else 'eggsecret_all.png' if 'secret' in ARGS else 'eggsw2_all.png' if 'w2' in ARGS else 'eggs2_all.png'), (15, -46, 13), (15, -3, 1.4), (1800, 1000), 40)
     # close-ups, one by one
     for o in objs:
         for q in objs:
@@ -909,3 +920,4 @@ if 'norender' not in ARGS:
         shot(out / f'eggs2_{o.name}.png', tuple(c + Vector((-2.2, -8.5, 1.6))), tuple(c), (700, 700), 50)
     for q in objs:
         q.hide_render = False
+

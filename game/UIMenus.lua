@@ -471,7 +471,7 @@ function M.init(X)
 	local eggGrid = scroller(ei, UDim2.fromScale(0.95, 0.68), UDim2.fromScale(0.025, 0.12), 4, 0.72)
 	local hatchAll = bigButton(ei, GREEN, UDim2.fromScale(0.4, 0.14), UDim2.fromScale(0.5, 0.985), Vector2.new(0.5, 1))
 	local KIND = {
-		golden = { "GOLDEN EGG", Color3.fromRGB(255, 196, 40), "x" .. C.GOLDEN_LUCK .. " LUCK" },
+		golden = { "GOLDEN EGG", Color3.fromRGB(255, 196, 40), "80% GOLD 20% RAINBOW" }, -- v244: no extra luck
 		storm = { "STORM EGG", Color3.fromRGB(140, 80, 255), "x" .. C.STORM_EGG_LUCK .. " LUCK" },
 	}
 	local ZONE_CARD = Color3.fromRGB(96, 160, 255)
@@ -484,7 +484,7 @@ function M.init(X)
 		local cam = make("Camera", { FieldOfView = 34 }, vp)
 		vp.CurrentCamera = cam
 		local name = (kind == "golden" and "Egg_Gold") or (kind == "storm" and "Egg_Storm") or ("Egg_" .. z)
-		local src = C.meshOf(name)
+		local src = (kind == "golden" and C.meshOf("Egg_" .. z .. "_G")) or C.meshOf(name) -- v244: gold-coated zone egg
 		local p, rot
 		if src then
 			p = src:Clone()
