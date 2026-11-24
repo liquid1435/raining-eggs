@@ -2145,34 +2145,42 @@ local function penTarget(info)
 	if info.penSize then
 		penSize(info.penSize)
 	end
-	for _ = 1, 12 do
+	-- v232 (user: the pets all heaped up in one corner): the whole pen is used (the spot the player chose is only
+	-- where the pet starts); of 16 random spots the one with the most room from the other pets wins
+	local best, bestRoom = nil, -1
+	for _ = 1, 16 do
 		local lx, lz = (math.random() * 2 - 1) * PEN_HX, PEN_ZB + math.random() * (PEN_ZF - PEN_ZB)
-		if info.home then -- v171: a few steps around the spot the player chose
-			local a, r = math.random() * math.pi * 2, 2 + math.random() * 4
-			lx = math.clamp(info.home.X - c.X + math.cos(a) * r, -PEN_HX, PEN_HX)
-			lz = math.clamp(info.home.Z - c.Z + math.sin(a) * r, PEN_ZB, PEN_ZF)
-		end
 		local p = Vector3.new(c.X + lx, info.pos.Y, c.Z + lz)
-		local ok = penFree(lx, lz) and (p - info.pos).Magnitude > (info.home and 1.5 or 6)
+		local ok = penFree(lx, lz) and (p - info.pos).Magnitude > 6
 		-- the straight path must not cut through the treadmill corner either
 		for a = 0.25, 0.75, 0.25 do
 			local q = info.pos:Lerp(p, a)
 			ok = ok and penFree(q.X - c.X, q.Z - c.Z)
 		end
-		-- keep a little space from where the other pets are going
 		if ok then
-			for m2, o in pairs(penPets) do
-				if o ~= info and o.penC == c and (o.target or o.pos) and ((o.target or o.pos) - p).Magnitude < 5 then
-					ok = false
-					break
+			local room = math.huge
+			for _, o in pairs(penPets) do
+				if o ~= info and o.penC == c then
+					local g = o.target or o.pos
+					room = math.min(room, Vector3.new(g.X - p.X, 0, g.Z - p.Z).Magnitude - (o.rad or 2))
+					-- do not walk straight through a pet that stands still on the way
+					if not o.target then
+						for a = 0.2, 0.8, 0.2 do
+							local q = info.pos:Lerp(p, a)
+							if Vector3.new(o.pos.X - q.X, 0, o.pos.Z - q.Z).Magnitude < (o.rad or 2) + (info.rad or 2) then
+								room = room - 6
+								break
+							end
+						end
+					end
 				end
 			end
-		end
-		if ok then
-			return p
+			if room > bestRoom then
+				best, bestRoom = p, room
+			end
 		end
 	end
-	return nil
+	return best
 end
 penWalk = function(model, info, now)
 	local dt = math.min(now - info.last, 0.1)
@@ -2191,13 +2199,51 @@ penWalk = function(model, info, now)
 			local step = math.min(dist, speed * dt)
 			info.pos = info.pos + Vector3.new(d.X, 0, d.Z).Unit * step
 			info.walkT = info.walkT + dt * speed / 5
+			info.walkFor = (info.walkFor or 0) + dt
+			if info.walkFor > 10 then -- blocked by other pets: stop and pick a new spot later
+				info.target, info.walkFor, info.wait = nil, 0, 1
+			end
 		end
 	else
+		info.walkFor = 0
 		info.wait = info.wait - dt
 		if info.wait <= 0 then
 			info.target = info.penC and penTarget(info)
 			if not info.target then
 				info.wait = 1.5
+			end
+		end
+	end
+	-- v232 (user: pets walked through each other): keep every two pets of a pen apart by their body sizes
+	if not info.rad then
+		local ok, ext = pcall(function()
+			return model:GetExtentsSize()
+		end)
+		info.rad = ok and math.clamp(math.max(ext.X, ext.Z) * 0.42, 1, 8) or 2
+	end
+	local c = info.penC
+	if c then
+		local push = Vector3.zero
+		for _, o in pairs(penPets) do
+			if o ~= info and o.penC == c then
+				local v = Vector3.new(info.pos.X - o.pos.X, 0, info.pos.Z - o.pos.Z)
+				local need = info.rad + (o.rad or 2)
+				local dist = v.Magnitude
+				if dist < need then
+					v = dist > 0.01 and v.Unit or Vector3.new(math.random() - 0.5, 0, math.random() - 0.5).Unit
+					push = push + v * (need - dist) * (o.target and not info.target and 0.3 or 0.5)
+				end
+			end
+		end
+		if push.Magnitude > 0 then
+			local mx = 8 * dt
+			if push.Magnitude > mx then
+				push = push.Unit * mx
+			end
+			local np = info.pos + push
+			local lx, lz = math.clamp(np.X - c.X, -PEN_HX, PEN_HX), math.clamp(np.Z - c.Z, PEN_ZB, PEN_ZF)
+			if penFree(lx, lz) then
+				info.pos = Vector3.new(c.X + lx, info.pos.Y, c.Z + lz)
 			end
 		end
 	end

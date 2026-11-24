@@ -2573,9 +2573,9 @@ def w2_props(cr, start):
         with group(grp, unique=False):
             if zone == 20:                                    # the throne mesh on the gold steps at the end of the carpet
                 n = 'Map_W2_20_GalaxyThrone'
-                mpart(n, 0, 4, z0 + 126, 0, 1.0)
+                mpart(n, 0, 4, z0 + 126, 180, 1.0)
                 if n + 'Neon' in pm and has_mesh(n + 'Neon'):
-                    mpart(n + 'Neon', 0, 4, z0 + 126, 0, 1.0, mat='Neon', cancollide=False)
+                    mpart(n + 'Neon', 0, 4, z0 + 126, 180, 1.0, mat='Neon', cancollide=False)   # v232: yaw 180 (user: the throne faced away from the road)
                 order.remove(n)
             for n in order:
                 sz = pm[n]['size']
