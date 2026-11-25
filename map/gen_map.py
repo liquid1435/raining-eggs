@@ -554,6 +554,9 @@ def base(i):
         # (invisible here: only the owner's client shows its own board)
         blk(bx - HW + 2.75, 1.45, zf + 1.15, 5.3, 3.5, 0.25, (255, 200, 60), 'SmoothPlastic', name='TreadSignBack', transparency=1, **NC)
         blk(bx - HW + 2.75, 1.5, zf + 1.35, 5.1, 3.4, 0.2, (28, 24, 58), 'SmoothPlastic', name='TreadSign', transparency=1, **NC)
+        # v248: PEN SPACE upgrade board, mirrored on the right side of the front fence
+        blk(bx + HW - 2.75, 1.45, zf + 1.15, 5.3, 3.5, 0.25, (255, 200, 60), 'SmoothPlastic', name='PenSignBack', transparency=1, **NC)
+        blk(bx + HW - 2.75, 1.5, zf + 1.35, 5.1, 3.4, 0.2, (28, 24, 58), 'SmoothPlastic', name='PenSign', transparency=1, **NC)
 
 
 SHOP_KEY = {'BASKETS': 'Baskets', 'LUCK SHOP': 'Luck', 'SELL': 'Sell', 'INDEX': 'Index'}

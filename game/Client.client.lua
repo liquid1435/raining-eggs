@@ -3889,7 +3889,7 @@ end
 
 -- ------------------------------------------------------------ treadmill upgrade panel on your own front fence
 -- The board parts are invisible in the map; only YOUR base's board is shown (locally), with LV a > b, speed, and a buy button.
-do
+local function fenceBoard(B)
 	local sg, lvT, spT, btn, btnT, shown
 	local buyTrain
 	local NAVY1, NAVY2, GOLDLINE = Color3.fromRGB(58, 52, 112), Color3.fromRGB(28, 24, 58), Color3.fromRGB(255, 200, 60)
@@ -3903,7 +3903,7 @@ do
 		local sc = btn:FindFirstChildOfClass("UIScale") or make("UIScale", {}, btn)
 		sc.Scale = 0.9
 		TweenService:Create(sc, TweenInfo.new(0.15, Enum.EasingStyle.Back), { Scale = 1 }):Play()
-		UI.buyUpgrade("train") -- v190: instant
+		UI.buyUpgrade(B.kind) -- v190: instant
 	end
 	-- v144 fix (user: the upgrade button on the fence did nothing): invisible parts between the camera and the board
 	-- (fence collision boxes, zones) can swallow clicks on a SurfaceGui. Backup: a click/tap that the GUI did not take
@@ -3949,13 +3949,13 @@ do
 		end
 		shown = {}
 		for _, q in ipairs(part.Parent:GetChildren()) do -- this base's board + its back plate: visible only here
-			if q:IsA("BasePart") and (q.Name == "TreadSign" or q.Name == "TreadSignBack") then
+			if q:IsA("BasePart") and (q.Name == B.sign or q.Name == B.sign .. "Back") then
 				q.Transparency = 0
 				table.insert(shown, q)
 			end
 		end
 		sg = make("SurfaceGui", {
-			Name = "TreadSignUI", Adornee = part, Face = Enum.NormalId.Back, SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud,
+			Name = B.sign .. "UI", Adornee = part, Face = Enum.NormalId.Back, SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud,
 			PixelsPerStud = 80, LightInfluence = 0, ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		}, plr:WaitForChild("PlayerGui"))
 		local bg = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE, BorderSizePixel = 0 }, sg)
@@ -3963,11 +3963,11 @@ do
 		make("UIStroke", { Thickness = 10, Color = GOLDLINE, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, bg)
 		make("UIGradient", { Rotation = 90, Color = ColorSequence.new(NAVY1, NAVY2) }, bg)
 		-- header: bolt + TREADMILL
-		local ic = icon(bg, "bolt", UDim2.fromScale(0.16, 0.24), UDim2.fromScale(0.06, 0.05))
+		local ic = icon(bg, B.icon, UDim2.fromScale(0.16, 0.24), UDim2.fromScale(0.06, 0.05))
 		make("UIAspectRatioConstraint", { AspectRatio = 1 }, ic)
 		local head = make("TextLabel", {
 			BackgroundTransparency = 1, Size = UDim2.fromScale(0.62, 0.16), Position = UDim2.fromScale(0.22, 0.08), Font = Enum.Font.LuckiestGuy,
-			TextScaled = true, TextColor3 = GOLDLINE, Text = "TREADMILL", TextXAlignment = Enum.TextXAlignment.Left,
+			TextScaled = true, TextColor3 = GOLDLINE, Text = B.title, TextXAlignment = Enum.TextXAlignment.Left,
 		}, bg)
 		make("UIStroke", { Thickness = 4, Color = BLACK }, head)
 		make("Frame", { Size = UDim2.fromScale(0.88, 0.012), Position = UDim2.fromScale(0.06, 0.3), BackgroundColor3 = GOLDLINE, BackgroundTransparency = 0.4, BorderSizePixel = 0 }, bg)
@@ -4002,17 +4002,17 @@ do
 		if not lvT then
 			return
 		end
-		local lv = attr("TrainLv", 0)
+		local lv = attr(B.attr, 0)
 		local grad = btn:FindFirstChild("Grad")
-		if lv >= C.MAX_LV.train then
+		if lv >= C.MAX_LV[B.kind] then
 			lvT.Text = "LEVEL " .. lv
-			spT.Text = "+" .. C.fmt(C.trainPower(lv)) .. " speed"
+			spT.Text = B.fx(lv)
 			btnT.Text = "MAX"
 			grad.Color = ColorSequence.new(Color3.fromRGB(200, 204, 220), Color3.fromRGB(120, 124, 146))
 		else
 			lvT.Text = "LV " .. lv .. ' <font color="#7CFF6B">></font> ' .. (lv + 1)
-			spT.Text = "+" .. C.fmt(C.trainPower(lv)) .. ' <font color="#7CFF6B">></font> +' .. C.fmt(C.trainPower(lv + 1)) .. " speed"
-			local cost = C.cost("train", lv)
+			spT.Text = B.fx(lv) .. ' <font color="#7CFF6B">></font> ' .. B.fx(lv + 1)
+			local cost = C.cost(B.kind, lv)
 			btnT.Text = "\u{25B2} $" .. C.fmt(cost)
 			local can = attr("Cash", 0) >= cost
 			grad.Color = can and ColorSequence.new(Color3.fromRGB(150, 250, 120), Color3.fromRGB(36, 168, 64))
@@ -4023,7 +4023,7 @@ do
 		local i = attr("Base", 0)
 		local map = workspace:FindFirstChild("Map")
 		local b = map and i > 0 and map:FindFirstChild("Base" .. i)
-		local part = b and b:FindFirstChild("TreadSign", true)
+		local part = b and b:FindFirstChild(B.sign, true)
 		if part then
 			build(part)
 			refresh()
@@ -4045,8 +4045,8 @@ do
 	end)
 	-- v232 fix (user: the fence button still did nothing): an invisible SCREEN button is laid exactly over the board's
 	-- buy button every frame. Screen buttons always get the click / tap (SurfaceGui + ClickDetector clicks were swallowed).
-	local ov = make("ScreenGui", { Name = "TreadBtnOverlay", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = -5 }, plr:WaitForChild("PlayerGui"))
-	local hitBtn = make("TextButton", { Name = "TreadBuy", Text = "", BackgroundTransparency = 1, AutoButtonColor = false, Visible = false }, ov)
+	local ov = make("ScreenGui", { Name = B.sign .. "Overlay", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = -5 }, plr:WaitForChild("PlayerGui"))
+	local hitBtn = make("TextButton", { Name = B.sign .. "Buy", Text = "", BackgroundTransparency = 1, AutoButtonColor = false, Visible = false }, ov)
 	hitBtn.Activated:Connect(function()
 		buyTrain()
 	end)
@@ -4077,7 +4077,11 @@ do
 		hitBtn.Visible = show
 	end)
 end
-
+-- v248 (user: "fa semnul de upgrade"): PEN SPACE board on the right side of the front fence, same look as the treadmill one
+fenceBoard({ sign = "TreadSign", title = "TREADMILL", icon = "bolt", kind = "train", attr = "TrainLv",
+	fx = function(lv) return "+" .. C.fmt(C.trainPower(lv)) .. " speed" end })
+fenceBoard({ sign = "PenSign", title = "PEN SPACE", icon = "basket", kind = "pen", attr = "PenLv",
+	fx = function(lv) return (C.PEN_MAX + lv) .. " pets" end })
 
 -- ============================================================ BIG EGG DROP (client): Codex VFX modules + animation clips
 task.spawn(function()
