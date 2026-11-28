@@ -5696,6 +5696,31 @@ do
 		local map = workspace:FindFirstChild("Map")
 		return map and map:FindFirstChild("Base" .. attr("Base", 0))
 	end
+	-- v284 (user): a steps bar under the violet tutorial pill, filling one part per finished step
+	local stepBg = make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 6), Size = UDim2.fromScale(0.8, 0.32),
+		BackgroundColor3 = Color3.fromRGB(30, 20, 60), BorderSizePixel = 0, Visible = false, ZIndex = 3 }, hintPill)
+	make("UICorner", { CornerRadius = UDim.new(1, 0) }, stepBg)
+	make("UIStroke", { Thickness = 2.5, Color = WHITE, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, stepBg)
+	local stepFill = make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 4 }, stepBg)
+	make("UICorner", { CornerRadius = UDim.new(1, 0) }, stepFill)
+	make("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(140, 255, 120), Color3.fromRGB(40, 190, 70)) }, stepFill)
+	for k = 1, C.TUT_STEPS - 1 do -- dividers between the steps
+		make("Frame", { Position = UDim2.fromScale(k / C.TUT_STEPS, 0.1), Size = UDim2.new(0, 2, 0.8, 0), BackgroundColor3 = WHITE, BackgroundTransparency = 0.4, BorderSizePixel = 0, ZIndex = 5 }, stepBg)
+	end
+	local stepT = make("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Font = Enum.Font.LuckiestGuy, TextScaled = true, TextColor3 = WHITE, Text = "", ZIndex = 6 }, stepBg)
+	make("UIStroke", { Thickness = 2, Color = BLACK }, stepT)
+	local shownStep = -1
+	RunService.RenderStepped:Connect(function()
+		local T = attr("Tut", 99)
+		local on = T >= 1 and T < 99
+		stepBg.Visible = on
+		if on and T ~= shownStep then
+			shownStep = T
+			local done = math.clamp(T - 1, 0, C.TUT_STEPS)
+			TweenService:Create(stepFill, TweenInfo.new(0.5, Enum.EasingStyle.Back), { Size = UDim2.fromScale(done / C.TUT_STEPS, 1) }):Play()
+			stepT.Text = "STEP " .. math.min(T, C.TUT_STEPS) .. " / " .. C.TUT_STEPS
+		end
+	end)
 	local sent, speed0, caught0 = 0, nil, nil
 	local function go(n)
 		if n > sent then

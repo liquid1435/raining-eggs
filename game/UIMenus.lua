@@ -103,11 +103,11 @@ function M.init(X)
 	do
 		local Bought = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Bought", 10)
 		if Bought then
-			Bought.OnClientEvent:Connect(function(what)
+			Bought.OnClientEvent:Connect(function(what, head)
 				local holder = make("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.36), Size = UDim2.fromScale(0.7, 0.2), ZIndex = 40 }, fxLayer)
 				local sc = make("UIScale", { Scale = 0.2 }, holder)
 				local t1 = make("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 0.62), Font = Enum.Font.LuckiestGuy, TextScaled = true,
-					Text = "CONGRATULATIONS!", TextColor3 = WHITE, ZIndex = 41 }, holder)
+					Text = head or "CONGRATULATIONS!", TextColor3 = WHITE, ZIndex = 41 }, holder)
 				make("UIStroke", { Thickness = 5, Color = Color3.fromRGB(60, 20, 90) }, t1)
 				make("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(255, 250, 160), Color3.fromRGB(255, 170, 30)) }, t1)
 				local t2 = make("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 0.34), Position = UDim2.fromScale(0, 0.64), Font = Enum.Font.FredokaOne, TextScaled = true,
@@ -1266,7 +1266,9 @@ function M.init(X)
 			return { button = b, label = t, grad = g }
 		end
 		local function buyProduct(pk, name)
-			if pk.id == 0 then
+			if pk.id == 0 and RunService:IsStudio() then -- v284: Studio test, free
+				Action:FireServer("testbuy", pk.key)
+			elseif pk.id == 0 then
 				toast(name .. " - coming soon!", "info")
 			else
 				MPS:PromptProductPurchase(plr, pk.id)
@@ -1422,6 +1424,8 @@ function M.init(X)
 					local b = priceBtn(c, UDim2.fromScale(0.56, 0.28), UDim2.fromScale(0.38, 0.66), function()
 						if hasPass(p.key) then
 							toast("You already own " .. p.name, "info")
+						elseif p.id == 0 and RunService:IsStudio() then -- v284: Studio test, free
+							Action:FireServer("testbuy", p.key)
 						elseif p.id == 0 then
 							toast(p.name .. " - coming soon!", "info")
 						else

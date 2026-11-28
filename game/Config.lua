@@ -774,6 +774,8 @@ C.PASSES = {
 	{ key = "autohatch", id = 0, name = "Auto Hatch", desc = "Hatch eggs automatically", robux = 99, icon = "bolt", col = Color3.fromRGB(255, 70, 150) },
 }
 C.SLOTS_PASS = 3
+C.TUT_REWARD = 5000 -- v284: cash for finishing the introduction
+C.TUT_STEPS = 6
 C.VIP_BASKET = 5
 -- v256 SHOP like Steal an Egg (user video): Robux products (developer products; id 0 = not created yet -> "coming soon").
 -- ROYAL EGG: hatches a pet of your best zone with big luck, always Gold or Rainbow (kind "royal", violet egg)

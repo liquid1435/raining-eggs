@@ -1090,8 +1090,14 @@ Action.OnServerEvent:Connect(function(plr, what, a)
 	end
 	local d = data[plr]
 	if d and typeof(a) == "number" and a == a and a >= (d.tut or 0) and a <= 99 then
+		local before = d.tut or 0
 		d.tut = math.floor(a)
 		plr:SetAttribute("Tut", d.tut)
+		if before < 99 and d.tut == 99 then -- v284 (user): finishing the introduction gives $5,000 (only once: Tut is saved)
+			d.cash = d.cash + C.TUT_REWARD
+			plr:SetAttribute("Cash", d.cash)
+			Bought:FireClient(plr, "$" .. C.comma(C.TUT_REWARD), "TUTORIAL COMPLETE!")
+		end
 	end
 end)
 Action.OnServerEvent:Connect(function(plr, what, a, x, z)
@@ -2125,6 +2131,7 @@ Players.PlayerAdded:Connect(function(plr)
 end)
 -- v256: Robux products (SHOP: Royal Egg, speed, money). Granted once per receipt.
 local granted = {}
+local grantProduct -- v284: defined right below (also used by the Studio test buy)
 MPS.ProcessReceipt = function(info)
 	local plr = Players:GetPlayerByUserId(info.PlayerId)
 	local d = plr and data[plr]
@@ -2143,6 +2150,11 @@ MPS.ProcessReceipt = function(info)
 	if not pk then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
+	grantProduct(plr, d, pk)
+	granted[info.PurchaseId] = true
+	return Enum.ProductPurchaseDecision.PurchaseGranted
+end
+grantProduct = function(plr, d, pk)
 	if pk.kind == "royal" then
 		for _ = 1, pk.n do
 			table.insert(d.bag, { z = math.max(1, d.unlocked or 1), kind = "royal", luck = C.luck(d.luck) * C.ROYAL_LUCK })
@@ -2161,10 +2173,31 @@ MPS.ProcessReceipt = function(info)
 		say(plr, "+$" .. C.fmt(gain) .. "! Thank you!", "legend")
 		Bought:FireClient(plr, "+$" .. C.fmt(gain))
 	end
-	granted[info.PurchaseId] = true
 	sync(plr)
-	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
+-- v284 (user: try the Robux things without paying): in Studio ONLY, the shop buttons of products / passes without an id
+-- give the thing for free (Action "testbuy", key). On the real game servers this does nothing.
+Action.OnServerEvent:Connect(function(plr, what, key)
+	if what ~= "testbuy" or not game:GetService("RunService"):IsStudio() or typeof(key) ~= "string" then
+		return
+	end
+	local d = data[plr]
+	if not d then
+		return
+	end
+	local pk = C.PRODUCTS[key]
+	if pk then
+		grantProduct(plr, d, pk)
+		return
+	end
+	for _, p in ipairs(C.PASSES) do
+		if p.key == key then
+			givePass(plr, p.key)
+			say(plr, p.name .. " unlocked! (Studio test)", "legend")
+			Bought:FireClient(plr, p.name)
+		end
+	end
+end)
 -- v262 AUTO HATCH pass: every 4 s one egg from the EGGS menu hatches on its own (same as pressing HATCH)
 task.spawn(function()
 	while true do
