@@ -726,7 +726,11 @@ C.PASSES = {
 	{ key = "luck2", id = 0, name = "2x Luck", desc = "Rare pets hatch twice as often", robux = 179, icon = "clover", col = Color3.fromRGB(40, 170, 255) },
 	{ key = "vip", id = 0, name = "VIP Basket", desc = "+5 basket space for every run", robux = 99, icon = "basket", col = Color3.fromRGB(255, 150, 30) },
 	{ key = "fast", id = 0, name = "Fast Hatch", desc = "Egg opening plays 2x faster", robux = 49, icon = "egg", col = Color3.fromRGB(190, 90, 255) },
+	-- v262 (user: like the ChatGPT shop): two more passes
+	{ key = "slots3", id = 0, name = "+3 Pet Slots", desc = "Equip 3 more pets", robux = 199, icon = "paw", col = Color3.fromRGB(60, 120, 255) },
+	{ key = "autohatch", id = 0, name = "Auto Hatch", desc = "Hatch eggs automatically", robux = 99, icon = "bolt", col = Color3.fromRGB(255, 70, 150) },
 }
+C.SLOTS_PASS = 3
 C.VIP_BASKET = 5
 -- v256 SHOP like Steal an Egg (user video): Robux products (developer products; id 0 = not created yet -> "coming soon").
 -- ROYAL EGG: hatches a pet of your best zone with big luck, always Gold or Rainbow (kind "royal", violet egg)
@@ -750,6 +754,31 @@ C.CASH_PACKS = {
 	{ key = "cash1h", id = 0, secs = 3600, robux = 35, name = "Bag of Cash", min = 50000 },
 	{ key = "cash4h", id = 0, secs = 4 * 3600, robux = 99, name = "Crate of Cash", min = 250000, tag = "POPULAR" },
 	{ key = "cash12h", id = 0, secs = 12 * 3600, robux = 199, name = "Vault of Cash", min = 1000000, tag = "BEST VALUE" },
+}
+-- v262: Codex shop art (E:/rainingeggs/codex_shop/sheets shop_A/B/C.png). Put the uploaded image ids here.
+C.SHOP_ART = { A = "", B = "", C = "" }
+C.SHOP_RECTS = {
+	cash_1 = { "B", 8, 0, 324, 341 },
+	cash_2 = { "B", 349, 0, 324, 341 },
+	cash_3 = { "B", 690, 0, 324, 341 },
+	cash_4 = { "B", 8, 341, 324, 341 },
+	cash_5 = { "B", 349, 341, 324, 341 },
+	pass_auto = { "A", 690, 341, 324, 341 },
+	pass_cash = { "A", 8, 0, 324, 341 },
+	pass_fast = { "A", 8, 341, 324, 341 },
+	pass_luck = { "A", 349, 0, 324, 341 },
+	pass_slots = { "A", 349, 341, 324, 341 },
+	pass_vip = { "A", 690, 0, 324, 341 },
+	ribbon_cash = { "C", 512, 115, 512, 99 },
+	ribbon_featured = { "C", 0, 5, 512, 99 },
+	ribbon_gamepasses = { "C", 512, 5, 512, 99 },
+	ribbon_speed = { "C", 0, 115, 512, 99 },
+	royal_egg = { "B", 704, 341, 297, 341 },
+	royal_title = { "C", 63, 220, 897, 256 },
+	speed_10 = { "A", 690, 682, 324, 341 },
+	speed_2 = { "A", 8, 682, 324, 341 },
+	speed_5 = { "A", 349, 682, 324, 341 },
+	title_shop = { "B", 0, 752, 1024, 201 },
 }
 C.PRODUCTS = {} -- every product by key (server: by id)
 for _, list in ipairs({ C.ROYAL_PACKS, C.SPEED_PACKS, C.CASH_PACKS }) do

@@ -69,7 +69,7 @@ end
 local buyTrain -- v162: defined next to buy()
 -- v232: pen space upgrade (UPGRADES menu): every level = one more pet in your pen
 local function penMax(d)
-	return C.PEN_MAX + (d and d.pen or 0)
+	return C.PEN_MAX + (d and d.pen or 0) + ((d and d.passes and d.passes.slots3) and C.SLOTS_PASS or 0) -- v262: +3 Pet Slots pass
 end
 
 -- treadmills from TreadmillPack (ReplicatedStorage.Shared): 20 models, a better one every 3 training levels
@@ -2157,6 +2157,17 @@ MPS.ProcessReceipt = function(info)
 	sync(plr)
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
+-- v262 AUTO HATCH pass: every 4 s one egg from the EGGS menu hatches on its own (same as pressing HATCH)
+task.spawn(function()
+	while true do
+		task.wait(4)
+		for plr, d in pairs(data) do
+			if d.passes and d.passes.autohatch and #d.bag > 0 and plr.Parent then
+				pcall(hatchBag, plr, nil, 1)
+			end
+		end
+	end
+end)
 MPS.PromptGamePassPurchaseFinished:Connect(function(plr, id, bought)
 	if not bought then
 		return
