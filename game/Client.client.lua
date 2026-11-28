@@ -1281,6 +1281,25 @@ do
 			end
 			t.art = a
 		end
+		-- v266 (user: could not scroll the zone list): the canvas is sized from the list itself (AutomaticCanvasSize missed the
+		-- aspect-ratio tabs), a wide visible scroll bar, and the tabs no longer catch the wheel / drag
+		local lay = tabList:FindFirstChildOfClass("UIListLayout")
+		tabList.AutomaticCanvasSize = Enum.AutomaticSize.None
+		tabList.ScrollingEnabled = true
+		tabList.ScrollBarThickness = 10
+		tabList.ScrollBarImageColor3 = Color3.fromRGB(190, 140, 255)
+		tabList.ScrollingDirection = Enum.ScrollingDirection.Y
+		tabList.ZIndex = 7
+		local function canvas()
+			tabList.CanvasSize = UDim2.fromOffset(0, lay.AbsoluteContentSize.Y + 16)
+		end
+		lay:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(canvas)
+		canvas()
+		for _, b in ipairs(tabList:GetChildren()) do
+			if b:IsA("GuiButton") then
+				b.Selectable = false
+			end
+		end
 		local banner = C.artImage(ii, "zb_sunny", UDim2.fromScale(0.67, 0.14), UDim2.fromScale(0.31, 0.135), 2)
 		banner.ScaleType = Enum.ScaleType.Stretch
 		zoneTitle.Parent = banner
