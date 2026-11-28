@@ -2118,6 +2118,45 @@ Players.PlayerAdded:Connect(function(plr)
 		end
 	end
 end)
+-- v256: Robux products (SHOP: Royal Egg, speed, money). Granted once per receipt.
+local granted = {}
+MPS.ProcessReceipt = function(info)
+	local plr = Players:GetPlayerByUserId(info.PlayerId)
+	local d = plr and data[plr]
+	if not d then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	if granted[info.PurchaseId] then
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+	local pk
+	for _, p in pairs(C.PRODUCTS) do
+		if p.id ~= 0 and p.id == info.ProductId then
+			pk = p
+		end
+	end
+	if not pk then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	if pk.kind == "royal" then
+		for _ = 1, pk.n do
+			table.insert(d.bag, { z = math.max(1, d.unlocked or 1), kind = "royal", luck = C.luck(d.luck) * C.ROYAL_LUCK })
+		end
+		renderCarry(plr)
+		say(plr, pk.n .. (pk.n == 1 and " ROYAL EGG" or " ROYAL EGGS") .. " added to your EGGS! Thank you!", "legend")
+	elseif pk.kind == "speed" then
+		d.speed = math.max(d.speed, 100) * pk.mult
+		say(plr, "Speed x" .. pk.mult .. "! Thank you!", "legend")
+	elseif pk.kind == "cash" then
+		local income = tonumber(plr:GetAttribute("Income")) or 0
+		local gain = math.max(pk.min, math.floor(income * pk.secs))
+		d.cash = d.cash + gain
+		say(plr, "+$" .. C.fmt(gain) .. "! Thank you!", "legend")
+	end
+	granted[info.PurchaseId] = true
+	sync(plr)
+	return Enum.ProductPurchaseDecision.PurchaseGranted
+end
 MPS.PromptGamePassPurchaseFinished:Connect(function(plr, id, bought)
 	if not bought then
 		return
@@ -2477,7 +2516,7 @@ local function placeAltar(plr, n, quiet)
 	end
 	local pick
 	for k, egg in ipairs(d.bag) do
-		if egg.z == n and (not pick or egg.kind == "normal") then
+		if egg.z == n and egg.kind ~= "royal" and (not pick or egg.kind == "normal") then
 			pick = k
 		end
 	end

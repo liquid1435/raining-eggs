@@ -728,6 +728,53 @@ C.PASSES = {
 	{ key = "fast", id = 0, name = "Fast Hatch", desc = "Egg opening plays 2x faster", robux = 79, icon = "egg", col = Color3.fromRGB(190, 90, 255) },
 }
 C.VIP_BASKET = 5
+-- v256 SHOP like Steal an Egg (user video): Robux products (developer products; id 0 = not created yet -> "coming soon").
+-- ROYAL EGG: hatches a pet of your best zone with big luck, always Gold or Rainbow (kind "royal", violet egg)
+C.ROYAL_LUCK = 10
+C.ROYAL_PACKS = {
+	{ key = "royal1", id = 0, n = 1, robux = 99 },
+	{ key = "royal3", id = 0, n = 3, robux = 249 },
+	{ key = "royal10", id = 0, n = 10, robux = 799 },
+	{ key = "royal50", id = 0, n = 50, robux = 3499, old = 4950 },
+}
+-- SPEED packs: your speed x N (speed is on a log scale, so x10 is a big but fair jump)
+C.SPEED_PACKS = {
+	{ key = "speed2", id = 0, mult = 2, robux = 35 },
+	{ key = "speed5", id = 0, mult = 5, robux = 99 },
+	{ key = "speed10", id = 0, mult = 10, robux = 229 },
+}
+-- MONEY packs: minutes / hours of YOUR current income (stay useful at every stage), never less than min
+C.CASH_PACKS = {
+	{ key = "cash10m", id = 0, secs = 600, robux = 19, name = "Handful of Cash", min = 5000 },
+	{ key = "cash30m", id = 0, secs = 1800, robux = 39, name = "Stack of Cash", min = 20000 },
+	{ key = "cash1h", id = 0, secs = 3600, robux = 79, name = "Bag of Cash", min = 50000 },
+	{ key = "cash4h", id = 0, secs = 4 * 3600, robux = 199, name = "Crate of Cash", min = 250000, tag = "POPULAR" },
+	{ key = "cash12h", id = 0, secs = 12 * 3600, robux = 399, name = "Vault of Cash", min = 1000000, tag = "BEST VALUE" },
+}
+C.PRODUCTS = {} -- every product by key (server: by id)
+for _, list in ipairs({ C.ROYAL_PACKS, C.SPEED_PACKS, C.CASH_PACKS }) do
+	for _, pk in ipairs(list) do
+		C.PRODUCTS[pk.key] = pk
+	end
+end
+C.ROYAL_PACKS[1].kind, C.ROYAL_PACKS[2].kind, C.ROYAL_PACKS[3].kind, C.ROYAL_PACKS[4].kind = "royal", "royal", "royal", "royal"
+for _, pk in ipairs(C.SPEED_PACKS) do
+	pk.kind = "speed"
+end
+for _, pk in ipairs(C.CASH_PACKS) do
+	pk.kind = "cash"
+end
+-- chance of each rarity with a luck value (same rule as the server's roll)
+function C.rarityChances(luck)
+	local out, left = {}, 1
+	for i = #C.RARITY, 2, -1 do
+		local p = math.min(luck / C.RARITY[i].odds, 0.9)
+		out[i] = left * p
+		left = left * (1 - p)
+	end
+	out[1] = left
+	return out
+end
 
 -- Daily rewards: claim once every 20 hours; miss 48 hours and the streak starts again at day 1.
 C.DAILY_COOLDOWN = 20 * 3600
@@ -753,6 +800,7 @@ C.EVENT_RAINBOW = 2       -- RAINBOW WEEK: Rainbow chance x this
 C.TIER_ODDS = {
 	normal = { 0.7, 0.2, 0.1 },
 	golden = { 0, 0.8, 0.2 },
+	royal = { 0, 0.7, 0.3 }, -- v256: the Robux ROYAL EGG
 	secret = { 0, 0.8, 0.2 }, -- v244: the SECRET (big) egg hatches as itself, same coats as a golden egg
 }
 function C.rollTier(kind, rainbowWeek)

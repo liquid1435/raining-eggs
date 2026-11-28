@@ -795,6 +795,7 @@ function M.init(X)
 	local KIND = {
 		golden = { "GOLDEN EGG", Color3.fromRGB(255, 196, 40), "80% GOLD 20% RAINBOW" }, -- v244: no extra luck
 		storm = { "STORM EGG", Color3.fromRGB(140, 80, 255), "x" .. C.STORM_EGG_LUCK .. " LUCK" },
+		royal = { "ROYAL EGG", Color3.fromRGB(200, 60, 150), "x" .. C.ROYAL_LUCK .. " LUCK  GOLD / RAINBOW" }, -- v256 Robux egg
 	}
 	local ZONE_CARD = Color3.fromRGB(96, 160, 255)
 	local spinning = {} -- egg parts in the open cards, turned every frame
@@ -805,7 +806,7 @@ function M.init(X)
 		}, parent)
 		local cam = make("Camera", { FieldOfView = 34 }, vp)
 		vp.CurrentCamera = cam
-		local name = (kind == "golden" and "Egg_Gold") or (kind == "storm" and "Egg_Storm") or ("Egg_" .. z)
+		local name = (kind == "golden" and "Egg_Gold") or (kind == "storm" and "Egg_Storm") or (kind == "royal" and "Egg_Secret") or ("Egg_" .. z)
 		local src = (kind == "golden" and C.meshOf("Egg_" .. z .. "_G")) or C.meshOf(name) -- v244: gold-coated zone egg
 		local p, rot
 		if src then
@@ -847,8 +848,8 @@ function M.init(X)
 			end
 		end
 		table.sort(order, function(a, b)
-			local ra = (a.kind == "storm" and 2 or a.kind == "golden" and 1 or 0) * 100 + a.z
-			local rb = (b.kind == "storm" and 2 or b.kind == "golden" and 1 or 0) * 100 + b.z
+			local ra = (a.kind == "royal" and 3 or a.kind == "storm" and 2 or a.kind == "golden" and 1 or 0) * 100 + a.z
+			local rb = (b.kind == "royal" and 3 or b.kind == "storm" and 2 or b.kind == "golden" and 1 or 0) * 100 + b.z
 			return ra > rb
 		end)
 		return order
@@ -1075,46 +1076,327 @@ function M.init(X)
 		end
 	end
 
-	-- ============================================================ STORE (game passes)
-	local storePanel = panel("STORE", "gem", Color3.fromRGB(40, 170, 255), 0.66, 1.6)
-	local si = storePanel.inner
-	local passCards = {}
-	for n, p in ipairs(C.PASSES) do
-		local col, row = (n - 1) % 2, math.floor((n - 1) / 2)
-		local c = card(si, p.col, UDim2.fromScale(0.455, 0.42), UDim2.fromScale(0.03 + col * 0.485, 0.05 + row * 0.47))
-		local ic = icon(c, p.icon, UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.04, 0.12))
-		ic.ZIndex = 3
-		local nm = title(c, UDim2.fromScale(0.6, 0.2), UDim2.fromScale(0.37, 0.1), 40, p.name:upper())
-		nm.TextXAlignment = Enum.TextXAlignment.Left
-		nm.ZIndex = 3
-		local ds = title(c, UDim2.fromScale(0.6, 0.26), UDim2.fromScale(0.37, 0.33), 24, p.desc)
-		ds.Font = Enum.Font.FredokaOne
-		ds.TextWrapped = true
-		ds.TextXAlignment = Enum.TextXAlignment.Left
-		ds.ZIndex = 3
-		local b = bigButton(c, GREEN, UDim2.fromScale(0.6, 0.26), UDim2.fromScale(0.37, 0.65))
-		b.button.Activated:Connect(function()
-			if hasPass(p.key) then
-				toast("You already own " .. p.name, "info")
-			elseif p.id == 0 then
-				toast(p.name .. " - coming soon!", "info")
+	-- ============================================================ SHOP v256 (user video of Steal an Egg's shop): green "Shop" title
+	-- bar + red X, dark body, ONE list you scroll: -- FEATURED -- (Royal Egg banner), -- PASSES -- (2 per row),
+	-- -- SPEED -- (3 per row), -- MONEY -- (3 small + 2 wide). Category buttons on the right jump to each section.
+	do
+		local BG1, BG2 = Color3.fromRGB(44, 44, 52), Color3.fromRGB(28, 28, 34)
+		local storePanel = panel("STORE", "gem", Color3.fromRGB(40, 170, 255), 0.6, 1.72)
+		local sf = storePanel.frame
+		for _, ch in ipairs(sf:GetChildren()) do
+			if ch:IsA("GuiObject") then
+				ch.Visible = false
+			end
+		end
+		local function rnd(o, s)
+			make("UICorner", { CornerRadius = UDim.new(s or 0.08, 0) }, o)
+		end
+		local function grad(o, a, b, rot)
+			return make("UIGradient", { Rotation = rot or 90, Color = ColorSequence.new(a, b) }, o)
+		end
+		local function txt(parent, size, pos, maxSize, s, col, xa, font, z)
+			local t = make("TextLabel", {
+				BackgroundTransparency = 1, Size = size, Position = pos, Font = font or Enum.Font.FredokaOne, TextScaled = true,
+				Text = s or "", TextColor3 = col or WHITE, TextXAlignment = xa or Enum.TextXAlignment.Center, ZIndex = z or 14,
+			}, parent)
+			make("UIStroke", { Thickness = 2.5, Color = BLACK }, t)
+			make("UITextSizeConstraint", { MaxTextSize = maxSize }, t)
+			return t
+		end
+		local function frame(parent, size, pos, a, b, stroke, z, corner)
+			local f = make("Frame", { Size = size, Position = pos or UDim2.new(), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = z or 12 }, parent)
+			rnd(f, corner)
+			grad(f, a, b)
+			if stroke then
+				make("UIStroke", { Thickness = 3, Color = stroke, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, f)
+			end
+			return f
+		end
+		local function shade(c, k)
+			return Color3.new(c.R * k, c.G * k, c.B * k)
+		end
+		local function click()
+			if sfx then
+				pcall(sfx, "click", 0.4)
+			end
+		end
+		local root = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 10 }, sf)
+		-- body + green title bar + X
+		local body = frame(root, UDim2.fromScale(1, 1), nil, BG1, BG2, BLACK, 10, 0.03)
+		local bar = frame(root, UDim2.fromScale(1, 0.1), nil, Color3.fromRGB(130, 245, 70), Color3.fromRGB(60, 190, 40), BLACK, 11, 0.25)
+		txt(bar, UDim2.fromScale(0.5, 0.72), UDim2.fromScale(0.025, 0.14), 48, "Shop", WHITE, Enum.TextXAlignment.Left, Enum.Font.LuckiestGuy)
+		local xb = make("TextButton", { AutoButtonColor = false, Text = "", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.fromScale(0.99, 0.05), Size = UDim2.fromScale(0.07, 0.085), BackgroundColor3 = WHITE, ZIndex = 13 }, root)
+		make("UIAspectRatioConstraint", { AspectRatio = 1 }, xb)
+		rnd(xb, 0.2)
+		grad(xb, Color3.fromRGB(255, 80, 80), Color3.fromRGB(200, 20, 30))
+		make("UIStroke", { Thickness = 2.5, Color = BLACK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, xb)
+		txt(xb, UDim2.fromScale(0.62, 0.62), UDim2.fromScale(0.19, 0.17), 40, "X", WHITE, nil, Enum.Font.LuckiestGuy, 14)
+		pressable(xb)
+		xb.Activated:Connect(function()
+			storePanel.close()
+		end)
+		local list = make("ScrollingFrame", {
+			BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromScale(0.96, 0.87), Position = UDim2.fromScale(0.02, 0.115),
+			ScrollBarThickness = 8, ScrollBarImageColor3 = Color3.fromRGB(150, 150, 160), CanvasSize = UDim2.new(),
+			AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 11,
+		}, root)
+		make("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }, list)
+		make("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingRight = UDim.new(0, 14), PaddingBottom = UDim.new(0, 12) }, list)
+		local order = 0
+		local function nextOrder()
+			order += 1
+			return order
+		end
+		-- a block of the list: full width, height = width / aspect (in pixels, so the canvas can grow)
+		local blocks = {}
+		local function fitBlocks()
+			local w = list.AbsoluteSize.X - 14
+			for f, aspect in pairs(blocks) do
+				f.Size = UDim2.new(1, 0, 0, math.floor(w / aspect))
+			end
+		end
+		list:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitBlocks)
+		local function block(aspect)
+			local f = make("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 40), LayoutOrder = nextOrder(), ZIndex = 11 }, list)
+			blocks[f] = aspect
+			fitBlocks()
+			return f
+		end
+		local sections = {}
+		local function header(name)
+			local h = block(16)
+			txt(h, UDim2.fromScale(1, 0.9), UDim2.fromScale(0, 0.05), 34, "-- " .. name .. " --", Color3.fromRGB(255, 226, 90), nil, Enum.Font.LuckiestGuy, 12)
+			sections[name] = h
+			return h
+		end
+		-- green Robux price button
+		local function priceBtn(parent, size, pos, onBuy)
+			local b = make("TextButton", { AutoButtonColor = false, Text = "", Size = size, Position = pos, BackgroundColor3 = WHITE, ZIndex = 14 }, parent)
+			rnd(b, 0.3)
+			local g = grad(b, Color3.fromRGB(120, 245, 90), Color3.fromRGB(40, 175, 50))
+			make("UIStroke", { Thickness = 2.5, Color = Color3.fromRGB(15, 60, 20), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
+			local t = txt(b, UDim2.fromScale(0.86, 0.7), UDim2.fromScale(0.07, 0.15), 40, "", WHITE, nil, nil, 15)
+			pressable(b)
+			b.Activated:Connect(function()
+				click()
+				onBuy()
+			end)
+			return { button = b, label = t, grad = g }
+		end
+		local function buyProduct(pk, name)
+			if pk.id == 0 then
+				toast(name .. " - coming soon!", "info")
 			else
-				MPS:PromptGamePassPurchase(plr, p.id)
+				MPS:PromptProductPurchase(plr, pk.id)
+			end
+		end
+		-- a coloured card with rays of light
+		local function card(parent, col, size, pos)
+			local c = frame(parent, size, pos, col:Lerp(WHITE, 0.25), shade(col, 0.55), shade(col, 0.4), 12, 0.1)
+			local rays = make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.35), Size = UDim2.fromScale(0.9, 0.9), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 12 }, c)
+			make("UIAspectRatioConstraint", { AspectRatio = 1 }, rays)
+			rnd(rays, 1)
+			make("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.7), NumberSequenceKeypoint.new(1, 1) }) }, rays)
+			return c
+		end
+		local function bigIcon(parent, name, size, pos)
+			local ic = icon(parent, name, size, pos, Vector2.new(0.5, 0.5))
+			make("UIAspectRatioConstraint", { AspectRatio = 1 }, ic)
+			ic.ZIndex = 13
+			X.wobbly[ic] = nil
+			return ic
+		end
+
+		-- ---------------------------------------------------------------- FEATURED: Royal Egg
+		header("FEATURED")
+		local feat = block(2.45)
+		local fc = frame(feat, UDim2.fromScale(1, 1), nil, Color3.fromRGB(210, 40, 80), Color3.fromRGB(90, 10, 60), Color3.fromRGB(255, 200, 60), 12, 0.06)
+		local newTag = frame(fc, UDim2.fromScale(0.09, 0.11), UDim2.fromScale(0.02, 0.04), Color3.fromRGB(255, 90, 90), Color3.fromRGB(190, 10, 30), WHITE, 15, 0.3)
+		txt(newTag, UDim2.fromScale(0.84, 0.76), UDim2.fromScale(0.08, 0.12), 26, "New!", WHITE, nil, nil, 16)
+		txt(fc, UDim2.fromScale(0.45, 0.17), UDim2.fromScale(0.13, 0.03), 54, "ROYAL EGG", Color3.fromRGB(255, 222, 70), Enum.TextXAlignment.Left, Enum.Font.LuckiestGuy)
+		local fsub = txt(fc, UDim2.fromScale(0.6, 0.08), UDim2.fromScale(0.13, 0.19), 26, "", Color3.fromRGB(255, 220, 245), Enum.TextXAlignment.Left)
+		-- the egg (violet SECRET egg mesh), turning
+		local eggVp = make("ViewportFrame", { Size = UDim2.fromScale(0.22, 0.6), Position = UDim2.fromScale(0.0, 0.18), BackgroundTransparency = 1, Ambient = Color3.fromRGB(210, 200, 220), LightColor = WHITE, LightDirection = Vector3.new(0.5, -1, 0.8), ZIndex = 13 }, fc)
+		local eggCam = make("Camera", { FieldOfView = 34 }, eggVp)
+		eggVp.CurrentCamera = eggCam
+		local eggSrc = C.meshOf("Egg_Secret") or C.meshOf("Egg_Gold")
+		local eggPart, eggRot
+		if eggSrc then
+			eggPart = eggSrc:Clone()
+			eggPart.Anchored = true
+			eggRot = eggSrc.CFrame.Rotation
+			eggPart.CFrame = eggRot
+			eggPart.Parent = eggVp
+			local h = math.max(eggPart.Size.X, eggPart.Size.Y, eggPart.Size.Z)
+			eggCam.CFrame = CFrame.lookAt(Vector3.new(0, h * 0.2, -h * 2.3), Vector3.new())
+		end
+		RunService.RenderStepped:Connect(function()
+			if eggPart and sf.Visible then
+				local t = os.clock()
+				eggPart.CFrame = CFrame.new(0, math.sin(t * 2) * 0.1, 0) * CFrame.Angles(0, t * 0.8, 0) * eggRot
 			end
 		end)
-		passCards[n] = { b = b, p = p }
-	end
-	local function refreshStore()
-		for _, pc in ipairs(passCards) do
-			local own = hasPass(pc.p.key)
-			pc.b.label.Text = own and "OWNED" or ("R$ " .. pc.p.robux)
-			pc.b.color(own and GREY or GREEN)
+		-- the 5 pets it can give (your best zone) with their chances
+		local petRow = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(0.75, 0.5), Position = UDim2.fromScale(0.235, 0.28), ZIndex = 12 }, fc)
+		local petSlots = {}
+		for i = 1, #C.RARITY do
+			local s = frame(petRow, UDim2.fromScale(0.19, 1), UDim2.fromScale((i - 1) * 0.2025, 0), Color3.fromRGB(70, 20, 60), Color3.fromRGB(35, 8, 35), C.RARITY[i].color, 13, 0.1)
+			local pct = txt(s, UDim2.fromScale(0.9, 0.2), UDim2.fromScale(0.05, 0.02), 28, "", WHITE, nil, nil, 16)
+			local inc = txt(s, UDim2.fromScale(0.9, 0.16), UDim2.fromScale(0.05, 0.82), 22, "", Color3.fromRGB(255, 222, 70), nil, nil, 16)
+			local holder = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 0.62), Position = UDim2.fromScale(0, 0.2), ZIndex = 14 }, s)
+			petSlots[i] = { pct = pct, inc = inc, holder = holder, key = nil }
 		end
+		local royalBtns = {}
+		for k, pk in ipairs(C.ROYAL_PACKS) do
+			local x = 0.235 + (k - 1) * 0.19
+			txt(fc, UDim2.fromScale(0.17, 0.07), UDim2.fromScale(x, 0.79), 24, pk.n .. (pk.n == 1 and " Egg" or " Eggs"), WHITE)
+			local b = priceBtn(fc, UDim2.fromScale(0.17, 0.12), UDim2.fromScale(x, 0.865), function()
+				buyProduct(pk, "Royal Egg")
+			end)
+			b.label.Text = "R$ " .. C.comma(pk.robux) .. (pk.old and ("  <font color='#ff6b6b'><s>" .. C.comma(pk.old) .. "</s></font>") or "")
+			b.label.RichText = true
+			royalBtns[k] = b
+		end
+		local function refreshFeatured()
+			local z = math.clamp(attr("Unlocked", 1), 1, #C.ZONES)
+			local luck = C.luck(attr("LuckLv", 0)) * C.ROYAL_LUCK
+			local ch = C.rarityChances(luck)
+			fsub.Text = "x" .. C.ROYAL_LUCK .. " LUCK  ·  always GOLD or RAINBOW  ·  " .. C.ZONES[z].name
+			for i, s in ipairs(petSlots) do
+				local p = ch[i] * 100
+				s.pct.Text = (p >= 10 and string.format("%.0f%%", p)) or (p >= 1 and string.format("%.1f%%", p)) or string.format("%.2f%%", p)
+				local pet = { z = z, i = i, t = 2 }
+				s.inc.Text = "$" .. C.fmt(C.petIncome(pet)) .. "/s"
+				local key = z .. "_" .. i
+				if s.key ~= key then
+					s.key = key
+					for _, v in ipairs(s.holder:GetChildren()) do
+						v:Destroy()
+					end
+					local ok, v = pcall(X.petView, s.holder, pet, UDim2.fromScale(1, 1), UDim2.new())
+					if ok and v then
+						v.ZIndex = 15
+					end
+				end
+			end
+		end
+
+		-- ---------------------------------------------------------------- PASSES (2 per row)
+		header("PASSES")
+		local passCards = {}
+		for n = 1, #C.PASSES, 2 do
+			local row = block(4.6)
+			for k = 0, 1 do
+				local p = C.PASSES[n + k]
+				if p then
+					local c = card(row, p.col, UDim2.fromScale(0.49, 1), UDim2.fromScale(k * 0.51, 0))
+					bigIcon(c, p.icon, UDim2.fromScale(0.34, 0.8), UDim2.fromScale(0.17, 0.5))
+					txt(c, UDim2.fromScale(0.6, 0.26), UDim2.fromScale(0.36, 0.07), 40, p.name:upper(), WHITE, Enum.TextXAlignment.Left, Enum.Font.LuckiestGuy)
+					local ds = txt(c, UDim2.fromScale(0.6, 0.26), UDim2.fromScale(0.36, 0.34), 24, p.desc .. "!", WHITE, Enum.TextXAlignment.Left)
+					ds.TextWrapped = true
+					local b = priceBtn(c, UDim2.fromScale(0.56, 0.28), UDim2.fromScale(0.38, 0.66), function()
+						if hasPass(p.key) then
+							toast("You already own " .. p.name, "info")
+						elseif p.id == 0 then
+							toast(p.name .. " - coming soon!", "info")
+						else
+							MPS:PromptGamePassPurchase(plr, p.id)
+						end
+					end)
+					table.insert(passCards, { b = b, p = p })
+				end
+			end
+		end
+
+		-- ---------------------------------------------------------------- SPEED (3 per row)
+		header("SPEED")
+		local srow = block(3.3)
+		for k, pk in ipairs(C.SPEED_PACKS) do
+			local c = card(srow, Color3.fromRGB(60, 190, 255), UDim2.fromScale(0.32, 1), UDim2.fromScale((k - 1) * 0.34, 0))
+			bigIcon(c, "bolt", UDim2.fromScale(0.5, 0.45), UDim2.fromScale(0.5, 0.3))
+			txt(c, UDim2.fromScale(0.9, 0.18), UDim2.fromScale(0.05, 0.53), 36, "x" .. pk.mult .. " SPEED", WHITE, nil, Enum.Font.LuckiestGuy)
+			local b = priceBtn(c, UDim2.fromScale(0.8, 0.2), UDim2.fromScale(0.1, 0.75), function()
+				buyProduct(pk, "Speed pack")
+			end)
+			b.label.Text = "R$ " .. pk.robux
+		end
+
+		-- ---------------------------------------------------------------- MONEY (3 small + 2 wide)
+		header("MONEY")
+		local cashLabels = {}
+		local function cashCard(parent, pk, size, pos)
+			local c = card(parent, Color3.fromRGB(70, 200, 80), size, pos)
+			bigIcon(c, "coin", UDim2.fromScale(0.45, 0.4), UDim2.fromScale(0.5, 0.26))
+			local amt = txt(c, UDim2.fromScale(0.9, 0.17), UDim2.fromScale(0.05, 0.46), 40, "", Color3.fromRGB(255, 240, 120), nil, Enum.Font.LuckiestGuy)
+			local secs = pk.secs >= 3600 and (pk.secs / 3600 .. (pk.secs == 3600 and " hour" or " hours")) or (pk.secs / 60 .. " min")
+			txt(c, UDim2.fromScale(0.9, 0.09), UDim2.fromScale(0.05, 0.63), 20, pk.name .. "  ·  " .. secs .. " of income", WHITE)
+			local b = priceBtn(c, UDim2.fromScale(0.8, 0.2), UDim2.fromScale(0.1, 0.76), function()
+				buyProduct(pk, pk.name)
+			end)
+			b.label.Text = "R$ " .. pk.robux
+			if pk.tag then
+				local tg = frame(c, UDim2.fromScale(0.42, 0.11), UDim2.fromScale(0.56, 0.03), Color3.fromRGB(255, 90, 90), Color3.fromRGB(190, 10, 30), WHITE, 15, 0.3)
+				txt(tg, UDim2.fromScale(0.9, 0.7), UDim2.fromScale(0.05, 0.15), 20, pk.tag, WHITE, nil, nil, 16)
+			end
+			table.insert(cashLabels, { t = amt, pk = pk })
+		end
+		local mrow1 = block(3.3)
+		for k = 1, 3 do
+			cashCard(mrow1, C.CASH_PACKS[k], UDim2.fromScale(0.32, 1), UDim2.fromScale((k - 1) * 0.34, 0))
+		end
+		local mrow2 = block(3.3)
+		for k = 4, 5 do
+			cashCard(mrow2, C.CASH_PACKS[k], UDim2.fromScale(0.49, 1), UDim2.fromScale((k - 4) * 0.51, 0))
+		end
+
+		-- ---------------------------------------------------------------- right side: jump to a section
+		local side = make("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(1, 10, 0.12, 0), Size = UDim2.fromScale(0.13, 0.6), ZIndex = 12 }, root)
+		make("UIListLayout", { Padding = UDim.new(0.03, 0), SortOrder = Enum.SortOrder.LayoutOrder }, side)
+		for k, it in ipairs({ { "FEATURED", "Featured", "gem", Color3.fromRGB(255, 80, 120) }, { "PASSES", "Passes", "star", Color3.fromRGB(255, 190, 40) },
+			{ "SPEED", "Speed", "bolt", Color3.fromRGB(60, 190, 255) }, { "MONEY", "Money", "coin", Color3.fromRGB(70, 200, 80) } }) do
+			local b = make("TextButton", { AutoButtonColor = false, Text = "", Size = UDim2.fromScale(1, 0.22), BackgroundColor3 = WHITE, LayoutOrder = k, ZIndex = 13 }, side)
+			rnd(b, 0.2)
+			grad(b, it[4]:Lerp(WHITE, 0.2), shade(it[4], 0.6))
+			make("UIStroke", { Thickness = 2.5, Color = BLACK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
+			local ic = icon(b, it[3], UDim2.fromScale(0.6, 0.6), UDim2.fromScale(0.5, 0.38), Vector2.new(0.5, 0.5))
+			make("UIAspectRatioConstraint", { AspectRatio = 1 }, ic)
+			ic.ZIndex = 14
+			X.wobbly[ic] = nil
+			txt(b, UDim2.fromScale(0.9, 0.26), UDim2.fromScale(0.05, 0.7), 22, it[2], WHITE, nil, nil, 15)
+			pressable(b)
+			b.Activated:Connect(function()
+				click()
+				local h = sections[it[1]]
+				if h then
+					local y = h.AbsolutePosition.Y - list.AbsolutePosition.Y + list.CanvasPosition.Y
+					TweenService:Create(list, TweenInfo.new(0.3, Enum.EasingStyle.Quad), { CanvasPosition = Vector2.new(0, math.max(0, y - 4)) }):Play()
+				end
+			end)
+		end
+
+		local function refreshStore()
+			for _, pc in ipairs(passCards) do
+				local own = hasPass(pc.p.key)
+				pc.b.label.Text = own and "OWNED" or ("R$ " .. pc.p.robux)
+				pc.b.grad.Color = own and ColorSequence.new(Color3.fromRGB(170, 170, 180), Color3.fromRGB(110, 110, 120)) or ColorSequence.new(Color3.fromRGB(120, 245, 90), Color3.fromRGB(40, 175, 50))
+			end
+			local income = attr("Income", 0)
+			for _, cl in ipairs(cashLabels) do
+				cl.t.Text = "+$" .. C.fmt(math.max(cl.pk.min, math.floor(income * cl.pk.secs)))
+			end
+			refreshFeatured()
+		end
+		plr.AttributeChanged:Connect(function(a)
+			if sf.Visible and (a == "Income" or a == "Unlocked" or a == "LuckLv" or a == "Passes") then
+				refreshStore()
+			end
+		end)
+		storeBtn.Activated:Connect(function()
+			refreshStore()
+			list.CanvasPosition = Vector2.zero
+			storePanel.toggle()
+		end)
 	end
-	storeBtn.Activated:Connect(function()
-		refreshStore()
-		storePanel.toggle()
-	end)
 
 	-- ============================================================ DAILY rewards (7-day streak)
 	local dailyPanel = panel("DAILY REWARDS", "gift", Color3.fromRGB(240, 70, 90), 0.7, 1.75)
@@ -1326,9 +1608,6 @@ function M.init(X)
 		end
 		if a == "TrainLv" or a == "BasketLv" or a == "LuckLv" or a == "PenLv" or a == "Rebirth" then
 			refreshUp()
-		end
-		if a == "Passes" and storePanel.frame.Visible then
-			refreshStore()
 		end
 	end)
 

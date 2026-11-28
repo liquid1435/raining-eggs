@@ -2284,7 +2284,7 @@ end
 local EGG_H = LAYER * #PROF
 local function eggMesh(zoneIndex, kind)
 	local name = (kind == "golden" and "Egg_Gold") or (kind == "rotten" and "Egg_Rotten") or (kind == "storm" and "Egg_Storm")
-		or (kind == "secret" and "Egg_Secret") or ("Egg_" .. zoneIndex)
+		or ((kind == "secret" or kind == "royal") and "Egg_Secret") or ("Egg_" .. zoneIndex)
 	-- v244 (user): a golden egg is the zone's own egg with a gold coating (Egg_<zone>_G), Egg_Gold only as a fallback
 	local src = (kind == "golden" and C.meshOf("Egg_" .. zoneIndex .. "_G")) or C.meshOf(name)
 	if not src then
