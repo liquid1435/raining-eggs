@@ -1738,10 +1738,14 @@ local function hatchBag(plr, only, limit)
 	end
 	d.bag = keep
 	for _, egg in ipairs(bag) do
-		local idx = egg.force or roll(egg.luck) -- v182: the welcome egg has its rarity fixed
+		local royal = egg.kind == "royal" and C.rollRoyal() or nil -- v262: the Royal Egg gives one of the 6 royal pets
+		local idx = royal and C.ROYAL_PETS[royal].i or egg.force or roll(egg.luck) -- v182: the welcome egg has its rarity fixed
 		-- v152: the coat (normal / Gold / Rainbow) is rolled at hatch: C.TIER_ODDS by egg kind
 		local pet = { z = egg.z, i = idx, t = math.clamp(math.floor(egg.tier or C.rollTier(egg.kind, eventKey() == "rainbow")), 1, #C.TIER) }
-		pet.v = rollVariant(pet, d)
+		pet.v = royal and (100 + royal) or rollVariant(pet, d)
+		if royal and C.ROYAL_PETS[royal].secret then
+			Notice:FireAllClients(plr.DisplayName .. " hatched the SECRET King Lion from a Royal Egg!", "legend")
+		end
 		local def = C.petDef(pet)
 		local odds = C.RARITY[idx].odds
 		table.insert(d.carry, pet)

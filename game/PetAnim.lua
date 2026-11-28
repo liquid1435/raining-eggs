@@ -112,6 +112,10 @@ local function frames(key, clip)
 end
 
 local function keyOf(pet) -- v153: variants 2/3 = <z>_<i>_<v>
+	local v = pet.v or 1
+	if v > 100 then -- v262 royal pets: R_<i>, King Lion R_5_2
+		return v == 106 and "R_5_2" or ("R_" .. (v - 100))
+	end
 	return pet.z .. "_" .. pet.i .. ((pet.v or 1) > 1 and ("_" .. pet.v) or "")
 end
 

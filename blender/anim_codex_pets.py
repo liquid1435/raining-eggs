@@ -19,8 +19,8 @@ from mathutils import Matrix, Vector
 
 SRC = pathlib.Path(os.environ.get('PETS_SRC', r'E:\rainingeggs\codex_pets_all'))
 HERE = pathlib.Path(__file__).resolve().parent
-OUT_FBX = HERE / 'out' / 'RainingEggsPetParts.fbx'
-OUT_LUA = HERE.parent / 'game' / 'PetAnimData.lua'
+OUT_FBX = HERE / 'out' / os.environ.get('PETS_PARTS_OUT', 'RainingEggsPetParts.fbx')
+OUT_LUA = pathlib.Path(os.environ['PETS_LUA']) if os.environ.get('PETS_LUA') else HERE.parent / 'game' / 'PetAnimData.lua'  # v262: royal pets go to their own file, then merged
 RARITY = {'Common': 1, 'Uncommon': 2, 'Rare': 3, 'Epic': 4, 'Legendary': 5}
 CLIPS = ('Idle', 'Walk', 'HappyHatch', 'PenLife')
 SRC_FPS, FPS = 24, 8
@@ -111,7 +111,7 @@ for e in manifest:
         c = (plo + phi) / 2 - bc
         rest.append([round(c.x, 4), round(c.y, 4), round(c.z, 4)])
         # keep the cut mesh centred on its own box (Roblox centres imported meshes the same way)
-        ob.location = ((z - 1) * 12, (i - 1) * 12, k * 0.0)
+        ob.location = (((z if isinstance(z, int) else 0) - 1) * 12, (i - 1) * 12, k * 0.0)
     bm.free()
     parts_total += len(order)
     # animation: world delta per bone per frame

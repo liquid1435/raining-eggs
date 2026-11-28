@@ -1305,9 +1305,9 @@ function M.init(X)
 		-- the 5 pets it can give (your best zone) with their chances
 		local petRow = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(0.75, 0.5), Position = UDim2.fromScale(0.235, 0.28), ZIndex = 12 }, fc)
 		local petSlots = {}
-		for i = 1, #C.RARITY do
-			local best = i == #C.RARITY
-			local s = frame(petRow, UDim2.fromScale(0.19, 1), UDim2.fromScale((i - 1) * 0.2025, 0), best and Color3.fromRGB(255, 160, 40) or Color3.fromRGB(72, 32, 140),
+		for i = 1, #C.ROYAL_PETS do -- v262: the 6 royal pets of the egg
+			local best = i == #C.ROYAL_PETS
+			local s = frame(petRow, UDim2.fromScale(0.158, 1), UDim2.fromScale((i - 1) * 0.1685, 0), best and Color3.fromRGB(255, 160, 40) or Color3.fromRGB(72, 32, 140),
 				best and Color3.fromRGB(200, 30, 100) or Color3.fromRGB(34, 14, 80), best and Color3.fromRGB(255, 220, 80) or Color3.fromRGB(150, 100, 255), 13, 0.1)
 			local pct = txt(s, UDim2.fromScale(0.9, 0.2), UDim2.fromScale(0.05, 0.02), 28, "", WHITE, nil, nil, 16)
 			local inc = txt(s, UDim2.fromScale(0.9, 0.16), UDim2.fromScale(0.05, 0.82), 22, "", Color3.fromRGB(255, 222, 70), nil, nil, 16)
@@ -1327,13 +1327,12 @@ function M.init(X)
 		end
 		local function refreshFeatured()
 			local z = math.clamp(attr("Unlocked", 1), 1, #C.ZONES)
-			local luck = C.luck(attr("LuckLv", 0)) * C.ROYAL_LUCK
-			local ch = C.rarityChances(luck)
-			fsub.Text = "x" .. C.ROYAL_LUCK .. " LUCK  ·  always GOLD or RAINBOW  ·  " .. C.ZONES[z].name
+			fsub.Text = "EXCLUSIVE pets  ·  x" .. C.ROYAL_MULT .. " income  ·  always GOLD or RAINBOW"
 			for i, s in ipairs(petSlots) do
-				local p = ch[i] * 100
-				s.pct.Text = (p >= 10 and string.format("%.0f%%", p)) or (p >= 1 and string.format("%.1f%%", p)) or string.format("%.2f%%", p)
-				local pet = { z = z, i = i, t = 2 }
+				local rp = C.ROYAL_PETS[i]
+				local p = rp.odds * 100
+				s.pct.Text = (p >= 10 and string.format("%.0f%%", p)) or (p >= 1 and string.format("%.1f%%", p)) or string.format("%.1f%%", p)
+				local pet = { z = z, i = rp.i, t = 2, v = 100 + i }
 				s.inc.Text = "$" .. C.fmt(C.petIncome(pet)) .. "/s"
 				local key = z .. "_" .. i
 				if s.key ~= key then
@@ -1341,7 +1340,11 @@ function M.init(X)
 					for _, v in ipairs(s.holder:GetChildren()) do
 						v:Destroy()
 					end
-					local ok, v = pcall(X.petView, s.holder, pet, UDim2.fromScale(1, 1), UDim2.new())
+					local pa = art(s.holder, "pet_" .. (360 + i), UDim2.fromScale(1, 1), nil, 15)
+					local ok, v = pa ~= nil, pa
+					if not pa then
+						ok, v = pcall(X.petView, s.holder, pet, UDim2.fromScale(1, 1), UDim2.new())
+					end
 					if ok and v then
 						v.ZIndex = 15
 					end

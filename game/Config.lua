@@ -339,8 +339,44 @@ for z, list in pairs(C.VARIANTS) do
 	end
 end
 -- the definition of a pet (its variant when it has one)
+-- v262 ROYAL EGG pets (Codex, user: own pets, bigger than normal ones): a royal pet is { z = zone it was hatched in
+-- (its income follows that zone), i = rarity, t = tier, v = 100 + royal number }. Assets Pet_R_<i>[_2].
+C.ROYAL_PETS = {
+	{ name = "Royal Corgi", i = 1, odds = 0.39, key = "R_1" },
+	{ name = "Royal Wolf", i = 2, odds = 0.24, key = "R_2" },
+	{ name = "Royal Ram", i = 3, odds = 0.18, key = "R_3" },
+	{ name = "Wizard Fox", i = 4, odds = 0.12, key = "R_4" },
+	{ name = "Crystal Tiger", i = 5, odds = 0.065, key = "R_5" },
+	{ name = "King Lion", i = 5, odds = 0.005, key = "R_5_2", secret = true },
+}
+C.ROYAL_MULT = 2      -- a royal pet earns 2x the pet of the same rarity in that zone
+C.ROYAL_SCALE = 1.35  -- and is bigger
+function C.royalOf(pet)
+	local v = pet and pet.v or 0
+	return v > 100 and C.ROYAL_PETS[v - 100] or nil
+end
+function C.rollRoyal()
+	local r, acc = math.random(), 0
+	for n, rp in ipairs(C.ROYAL_PETS) do
+		acc = acc + rp.odds
+		if r < acc then
+			return n
+		end
+	end
+	return 1
+end
+local royalDefs = {}
 function C.petDef(pet)
 	local base = C.ZONES[pet.z].pets[pet.i]
+	local rp = C.royalOf(pet)
+	if rp then
+		local d = royalDefs[rp.key]
+		if not d then
+			d = setmetatable({ name = rp.name }, { __index = base })
+			royalDefs[rp.key] = d
+		end
+		return d
+	end
 	local v = pet.v or 1
 	return (v > 1 and base.vars and base.vars[v]) or base
 end
@@ -351,12 +387,16 @@ end
 
 -- a pet is { z = zone, i = rarity index, t = tier (1 normal, 2 gold, 3 rainbow), v = variant (nil/1, 2, 3) }
 function C.petIncome(pet)
-	return C.ZONES[pet.z].pets[pet.i].income * C.TIER[pet.t or 1].mult
+	return C.ZONES[pet.z].pets[pet.i].income * C.TIER[pet.t or 1].mult * (C.royalOf(pet) and C.ROYAL_MULT or 1)
 end
 function C.petName(pet)
 	return C.TIER[pet.t or 1].name .. C.petDef(pet).name
 end
 function C.petKey(pet) -- index key; also the asset key: Pet_<key>, Pet_<key>__<part>, Pet_<key>_G / _R
+	local rp = C.royalOf(pet)
+	if rp then
+		return rp.key
+	end
 	return pet.z .. "_" .. pet.i .. ((pet.v or 1) > 1 and ("_" .. pet.v) or "")
 end
 
@@ -576,6 +616,9 @@ function C.petAnim() -- v129: ReplicatedStorage.PetAnim (Codex pets made of movi
 end
 
 function C.buildPet(pet, s, anchored)
+	if C.royalOf(pet) then
+		s = s * C.ROYAL_SCALE
+	end
 	local def = C.petDef(pet)
 	local tier = pet.t or 1
 	local PA = C.petAnim()
@@ -769,6 +812,12 @@ C.SHOP_RECTS = {
 	pass_luck = { "A", 349, 0, 324, 341 },
 	pass_slots = { "A", 349, 341, 324, 341 },
 	pass_vip = { "A", 690, 0, 324, 341 },
+	pet_361 = { "C", 22, 480, 297, 272 },
+	pet_362 = { "C", 370, 480, 283, 272 },
+	pet_363 = { "C", 692, 480, 320, 272 },
+	pet_364 = { "C", 50, 752, 240, 272 },
+	pet_365 = { "C", 368, 752, 287, 272 },
+	pet_366 = { "C", 727, 752, 250, 272 },
 	ribbon_cash = { "C", 512, 115, 512, 99 },
 	ribbon_featured = { "C", 0, 5, 512, 99 },
 	ribbon_gamepasses = { "C", 512, 5, 512, 99 },
