@@ -799,7 +799,7 @@ C.CASH_PACKS = {
 	{ key = "cash12h", id = 0, secs = 12 * 3600, robux = 199, name = "Vault of Cash", min = 1000000, tag = "BEST VALUE" },
 }
 -- v262: Codex shop art (E:/rainingeggs/codex_shop/sheets shop_A/B/C.png). Put the uploaded image ids here.
-C.SHOP_ART = { A = "", B = "", C = "" }
+C.SHOP_ART = { A = "rbxassetid://119674742052843", B = "rbxassetid://74266702722248", C = "rbxassetid://129345873823223" }
 C.SHOP_RECTS = {
 	cash_1 = { "B", 8, 0, 324, 341 },
 	cash_2 = { "B", 349, 0, 324, 341 },
