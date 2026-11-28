@@ -830,7 +830,7 @@ C.SHOP_RECTS = {
 	title_shop = { "B", 0, 752, 1024, 201 },
 }
 -- v264: Codex art for MY EGGS + PET INDEX (E:/rainingeggs/codex_shop/sheets ui_D/E/F.png). Put the uploaded image ids here.
-C.UI_ART = { D = "rbxassetid://96777079394959", E = "rbxassetid://72324647553144", F = "rbxassetid://88781833273745", G = "", H = "" } -- v270: G/H = other menus + blank cards
+C.UI_ART = { D = "rbxassetid://96777079394959", E = "rbxassetid://72324647553144", F = "rbxassetid://88781833273745", G = "rbxassetid://134207539023218", H = "rbxassetid://130019533024146" } -- v270: G/H = other menus + blank cards
 C.UI_RECTS = {
 	basket_panel = { "G", 481, 322, 479, 320 },
 	basket_title = { "H", 606, 448, 400, 95 },
