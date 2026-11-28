@@ -161,13 +161,16 @@ VF = os.environ.get('FBX_PARTS_FILTER', '')          # v153: 'va,vb' = one FBX p
 if VF:
     for tag in VF.split(','):
         lo, hi = {'va': (1, 5), 'vb': (6, 10), 'wa': (11, 15), 'wb': (16, 20)}.get(tag, (6, 10))  # v228: wa / wb = world 2
+        allz = tag.startswith('z') and '-' in tag      # v250: 'z1-4' = every pet (base + variants) of zones 1-4
+        if allz:
+            lo, hi = map(int, tag[1:].split('-'))
         only = set(tag[5:].split(';')) if tag.startswith('keys=') else None   # v208: 'keys=10_2;2_1_3' = just these pets
         for o in bpy.data.objects:
             k = o.name[4:].split('__')[0].split('_')      # Pet_<z>_<i>[_<v>]__<j>
             if only is not None:
                 o.select_set('_'.join(k) in only)
             else:
-                o.select_set(len(k) == 3 and lo <= int(k[0]) <= hi)
+                o.select_set((allz or len(k) == 3) and lo <= int(k[0]) <= hi)
         if only is not None:
             tag = 'fix'
         f = OUT_FBX.with_name(OUT_FBX.stem + f'_{tag}.fbx')

@@ -360,6 +360,74 @@ function C.petKey(pet) -- index key; also the asset key: Pet_<key>, Pet_<key>__<
 	return pet.z .. "_" .. pet.i .. ((pet.v or 1) > 1 and ("_" .. pet.v) or "")
 end
 
+-- v250 (user): every pet has a TRAIT = a visual effect by its theme (name words, else its zone). Epic and Legendary
+-- pets in your pen also give a small bonus of their trait's kind (cash / egg luck / walk speed), capped.
+C.TRAITS = {
+	{ id = "gold", label = "Golden", icon = "✨", bonus = "cash", words = { "golden", "gold", "royal", "king", "gilded" } },
+	{ id = "fire", label = "Fire", icon = "🔥", bonus = "cash", words = { "phoenix", "ember", "flare", "magma", "lava", "inferno", "solar", "sun", "flame", "cinder", "ash", "meteor" } },
+	{ id = "ice", label = "Ice", icon = "❄️", bonus = "luck", words = { "frost", "ice", "glacier", "snow", "arctic", "penguin", "aurora", "yeti", "mammoth", "polar" } },
+	{ id = "storm", label = "Storm", icon = "⚡", bonus = "speed", words = { "thunder", "storm", "lightning", "laser", "bolt" } },
+	{ id = "shadow", label = "Shadow", icon = "🌑", bonus = "luck", words = { "void", "shadow", "eclipse", "black", "dark", "singularity", "gravity", "nightmare", "wraith", "werewolf", "raven", "bat" } },
+	{ id = "star", label = "Cosmic", icon = "⭐", bonus = "luck", words = { "nebula", "galaxy", "cosmic", "star", "astral", "celestial", "universe", "infinity", "comet", "nova", "moon", "lunar", "orbit", "cosmos" } },
+	{ id = "water", label = "Water", icon = "💧", bonus = "speed", words = { "shark", "whale", "dolphin", "kraken", "jelly", "manta", "ray", "orca", "seal", "otter", "octopus", "turtle", "fish", "puffer", "crab", "seahorse", "narwhal", "leviathan", "serpent", "walrus", "koi", "axolotl", "swan" } },
+	{ id = "leaf", label = "Nature", icon = "🍃", bonus = "speed", words = { "leaf", "fungus", "mushroom", "spore", "shroom", "glow", "alien", "xeno", "chameleon", "frog", "gecko", "sloth", "tentacle" } },
+	{ id = "candy", label = "Sweet", icon = "🍬", bonus = "luck", words = { "candy", "cotton", "caramel", "pink", "poodle", "rainbow" } },
+	{ id = "gear", label = "Machine", icon = "⚙️", bonus = "cash", words = { "mecha", "robo", "clockwork", "wind-up", "tin", "drone", "titan", "cyber", "mech", "robot", "rocket" } },
+	{ id = "neon", label = "Neon", icon = "💡", bonus = "speed", words = { "neon", "holo" } },
+	{ id = "spirit", label = "Spirit", icon = "🕊️", bonus = "luck", words = { "spirit", "angel", "seraph", "halo", "ghost", "unicorn", "alicorn", "pegasus", "cloud", "sky", "dove", "kitsune", "qilin" } },
+	{ id = "dragon", label = "Dragon", icon = "🐉", bonus = "cash", words = { "dragon", "hydra", "wyvern", "griffin", "manticore", "basilisk", "cerberus", "fenrir", "rex", "raptor", "roc" } },
+}
+C.TRAIT_BY_ID = {}
+for _, tr in ipairs(C.TRAITS) do
+	C.TRAIT_BY_ID[tr.id] = tr
+end
+-- zone theme when the name has no trait word (1 Sunny Meadow ... 20 Galaxy Throne)
+C.ZONE_TRAIT = { "leaf", "leaf", "candy", "gear", "water", "shadow", "storm", "neon", "spirit", "gold",
+	"star", "star", "star", "fire", "fire", "ice", "leaf", "shadow", "gear", "star" }
+C.TRAIT_BONUS = { [4] = 0.03, [5] = 0.06, [6] = 0.08 } -- per Epic / Legendary / Special pet in the pen
+C.TRAIT_CAP = 0.3
+local traitCache = {}
+function C.petTrait(pet)
+	local name = C.petDef(pet).name
+	local hit = traitCache[name]
+	if hit then
+		return hit
+	end
+	local low = " " .. string.lower(name) .. " "
+	for _, tr in ipairs(C.TRAITS) do
+		for _, w in ipairs(tr.words) do
+			if string.find(low, w, 1, true) then
+				hit = tr
+				break
+			end
+		end
+		if hit then
+			break
+		end
+	end
+	hit = hit or C.TRAIT_BY_ID[C.ZONE_TRAIT[pet.z] or "leaf"]
+	traitCache[name] = hit
+	return hit
+end
+-- total trait bonus of the pets in the pen: { cash = 0.09, luck = 0.03, speed = 0 }
+function C.traitBonus(pets)
+	local b = { cash = 0, luck = 0, speed = 0 }
+	for _, pet in ipairs(pets or {}) do
+		local v = C.TRAIT_BONUS[pet.i]
+		if v then
+			local k = C.petTrait(pet).bonus
+			b[k] = math.min(C.TRAIT_CAP, b[k] + v)
+		end
+	end
+	return b
+end
+function C.traitText(pet)
+	local tr = C.petTrait(pet)
+	local v = C.TRAIT_BONUS[pet.i]
+	local what = { cash = "cash", luck = "egg luck", speed = "speed" }
+	return tr.icon .. " " .. tr.label .. (v and ("  +" .. math.floor(v * 100 + 0.5) .. "% " .. what[tr.bonus]) or "")
+end
+
 -- upgrades: level starts at 0
 C.MAX_LV = { train = 60, basket = 19, luck = 20, pen = 10 }
 -- v232: PEN SPACE upgrade (UPGRADES menu, replaces TRAINING there): level n = C.PEN_MAX + n pets in your pen
@@ -516,6 +584,8 @@ function C.buildPet(pet, s, anchored)
 		if ok and am then
 			am.Name = C.petName(pet)
 			am:SetAttribute("Tier", tier)
+			am:SetAttribute("Trait", C.petTrait(pet).id)
+			am:SetAttribute("Rarity", pet.i)
 			am:SetAttribute("Species", def.name) -- v138: the client's flowing Gold/Rainbow coat (PetCoatFlow) looks this up
 			return am
 		end
@@ -532,6 +602,8 @@ function C.buildPet(pet, s, anchored)
 		m.Name = C.petName(pet)
 		m:SetAttribute("Tier", tier)
 		m:SetAttribute("Species", def.name)
+		m:SetAttribute("Trait", C.petTrait(pet).id)
+		m:SetAttribute("Rarity", pet.i)
 		local part = src:Clone()
 		part.Name = "Body"
 		local rot = src.CFrame.Rotation

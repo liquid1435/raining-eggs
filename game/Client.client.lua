@@ -5772,3 +5772,85 @@ do
 		TweenService:Create(music, TweenInfo.new(4), { Volume = C.MUSIC_VOLUME or 0.22 }):Play() -- fades in
 	end
 end
+
+-- ============================================================ v250 (user): every pet shows its TRAIT as a small particle effect
+-- (Config C.petTrait: fire, ice, water, star...). Stronger for rarer pets: Common barely, Legendary / Special a lot.
+task.spawn(function()
+	local P = "rbxasset://textures/particles/"
+	local function cs(a, b)
+		return ColorSequence.new(Color3.fromRGB(a[1], a[2], a[3]), Color3.fromRGB(b[1], b[2], b[3]))
+	end
+	-- tex, colours, light, speed, acceleration (y), lifetime, size
+	local FX = {
+		gold = { "sparkles_main.dds", cs({ 255, 240, 150 }, { 255, 190, 40 }), 1, 0.6, 0.4, 1.0, 0.7 },
+		fire = { "fire_main.dds", cs({ 255, 230, 120 }, { 255, 80, 20 }), 1, 1.2, 2.5, 0.7, 0.9 },
+		ice = { "sparkles_main.dds", cs({ 230, 250, 255 }, { 140, 210, 255 }), 0.6, 0.5, -1.2, 1.6, 0.55 },
+		storm = { "sparkles_main.dds", cs({ 220, 250, 255 }, { 90, 200, 255 }), 1, 3.5, 0, 0.25, 0.8 },
+		shadow = { "smoke_main.dds", cs({ 120, 70, 200 }, { 30, 20, 60 }), 0, 0.5, 0.8, 1.4, 1.1 },
+		star = { "sparkles_main.dds", cs({ 255, 255, 255 }, { 180, 140, 255 }), 1, 0.4, 0.2, 1.4, 0.6 },
+		water = { "sparkles_main.dds", cs({ 210, 245, 255 }, { 90, 180, 255 }), 0.4, 0.6, 2.2, 1.2, 0.5 },
+		leaf = { "sparkles_main.dds", cs({ 170, 255, 130 }, { 60, 190, 80 }), 0.3, 0.6, -0.6, 1.6, 0.6 },
+		candy = { "sparkles_main.dds", cs({ 255, 170, 220 }, { 140, 230, 255 }), 0.8, 0.7, -0.5, 1.2, 0.65 },
+		gear = { "fire_sparks_main.dds", cs({ 255, 240, 200 }, { 255, 170, 60 }), 1, 2.5, -4, 0.45, 0.4 },
+		neon = { "sparkles_main.dds", cs({ 255, 80, 220 }, { 80, 240, 255 }), 1, 0.8, 0.3, 0.9, 0.7 },
+		spirit = { "sparkles_main.dds", cs({ 255, 255, 255 }, { 255, 240, 200 }), 0.9, 0.4, 0.8, 1.6, 0.7 },
+		dragon = { "fire_sparks_main.dds", cs({ 255, 220, 120 }, { 255, 70, 30 }), 1, 1.5, 2, 0.8, 0.5 },
+	}
+	local RATE = { 1.2, 2, 3.5, 6, 10, 14 }
+	local done = setmetatable({}, { __mode = "k" })
+	local function add(m)
+		if done[m] or not m:IsA("Model") then
+			return
+		end
+		local id = m:GetAttribute("Trait")
+		local fx = id and FX[id]
+		if not fx then
+			return
+		end
+		done[m] = true
+		task.delay(0.6, function()
+			if not m.Parent then
+				return
+			end
+			local cf, size = m:GetBoundingBox()
+			local host = Instance.new("Part")
+			host.Name = "TraitFX"
+			host.Anchored, host.CanCollide, host.CanQuery, host.CanTouch, host.Transparency = true, false, false, false, 1
+			host.Size = size * 0.75
+			host.CFrame = cf
+			host.Parent = m
+			local r = m:GetAttribute("Rarity") or 1
+			local e = Instance.new("ParticleEmitter")
+			e.Texture = P .. fx[1]
+			e.Color = fx[2]
+			e.LightEmission = fx[3]
+			e.Speed = NumberRange.new(fx[4] * 0.6, fx[4])
+			e.Acceleration = Vector3.new(0, fx[5], 0)
+			e.Lifetime = NumberRange.new(fx[6] * 0.7, fx[6])
+			local sz = math.clamp(size.Magnitude * 0.06, 0.25, 1.6) * fx[7] * (0.8 + 0.08 * r)
+			e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.25, sz), NumberSequenceKeypoint.new(1, 0) })
+			e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
+			e.Rate = RATE[r] or 2
+			e.SpreadAngle = Vector2.new(180, 180)
+			e.Rotation = NumberRange.new(0, 360)
+			e.RotSpeed = NumberRange.new(-60, 60)
+			e.Shape = Enum.ParticleEmitterShape.Box
+			e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+			e.Parent = host
+			while host.Parent and m.Parent do -- follows the pet when it walks
+				host.CFrame = (m:GetBoundingBox())
+				task.wait(0.1)
+			end
+		end)
+	end
+	for _, d in ipairs(workspace:GetDescendants()) do
+		if d:IsA("Model") then
+			add(d)
+		end
+	end
+	workspace.DescendantAdded:Connect(function(d)
+		if d:IsA("Model") then
+			task.defer(add, d)
+		end
+	end)
+end)

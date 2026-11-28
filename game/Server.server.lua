@@ -315,6 +315,7 @@ end
 local function cashMult(d)
 	return C.rebirthMult(d.rebirth) * (1 + C.INDEX_BONUS * d.zonesDone) * (d.passes.cash2 and 2 or 1)
 		* (eventKey() == "cash" and 2 or 1) * (1 + C.FRIEND_BONUS * (d.friends or 0)) -- v150: weekly event + friends
+		* (1 + C.traitBonus(d.pets).cash) -- v250: Fire / Gold / Machine / Dragon traits
 end
 
 -- basket size: upgrades + the VIP Basket game pass
@@ -444,7 +445,7 @@ local TIER_COLOR = { nil, Color3.fromRGB(255, 204, 40), Color3.fromRGB(255, 120,
 local function label(model, pet, mult)
 	local bb = Instance.new("BillboardGui")
 	bb.Name = "Tag"
-	bb.Size = UDim2.fromOffset(170, 50) -- v214 (user: a giant "$600M/s" up close): same size on screen at any distance
+	bb.Size = UDim2.fromOffset(170, 64) -- v250: + trait line; v214 (user: a giant "$600M/s" up close): same size on screen at any distance
 	-- v144 fix (user: some pets showed no $/s): the tag sat a fixed 5 studs up, inside the big pets' bodies
 	-- (AlwaysOnTop off hides it there), and pets without a PrimaryPart got no tag at all -> put it above the real top
 	local root = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
@@ -472,8 +473,9 @@ local function label(model, pet, mult)
 		st.Parent = t
 		t.Parent = bb
 	end
-	line(C.petName(pet), 0, 0.55, TIER_COLOR[pet.t] or C.RARITY[pet.i].color)
-	line("$" .. C.fmt(C.petIncome(pet) * mult) .. "/s", 0.55, 0.45, Color3.fromRGB(255, 222, 60))
+	line(C.petName(pet), 0, 0.42, TIER_COLOR[pet.t] or C.RARITY[pet.i].color)
+	line("$" .. C.fmt(C.petIncome(pet) * mult) .. "/s", 0.42, 0.33, Color3.fromRGB(255, 222, 60))
+	line(C.traitText(pet), 0.75, 0.25, Color3.fromRGB(200, 235, 255)) -- v250: the pet's trait (+ bonus for Epic / Legendary)
 	bb.Parent = root
 end
 
@@ -1691,7 +1693,7 @@ Catch.OnServerEvent:Connect(function(plr, id)
 
 	-- the luck is saved with the egg now (combo, storm, golden...), the pet is rolled when the player presses HATCH EGGS
 	local ev = eventKey()
-	local luck = C.luck(d.luck) * C.comboLuck(d.combo) * (storm and C.STORM_LUCK or 1) * (d.passes.luck2 and 2 or 1) * (ev == "luck" and 2 or 1)
+	local luck = C.luck(d.luck) * C.comboLuck(d.combo) * (storm and C.STORM_LUCK or 1) * (d.passes.luck2 and 2 or 1) * (ev == "luck" and 2 or 1) * (1 + C.traitBonus(d.pets).luck)
 	local tier = nil
 	if e.kind == "golden" then
 		luck = luck * C.GOLDEN_LUCK
@@ -1914,7 +1916,7 @@ task.spawn(function()
 						end
 					end
 				end
-				hum.WalkSpeed = C.walkSpeed(d.speed) * (now < d.slowUntil and C.ROTTEN_FACTOR or 1) * (now < (d.stunUntil or 0) and 0.15 or 1)
+				hum.WalkSpeed = C.walkSpeed(d.speed) * (1 + C.traitBonus(d.pets).speed) * (now < d.slowUntil and C.ROTTEN_FACTOR or 1) * (now < (d.stunUntil or 0) and 0.15 or 1)
 			end
 		end
 	end
