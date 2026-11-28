@@ -566,30 +566,52 @@ stormBanner:GetPropertyChangedSignal("Visible"):Connect(function()
 	TweenService:Create(barBg, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = stormBanner.Visible and BAR_LOW or BAR_HIGH }):Play()
 end)
 
--- v286 (user): owned treadmill multiplier as a round badge at the bottom right, above the weekly event button
+-- v294 (user: after buying I want to see my boosts in the bottom corner): round badges stacked above the weekly event
+-- button: treadmill xN (bolt), 2x CASH (cash bill), 2x LUCK (clover) - each only when owned. Re-checked every second too.
 do
-	local hold = make("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1 - 24 / 1920, 1 - 120 / 1080),
-		Size = UDim2.fromScale(58 / 1920, 72 / 1080), Visible = false }, gui)
-	make("UIAspectRatioConstraint", { AspectRatio = 0.82 }, hold)
-	local b = make("Frame", { BackgroundColor3 = Color3.fromRGB(60, 190, 255), Size = UDim2.fromScale(1, 0.82) }, hold)
-	make("UICorner", { CornerRadius = UDim.new(1, 0) }, b)
-	make("UIStroke", { Thickness = 3, Color = BLACK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
-	local ic = icon(b, "bolt", UDim2.fromScale(0.72, 0.72), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5))
-	ic.ZIndex = 3
-	local t = make("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1.5, 0.22), Position = UDim2.fromScale(-0.25, 0.8),
-		Font = Enum.Font.FredokaOne, TextScaled = true, TextColor3 = WHITE, Text = "" }, hold)
-	make("UIStroke", { Thickness = 2, Color = BLACK }, t)
+	local BOOSTS = {
+		{ id = "tread", icon = "bolt", col = Color3.fromRGB(60, 190, 255) },
+		{ id = "cash2", icon = "coin", col = Color3.fromRGB(60, 200, 90), text = "x2 CASH" },
+		{ id = "luck2", icon = "clover", col = Color3.fromRGB(40, 170, 255), text = "x2 LUCK" },
+	}
+	local col = make("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1 - 24 / 1920, 1 - 112 / 1080),
+		Size = UDim2.fromScale(58 / 1920, 300 / 1080), ZIndex = 5 }, gui)
+	make("UIAspectRatioConstraint", { AspectRatio = 58 / 300 }, col)
+	make("UIListLayout", { Padding = UDim.new(0.02, 0), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Bottom }, col)
+	local items = {}
+	for k, b in ipairs(BOOSTS) do
+		local hold = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 72 / 300), LayoutOrder = -k, Visible = false, ZIndex = 5 }, col)
+		local ball = make("Frame", { BackgroundColor3 = b.col, Size = UDim2.fromScale(1, 0.8), ZIndex = 5 }, hold)
+		make("UICorner", { CornerRadius = UDim.new(1, 0) }, ball)
+		make("UIStroke", { Thickness = 3, Color = BLACK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, ball)
+		make("UIGradient", { Rotation = 90, Color = ColorSequence.new(b.col:Lerp(WHITE, 0.35), b.col) }, ball)
+		local ic = icon(ball, b.icon, UDim2.fromScale(0.72, 0.72), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5))
+		ic.ZIndex = 6
+		wobbly[ic] = nil
+		local t = make("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1.7, 0.26), Position = UDim2.fromScale(-0.35, 0.76),
+			Font = Enum.Font.FredokaOne, TextScaled = true, TextColor3 = WHITE, Text = b.text or "", ZIndex = 6 }, hold)
+		make("UIStroke", { Thickness = 2, Color = BLACK }, t)
+		items[b.id] = { hold = hold, t = t }
+	end
 	local function upd()
 		local owned = {}
 		for _, k in ipairs(string.split(attr("Passes", ""), ",")) do
 			owned[k] = true
 		end
 		local m = C.treadMult(owned)
-		hold.Visible = m > 1
-		t.Text = "x" .. m .. " TREAD"
+		items.tread.hold.Visible = m > 1
+		items.tread.t.Text = "x" .. m .. " SPEED"
+		items.cash2.hold.Visible = owned.cash2 == true
+		items.luck2.hold.Visible = owned.luck2 == true
 	end
 	plr:GetAttributeChangedSignal("Passes"):Connect(upd)
 	upd()
+	task.spawn(function()
+		while true do
+			task.wait(1)
+			upd()
+		end
+	end)
 end
 
 -- v167 (user): the weekly event is a small round button at the bottom left (clover for LUCKY WEEK, other icons for the
