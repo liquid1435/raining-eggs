@@ -1762,6 +1762,7 @@ end)
 -- ------------------------------------------------------------ rebirth: NOW > NEXT, what you get / lose / keep, speed bar
 rebirthPanel = panel("REBIRTH", "rebirth", Color3.fromRGB(240, 100, 175), 0.52, 1.35)
 local ri = rebirthPanel.inner
+C.reskinPanel(rebirthPanel, "rebirth", nil, UDim2.fromScale(0.06, 0.17), UDim2.fromScale(0.88, 0.76)) -- v270: painted like MY EGGS
 -- NOW > NEXT as two medals: glow, spinning gold ring, glossy disc, big number, ribbon label; animated chevrons between
 local rbNow, rbNext
 do

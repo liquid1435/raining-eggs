@@ -830,8 +830,31 @@ C.SHOP_RECTS = {
 	title_shop = { "B", 0, 752, 1024, 201 },
 }
 -- v264: Codex art for MY EGGS + PET INDEX (E:/rainingeggs/codex_shop/sheets ui_D/E/F.png). Put the uploaded image ids here.
-C.UI_ART = { D = "rbxassetid://96777079394959", E = "rbxassetid://72324647553144", F = "rbxassetid://88781833273745" }
+C.UI_ART = { D = "rbxassetid://96777079394959", E = "rbxassetid://72324647553144", F = "rbxassetid://88781833273745", G = "", H = "" } -- v270: G/H = other menus + blank cards
 C.UI_RECTS = {
+	basket_panel = { "G", 481, 322, 479, 320 },
+	basket_title = { "H", 606, 448, 400, 95 },
+	blank_blue = { "H", 0, 254, 240, 252 },
+	blank_cyan = { "H", 726, 0, 240, 252 },
+	blank_gold = { "H", 484, 0, 240, 252 },
+	blank_green = { "H", 0, 0, 240, 252 },
+	blank_orange = { "H", 0, 508, 240, 252 },
+	blank_pink = { "H", 242, 0, 240, 252 },
+	blank_purple = { "H", 0, 762, 240, 252 },
+	daily_panel = { "G", 481, 0, 479, 320 },
+	daily_title = { "H", 606, 254, 400, 95 },
+	day_card = { "H", 242, 492, 180, 237 },
+	day_card_done = { "H", 424, 492, 180, 237 },
+	day_card_today = { "H", 242, 731, 180, 237 },
+	item_card = { "H", 242, 254, 190, 236 },
+	pets_panel = { "G", 481, 644, 479, 320 },
+	pets_title = { "H", 606, 641, 400, 93 },
+	rebirth_panel = { "G", 0, 644, 479, 320 },
+	rebirth_title = { "H", 606, 351, 400, 95 },
+	sell_panel = { "G", 0, 0, 479, 320 },
+	sell_title = { "H", 424, 736, 400, 92 },
+	top_panel = { "G", 0, 322, 479, 320 },
+	top_title = { "H", 606, 545, 400, 94 },
 	btn_green = { "F", 597, 97, 400, 95 },
 	btn_grey = { "E", 562, 914, 400, 96 },
 	egg_card = { "D", 782, 0, 240, 299 },
@@ -918,11 +941,15 @@ function C.reskinPanel(pnl, prefix, aspect, innerPos, innerSize)
 		end
 	end
 	local ar = f:FindFirstChildOfClass("UIAspectRatioConstraint")
-	if ar then
+	if ar and aspect then
 		ar.AspectRatio = aspect
 	end
 	local bg = C.artImage(f, prefix .. "_panel", UDim2.fromScale(1, 1), nil, 5)
 	bg.ScaleType = Enum.ScaleType.Stretch
+	if not aspect then -- v270: other panel sizes: 9-slice keeps the rim clean
+		bg.ScaleType = Enum.ScaleType.Slice
+		bg.SliceCenter = Rect.new(r[4] * 0.16, r[5] * 0.2, r[4] * 0.84, r[5] * 0.8)
+	end
 	C.artImage(f, prefix .. "_title", UDim2.fromScale(0.56, 0.21), UDim2.fromScale(0.5, 0.03), 9, Vector2.new(0.5, 0.5))
 	local xr = C.UI_RECTS[prefix .. "_x"]
 	local x = Instance.new("ImageButton")

@@ -1403,6 +1403,35 @@ function M.init(X)
 			return holder, b
 		end
 		local ART_ROW = 1 / (0.32 / 0.95) -- block aspect of a row of 3 painted cards
+		-- v270 (user: money / speed must look like in the game): blank Codex card + the game's own icon + live text in fixed rows
+		local function gameCard(row, blank, iconName, iconN, title, sub, k, n, onBuy)
+			local x = (1 - n * 0.32 - (n - 1) * 0.02) / 2 + (k - 1) * 0.34
+			local holder = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(0.32, 1), Position = UDim2.fromScale(x, 0), ZIndex = 12 }, row)
+			local im = C.artImage(holder, blank, UDim2.fromScale(1, 1), nil, 12)
+			if not im then
+				holder:Destroy()
+				return nil
+			end
+			for j = 1, iconN do -- 1, 2 or 3 icons in a small fan
+				local off = (j - (iconN + 1) / 2) * 0.16
+				local ic = icon(holder, iconName, UDim2.fromScale(0.46, 0.4), UDim2.fromScale(0.5 + off, 0.27 - math.abs(off) * 0.25), Vector2.new(0.5, 0.5))
+				make("UIAspectRatioConstraint", { AspectRatio = 1 }, ic)
+				ic.ZIndex = 14
+				ic.Rotation = off * 60
+				X.wobbly[ic] = nil
+			end
+			txt(holder, UDim2.fromScale(0.86, 0.1), UDim2.fromScale(0.07, 0.5), 34, title, WHITE, nil, Enum.Font.LuckiestGuy, 15)
+			local amt = txt(holder, UDim2.fromScale(0.86, 0.085), UDim2.fromScale(0.07, 0.605), 34, "", Color3.fromRGB(170, 255, 120), nil, Enum.Font.LuckiestGuy, 15)
+			txt(holder, UDim2.fromScale(0.86, 0.055), UDim2.fromScale(0.07, 0.7), 20, sub, WHITE, nil, nil, 15)
+			local b = priceBtn(holder, UDim2.fromScale(0.7, 0.13), UDim2.fromScale(0.15, 0.805), onBuy)
+			local sh = make("Frame", { BackgroundColor3 = WHITE, BorderSizePixel = 0, Size = UDim2.fromScale(0.88, 0.7), Position = UDim2.fromScale(0.06, 0.05), ZIndex = 13 }, holder)
+			rnd(sh, 0.12)
+			local sg = make("UIGradient", { Rotation = 25, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.42, 1),
+				NumberSequenceKeypoint.new(0.5, 0.6), NumberSequenceKeypoint.new(0.58, 1), NumberSequenceKeypoint.new(1, 1) }) }, sh)
+			table.insert(shimmers, { g = sg, sc = make("UIScale", {}, im), ph = #shimmers * 0.37 })
+			return holder, b, amt
+		end
+		local HAS_BLANK = C.artImage(Instance.new("Frame"), "blank_gold") ~= nil
 		-- ---------------------------------------------------------------- PASSES (2 per row)
 		header("GAMEPASSES")
 		local passCards = {}
@@ -1457,9 +1486,20 @@ function M.init(X)
 		header("SPEED")
 		local srow = block(HAS_ART and ART_ROW or 3.3)
 		for k, pk in ipairs(HAS_ART and C.SPEED_PACKS or {}) do
-			local _, b = artCard(srow, "speed_" .. pk.mult, k, #C.SPEED_PACKS, function()
-				buyProduct(pk, "Speed pack")
-			end)
+			local h, b, amt = nil, nil, nil
+			if HAS_BLANK then
+				h, b, amt = gameCard(srow, "blank_cyan", "bolt", k, "x" .. pk.mult .. " SPEED", "Your speed x" .. pk.mult .. " forever", k, #C.SPEED_PACKS, function()
+					buyProduct(pk, "Speed pack")
+				end)
+				if amt then
+					amt.Visible = false
+				end
+			end
+			if not h then
+				_, b = artCard(srow, "speed_" .. pk.mult, k, #C.SPEED_PACKS, function()
+					buyProduct(pk, "Speed pack")
+				end)
+			end
 			b.label.Text = RBX .. " " .. tostring(pk.robux)
 		end
 		for k, pk in ipairs(HAS_ART and {} or C.SPEED_PACKS) do
@@ -1493,6 +1533,21 @@ function M.init(X)
 		end
 		local function cashArt(row, k, idx, n)
 			local pk = C.CASH_PACKS[idx]
+			if HAS_BLANK then -- the game's own green cash icon, more bills for the bigger packs
+				local secs = pk.secs >= 3600 and (pk.secs / 3600 .. (pk.secs == 3600 and " hour" or " hours")) or (pk.secs / 60 .. " min")
+				local h, b, amt = gameCard(row, "blank_gold", "coin", math.min(3, math.ceil(idx / 2)), pk.name:upper(), secs .. " of your income", k, n, function()
+					buyProduct(pk, pk.name)
+				end)
+				if h then
+					b.label.Text = RBX .. " " .. tostring(pk.robux)
+					table.insert(cashLabels, { t = amt, pk = pk })
+					if pk.tag then
+						local tg = frame(h, UDim2.fromScale(0.5, 0.08), UDim2.fromScale(0.46, 0.035), Color3.fromRGB(255, 90, 90), Color3.fromRGB(190, 10, 30), WHITE, 16, 0.3)
+						txt(tg, UDim2.fromScale(0.9, 0.7), UDim2.fromScale(0.05, 0.15), 18, pk.tag, WHITE, nil, nil, 17)
+					end
+					return
+				end
+			end
 			local holder, b = artCard(row, "cash_" .. idx, k, n, function()
 				buyProduct(pk, pk.name)
 			end)
@@ -1777,6 +1832,43 @@ function M.init(X)
 			refreshTop()
 		end
 	end)
+
+	-- v270 (user: every menu like MY EGGS): painted panels for SELL, DAILY, LEADERBOARD + painted day cards
+	do
+		local IN_P, IN_S = UDim2.fromScale(0.06, 0.17), UDim2.fromScale(0.88, 0.76)
+		C.reskinPanel(sellPanel, "sell", nil, IN_P, IN_S)
+		C.reskinPanel(topPanel, "top", nil, IN_P, IN_S)
+		if C.reskinPanel(dailyPanel, "daily", nil, IN_P, IN_S) then
+			local arts = {}
+			for n, d in ipairs(days) do
+				local a = C.artImage(d.card, "day_card", UDim2.fromScale(1, 1), nil, 2)
+				if a then
+					a.ScaleType = Enum.ScaleType.Stretch
+					local st = d.card:FindFirstChildOfClass("UIStroke")
+					if st then
+						st.Enabled = false
+					end
+					arts[n] = a
+				end
+			end
+			task.spawn(function()
+				while true do
+					task.wait(0.3)
+					if dailyPanel.frame.Visible then
+						local last, day = attr("DailyLast", 0), attr("DailyDay", 0)
+						local now = workspace:GetServerTimeNow()
+						local ready = last == 0 or now - last >= C.DAILY_COOLDOWN
+						local nextDay = (last == 0 or now - last > C.DAILY_RESET) and 1 or (day % #C.DAILY + 1)
+						for n, a in pairs(arts) do
+							local done = days[n].check.Visible
+							C.setArt(a, done and "day_card_done" or ((ready and n == nextDay) and "day_card_today" or "day_card"))
+							days[n].check.ImageTransparency = done and 1 or 0 -- the painted card has its own check mark
+						end
+					end
+				end
+			end)
+		end
+	end
 
 	-- live refresh of the open menus
 	plr.AttributeChanged:Connect(function(a)
