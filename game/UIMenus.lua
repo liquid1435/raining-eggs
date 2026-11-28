@@ -930,6 +930,41 @@ function M.init(X)
 	end
 	M.refreshEggs()
 
+	-- v264 (user's ChatGPT MY EGGS picture): Codex painted look when the art sheets are uploaded (C.UI_ART)
+	do
+		if C.reskinPanel(eggsPanel, "eggs", 1.5, UDim2.fromScale(0.075, 0.215), UDim2.fromScale(0.85, 0.69)) then
+			local btnArt = C.artImage(hatchAll.button, "btn_grey", UDim2.fromScale(1, 1), nil, 2)
+			btnArt.ScaleType = Enum.ScaleType.Stretch
+			hatchAll.face.Parent.Visible = false
+			hatchAll.label.Parent = btnArt
+			hatchAll.label.ZIndex = 3
+			local emptyEgg = C.artImage(ei, "eggs_empty_egg", UDim2.fromScale(0.36, 0.6), UDim2.fromScale(0.58, 0.14), 3)
+			local emptyText = C.artImage(ei, "eggs_empty_text", UDim2.fromScale(0.46, 0.5), UDim2.fromScale(0.06, 0.18), 3)
+			local base = M.refreshEggs
+			M.refreshEggs = function()
+				base()
+				local n = attr("Eggs", 0)
+				C.setArt(btnArt, n > 0 and "btn_green" or "btn_grey")
+				emptyEgg.Visible, emptyText.Visible = n == 0, n == 0
+				for _, c in ipairs(eggGrid:GetChildren()) do
+					if c:IsA("TextLabel") then
+						c.Visible = false -- the old "No eggs yet" line (the painted one shows instead)
+					elseif c:IsA("Frame") and not c:FindFirstChild("CardArt") then
+						local a = C.artImage(c, "egg_card", UDim2.fromScale(1, 1), nil, 2)
+						if a then
+							a.Name = "CardArt"
+							a.ScaleType = Enum.ScaleType.Stretch
+							local st = c:FindFirstChildOfClass("UIStroke")
+							if st then
+								st.Enabled = false
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
 	-- ============================================================ SELL (v104, user: "select the pets, with their picture, professional")
 	-- opens while standing on the SELL shop zone: tabs BASKET / PEN, cards like MY PETS (3D pet, name, rarity, price),
 	-- tap cards to select (green frame + tick), SELECT ALL, SELL SELECTED ($total)

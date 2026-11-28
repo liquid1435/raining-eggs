@@ -829,6 +829,125 @@ C.SHOP_RECTS = {
 	speed_5 = { "A", 349, 682, 324, 341 },
 	title_shop = { "B", 0, 752, 1024, 201 },
 }
+-- v264: Codex art for MY EGGS + PET INDEX (E:/rainingeggs/codex_shop/sheets ui_D/E/F.png). Put the uploaded image ids here.
+C.UI_ART = { D = "", E = "", F = "" }
+C.UI_RECTS = {
+	btn_green = { "F", 597, 97, 400, 95 },
+	btn_grey = { "E", 562, 914, 400, 96 },
+	egg_card = { "D", 782, 0, 240, 299 },
+	eggs_empty_egg = { "E", 0, 0, 320, 288 },
+	eggs_empty_text = { "F", 562, 194, 360, 100 },
+	eggs_panel = { "D", 0, 488, 730, 488 },
+	eggs_title = { "F", 0, 0, 512, 117 },
+	eggs_x = { "E", 884, 0, 128, 127 },
+	index_bar = { "F", 0, 426, 496, 95 },
+	index_bonus = { "F", 514, 0, 496, 95 },
+	index_detail = { "F", 0, 329, 595, 95 },
+	index_panel = { "D", 0, 0, 780, 486 },
+	index_title = { "E", 322, 0, 512, 126 },
+	index_x = { "F", 0, 766, 123, 117 },
+	rc_common = { "E", 562, 350, 208, 280 },
+	rc_epic = { "D", 782, 301, 209, 280 },
+	rc_legendary = { "D", 732, 583, 209, 280 },
+	rc_rare = { "E", 562, 632, 208, 280 },
+	rc_uncommon = { "E", 772, 350, 208, 280 },
+	rc_unknown = { "E", 772, 632, 174, 188 },
+	tab_green = { "F", 597, 296, 332, 91 },
+	tab_purple = { "F", 597, 389, 331, 91 },
+	zb_candy = { "E", 0, 350, 560, 109 },
+	zb_cloud = { "E", 0, 794, 560, 109 },
+	zb_crystal = { "F", 0, 119, 560, 103 },
+	zb_golden = { "E", 0, 905, 560, 109 },
+	zb_mushroom = { "E", 322, 239, 560, 109 },
+	zb_neon = { "E", 0, 683, 560, 109 },
+	zb_spooky = { "E", 0, 572, 560, 109 },
+	zb_sunny = { "E", 322, 128, 560, 109 },
+	zb_thunder = { "F", 0, 224, 560, 103 },
+	zb_toy = { "E", 0, 461, 560, 109 },
+	zi_candy = { "F", 0, 885, 124, 112 },
+	zi_cloud = { "E", 884, 255, 122, 92 },
+	zi_crystal = { "E", 884, 129, 123, 124 },
+	zi_golden = { "F", 125, 766, 124, 103 },
+	zi_mushroom = { "D", 732, 865, 122, 122 },
+	zi_neon = { "F", 125, 523, 123, 118 },
+	zi_spooky = { "F", 0, 645, 124, 119 },
+	zi_sunny = { "F", 0, 523, 123, 120 },
+	zi_thunder = { "F", 498, 426, 96, 124 },
+	zi_toy = { "D", 856, 865, 120, 124 },
+}
+-- an ImageLabel showing one painted piece (shop or menu art); nil while its sheet is not uploaded
+function C.artImage(parent, name, size, pos, z, anchor)
+	local ui = C.UI_RECTS and C.UI_RECTS[name]
+	local r = ui or (C.SHOP_RECTS and C.SHOP_RECTS[name])
+	local sheets = ui and C.UI_ART or C.SHOP_ART
+	local id = r and sheets and sheets[r[1]]
+	if not id or id == "" then
+		return nil
+	end
+	local im = Instance.new("ImageLabel")
+	im.BackgroundTransparency = 1
+	im.Image = id
+	im.ImageRectOffset = Vector2.new(r[2], r[3])
+	im.ImageRectSize = Vector2.new(r[4], r[5])
+	im.ScaleType = Enum.ScaleType.Fit
+	im.Size = size or UDim2.fromScale(1, 1)
+	im.Position = pos or UDim2.new()
+	im.AnchorPoint = anchor or Vector2.zero
+	im.ZIndex = z or 2
+	im.Parent = parent
+	return im
+end
+function C.setArt(im, name) -- show another piece in the same ImageLabel
+	local ui = C.UI_RECTS and C.UI_RECTS[name]
+	local r = ui or (C.SHOP_RECTS and C.SHOP_RECTS[name])
+	if im and r then
+		im.ImageRectOffset = Vector2.new(r[2], r[3])
+		im.ImageRectSize = Vector2.new(r[4], r[5])
+	end
+end
+-- a menu panel (Client panel()) gets the painted look: old skin hidden, art panel + title + X, content moved inside
+function C.reskinPanel(pnl, prefix, aspect, innerPos, innerSize)
+	local r = C.UI_RECTS and C.UI_RECTS[prefix .. "_panel"]
+	if not r or (C.UI_ART[r[1]] or "") == "" then
+		return false
+	end
+	local f, inner = pnl.frame, pnl.inner
+	for _, ch in ipairs(f:GetChildren()) do
+		if ch:IsA("GuiObject") then
+			ch.Visible = false
+		end
+	end
+	local ar = f:FindFirstChildOfClass("UIAspectRatioConstraint")
+	if ar then
+		ar.AspectRatio = aspect
+	end
+	local bg = C.artImage(f, prefix .. "_panel", UDim2.fromScale(1, 1), nil, 5)
+	bg.ScaleType = Enum.ScaleType.Stretch
+	C.artImage(f, prefix .. "_title", UDim2.fromScale(0.56, 0.21), UDim2.fromScale(0.5, 0.03), 9, Vector2.new(0.5, 0.5))
+	local xr = C.UI_RECTS[prefix .. "_x"]
+	local x = Instance.new("ImageButton")
+	x.BackgroundTransparency = 1
+	x.Image = C.UI_ART[xr[1]]
+	x.ImageRectOffset, x.ImageRectSize = Vector2.new(xr[2], xr[3]), Vector2.new(xr[4], xr[5])
+	x.ScaleType = Enum.ScaleType.Fit
+	x.AnchorPoint = Vector2.new(0.5, 0.5)
+	x.Position = UDim2.fromScale(0.965, 0.07)
+	x.Size = UDim2.fromScale(0.1, 0.15)
+	x.ZIndex = 10
+	x.Parent = f
+	x.Activated:Connect(function()
+		pnl.close()
+	end)
+	inner.Parent = f
+	inner.Position, inner.Size = innerPos, innerSize
+	inner.BackgroundTransparency = 1
+	inner.ZIndex = 6
+	local st = inner:FindFirstChildOfClass("UIStroke")
+	if st then
+		st.Enabled = false
+	end
+	return true
+end
 C.PRODUCTS = {} -- every product by key (server: by id)
 for _, list in ipairs({ C.ROYAL_PACKS, C.SPEED_PACKS, C.CASH_PACKS }) do
 	for _, pk in ipairs(list) do

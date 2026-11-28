@@ -1248,6 +1248,93 @@ refreshIndex = function()
 		end
 	end
 end
+-- v264 (user's ChatGPT PET INDEX picture): Codex painted look when the art sheets are uploaded (C.UI_ART)
+do
+	local ZK = { "sunny", "mushroom", "candy", "toy", "crystal", "spooky", "thunder", "neon", "cloud", "golden" }
+	local RK = { "common", "uncommon", "rare", "epic", "legendary" }
+	if C.reskinPanel(indexPanel, "index", 1.6, UDim2.fromScale(0.045, 0.15), UDim2.fromScale(0.91, 0.8)) then
+		foundLabel.TextColor3 = WHITE
+		make("UIStroke", { Thickness = 3, Color = BLACK }, foundLabel)
+		local bon = C.artImage(ii, "index_bonus", UDim2.fromScale(0.3, 0.1), UDim2.fromScale(0.69, 0.03), 4)
+		if bon then
+			bonusFace.Parent.Visible = false
+			bonusText.Parent = bon
+			bonusText.Position, bonusText.Size = UDim2.fromScale(0.22, 0.18), UDim2.fromScale(0.74, 0.64)
+			bonusText.ZIndex = 5
+		end
+		for z, t in pairs(tabs) do
+			local faceF = t.face
+			local holder = faceF.Parent
+			local b = holder.Parent
+			holder.Visible = false
+			local a = C.artImage(b, "tab_purple", UDim2.fromScale(1, 1), nil, 2)
+			a.ScaleType = Enum.ScaleType.Stretch
+			local zi = C.artImage(a, "zi_" .. (ZK[z] or "sunny"), UDim2.fromScale(0.2, 0.82), UDim2.fromScale(0.03, 0.09), 3)
+			for _, ch in ipairs(faceF:GetChildren()) do
+				if ch:IsA("TextLabel") then
+					ch.Parent = a
+					ch.ZIndex = 4
+					if ch ~= t.count then
+						ch.Position, ch.Size = UDim2.fromScale(0.25, 0.2), UDim2.fromScale(0.5, 0.6)
+					end
+				end
+			end
+			t.art = a
+		end
+		local banner = C.artImage(ii, "zb_sunny", UDim2.fromScale(0.67, 0.14), UDim2.fromScale(0.31, 0.135), 2)
+		banner.ScaleType = Enum.ScaleType.Stretch
+		zoneTitle.Parent = banner
+		zoneTitle.Position, zoneTitle.Size = UDim2.fromScale(0.15, 0.15), UDim2.fromScale(0.7, 0.7)
+		zoneTitle.TextXAlignment = Enum.TextXAlignment.Center
+		zoneTitle.TextColor3 = WHITE
+		zoneTitle.ZIndex = 3
+		make("UIStroke", { Thickness = 3.5, Color = Color3.fromRGB(20, 20, 80) }, zoneTitle)
+		local det = C.artImage(ii, "index_detail", UDim2.fromScale(0.67, 0.12), UDim2.fromScale(0.31, 0.86), 2)
+		det.ScaleType = Enum.ScaleType.Stretch
+		indexInfo.Parent = det
+		indexInfo.Position, indexInfo.Size = UDim2.fromScale(0.04, 0.2), UDim2.fromScale(0.92, 0.6)
+		indexInfo.TextColor3 = WHITE
+		indexInfo.ZIndex = 3
+		make("UIStroke", { Thickness = 2.5, Color = BLACK }, indexInfo)
+		for i, cd in ipairs(cards) do
+			local card = cd.frame
+			card.Size = UDim2.fromScale(0.122, 0.55)
+			card.Position = UDim2.fromScale(0.31 + (i - 1) * 0.135, 0.29)
+			local st = card:FindFirstChildOfClass("UIStroke")
+			if st then
+				st.Enabled = false
+			end
+			local a = C.artImage(card, "rc_" .. RK[i], UDim2.fromScale(1, 1), nil, 2)
+			a.ScaleType = Enum.ScaleType.Stretch
+			local unk = C.artImage(card, "rc_unknown", UDim2.fromScale(0.74, 0.5), UDim2.fromScale(0.13, 0.17), 3)
+			cd.unk = unk
+			cd.q.TextTransparency = 1
+			for _, ch in ipairs(card:GetChildren()) do
+				if ch:IsA("TextLabel") and ch.Text == C.RARITY[i].name:upper() then
+					ch.Position, ch.Size = UDim2.fromScale(0.14, 0.835), UDim2.fromScale(0.72, 0.085)
+				elseif ch:IsA("TextLabel") and string.find(ch.Text, "1 in", 1, true) then
+					ch.Position, ch.Size = UDim2.fromScale(0.07, 0.72), UDim2.fromScale(0.86, 0.09)
+				end
+			end
+		end
+		local base = refreshIndex
+		refreshIndex = function()
+			base()
+			if not indexPanel.frame.Visible then
+				return
+			end
+			for z, t in pairs(tabs) do
+				C.setArt(t.art, z == selZone and "tab_green" or "tab_purple")
+			end
+			C.setArt(banner, "zb_" .. (ZK[selZone] or "sunny"))
+			for i, cd in ipairs(cards) do
+				if cd.unk then
+					cd.unk.Visible = not found[selZone .. "_" .. i]
+				end
+			end
+		end
+	end
+end
 indexBtn.Activated:Connect(function()
 	indexPanel.toggle()
 	refreshIndex()
