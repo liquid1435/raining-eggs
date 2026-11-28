@@ -1164,6 +1164,8 @@ function M.init(X)
 			}, parent)
 		end
 		local HAS_ART = (ART.A or "") ~= ""
+		local RBX = utf8.char(0xE002) -- the Robux icon inside Roblox text
+		local shimmers = {} -- v268: animated light that sweeps over every card
 		local function click()
 			if sfx then
 				pcall(sfx, "click", 0.4)
@@ -1259,12 +1261,13 @@ function M.init(X)
 		local function priceBtn(parent, size, pos, onBuy)
 			local b = make("TextButton", { AutoButtonColor = false, Text = "", Size = size, Position = pos, BackgroundColor3 = WHITE, ZIndex = 14 }, parent)
 			rnd(b, 0.3)
-			local g = grad(b, Color3.fromRGB(120, 245, 90), Color3.fromRGB(40, 175, 50))
-			make("UIStroke", { Thickness = 2.5, Color = Color3.fromRGB(15, 60, 20), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
-			local rbx = make("ImageLabel", { BackgroundTransparency = 1, Image = "rbxasset://textures/ui/common/robux.png", ImageColor3 = WHITE,
-				AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0.1, 0.5), Size = UDim2.fromScale(0.6, 0.6), ZIndex = 15 }, b)
-			make("UIAspectRatioConstraint", { AspectRatio = 1 }, rbx)
-			local t = txt(b, UDim2.fromScale(0.7, 0.7), UDim2.fromScale(0.25, 0.15), 40, "", WHITE, nil, nil, 15)
+			local g = grad(b, Color3.fromRGB(110, 240, 80), Color3.fromRGB(28, 150, 40))
+			make("UIStroke", { Thickness = 3, Color = Color3.fromRGB(10, 50, 15), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
+			-- v268 (user: the green Robux icon could not be seen): Roblox's own Robux sign as text, white, right before the price
+			local t = txt(b, UDim2.fromScale(0.86, 0.72), UDim2.fromScale(0.07, 0.14), 42, "", WHITE, nil, Enum.Font.GothamBlack, 15)
+			t.RichText = true
+			t:FindFirstChildOfClass("UIStroke").Thickness = 3
+			t:FindFirstChildOfClass("UIStroke").Color = Color3.fromRGB(10, 50, 15)
 			pressable(b)
 			b.Activated:Connect(function()
 				click()
@@ -1302,7 +1305,7 @@ function M.init(X)
 		local feat = block(2.45)
 		local fc = frame(feat, UDim2.fromScale(1, 1), nil, Color3.fromRGB(150, 45, 235), Color3.fromRGB(46, 10, 118), Color3.fromRGB(255, 120, 245), 12, 0.06)
 		fc:FindFirstChildOfClass("UIStroke").Thickness = 4
-		local newTag = HAS_ART and Instance.new("Frame") or frame(fc, UDim2.fromScale(0.09, 0.11), UDim2.fromScale(0.02, 0.04), Color3.fromRGB(255, 90, 90), Color3.fromRGB(190, 10, 30), WHITE, 15, 0.3)
+		local newTag = frame(fc, UDim2.fromScale(0.09, 0.11), UDim2.fromScale(0.02, 0.04), Color3.fromRGB(255, 90, 90), Color3.fromRGB(190, 10, 30), WHITE, 15, 0.3)
 		txt(newTag, UDim2.fromScale(0.84, 0.76), UDim2.fromScale(0.08, 0.12), 26, "New!", WHITE, nil, nil, 16)
 		local royT = txt(fc, UDim2.fromScale(0.45, 0.17), UDim2.fromScale(0.13, 0.03), 54, "ROYAL EGG", WHITE, Enum.TextXAlignment.Left, Enum.Font.LuckiestGuy)
 		grad(royT, Color3.fromRGB(255, 248, 170), Color3.fromRGB(255, 170, 0))
@@ -1312,7 +1315,7 @@ function M.init(X)
 		local eggVp = make("ViewportFrame", { Size = UDim2.fromScale(0.22, 0.6), Position = UDim2.fromScale(0.0, 0.18), BackgroundTransparency = 1, Ambient = Color3.fromRGB(210, 200, 220), LightColor = WHITE, LightDirection = Vector3.new(0.5, -1, 0.8), ZIndex = 13 }, fc)
 		local eggCam = make("Camera", { FieldOfView = 34 }, eggVp)
 		eggVp.CurrentCamera = eggCam
-		local eggArt = art(fc, "royal_egg", UDim2.fromScale(0.24, 0.82), UDim2.fromScale(0.005, 0.12), 14)
+		local eggArt = nil and art(fc, "royal_egg", UDim2.fromScale(0.24, 0.82), UDim2.fromScale(0.005, 0.12), 14)
 		local royArt = art(fc, "royal_title", UDim2.fromScale(0.5, 0.22), UDim2.fromScale(0.27, 0.0), 14)
 		if royArt then
 			royT.Visible = false
@@ -1356,7 +1359,7 @@ function M.init(X)
 			local b = priceBtn(fc, UDim2.fromScale(0.17, 0.12), UDim2.fromScale(x, 0.865), function()
 				buyProduct(pk, "Royal Egg")
 			end)
-			b.label.Text = C.comma(pk.robux) .. (pk.old and ("  <font color='#ff6b6b'><s>" .. C.comma(pk.old) .. "</s></font>") or "")
+			b.label.Text = RBX .. " " .. C.comma(pk.robux) .. (pk.old and ("  <font color='#ff6b6b'><s>" .. C.comma(pk.old) .. "</s></font>") or "")
 			b.label.RichText = true
 			royalBtns[k] = b
 		end
@@ -1390,7 +1393,12 @@ function M.init(X)
 		local function artCard(row, name, k, n, onBuy)
 			local x = (1 - n * 0.32 - (n - 1) * 0.02) / 2 + (k - 1) * 0.34
 			local holder = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(0.32, 1), Position = UDim2.fromScale(x, 0), ZIndex = 12 }, row)
-			art(holder, name, UDim2.fromScale(1, 1), nil, 12)
+			local im = art(holder, name, UDim2.fromScale(1, 1), nil, 12)
+			local sh = make("Frame", { BackgroundColor3 = WHITE, BorderSizePixel = 0, Size = UDim2.fromScale(0.88, 0.7), Position = UDim2.fromScale(0.06, 0.05), ZIndex = 13 }, holder)
+			rnd(sh, 0.12)
+			local sg = make("UIGradient", { Rotation = 25, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.42, 1),
+				NumberSequenceKeypoint.new(0.5, 0.6), NumberSequenceKeypoint.new(0.58, 1), NumberSequenceKeypoint.new(1, 1) }) }, sh)
+			table.insert(shimmers, { g = sg, sc = im and make("UIScale", {}, im), ph = #shimmers * 0.37 })
 			local b = priceBtn(holder, UDim2.fromScale(0.7, 0.14), UDim2.fromScale(0.15, 0.8), onBuy)
 			return holder, b
 		end
@@ -1452,7 +1460,7 @@ function M.init(X)
 			local _, b = artCard(srow, "speed_" .. pk.mult, k, #C.SPEED_PACKS, function()
 				buyProduct(pk, "Speed pack")
 			end)
-			b.label.Text = tostring(pk.robux)
+			b.label.Text = RBX .. " " .. tostring(pk.robux)
 		end
 		for k, pk in ipairs(HAS_ART and {} or C.SPEED_PACKS) do
 			local c = card(srow, Color3.fromRGB(60, 190, 255), UDim2.fromScale(0.32, 1), UDim2.fromScale((k - 1) * 0.34, 0))
@@ -1488,8 +1496,8 @@ function M.init(X)
 			local holder, b = artCard(row, "cash_" .. idx, k, n, function()
 				buyProduct(pk, pk.name)
 			end)
-			b.label.Text = tostring(pk.robux)
-			local amt = txt(holder, UDim2.fromScale(0.9, 0.1), UDim2.fromScale(0.05, 0.68), 40, "", Color3.fromRGB(170, 255, 120), nil, Enum.Font.LuckiestGuy, 14)
+			b.label.Text = RBX .. " " .. tostring(pk.robux)
+			local amt = txt(holder, UDim2.fromScale(0.8, 0.075), UDim2.fromScale(0.1, 0.705), 34, "", Color3.fromRGB(170, 255, 120), nil, Enum.Font.LuckiestGuy, 14)
 			table.insert(cashLabels, { t = amt, pk = pk })
 		end
 		if HAS_ART then
@@ -1512,7 +1520,7 @@ function M.init(X)
 		end
 
 		-- ---------------------------------------------------------------- right side: jump to a section
-		local side = make("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(1, 10, 0.12, 0), Size = UDim2.fromScale(0.13, 0.6), ZIndex = 12 }, root)
+		local side = make("Frame", { Visible = false, BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(1, 10, 0.12, 0), Size = UDim2.fromScale(0.13, 0.6), ZIndex = 12 }, root)
 		make("UIListLayout", { Padding = UDim.new(0.03, 0), SortOrder = Enum.SortOrder.LayoutOrder }, side)
 		for k, it in ipairs({ { "FEATURED", "Featured", "gem", Color3.fromRGB(255, 80, 120) }, { "GAMEPASSES", "Passes", "star", Color3.fromRGB(255, 190, 40) },
 			{ "SPEED", "Speed", "bolt", Color3.fromRGB(60, 190, 255) }, { "CASH", "Cash", "coin", Color3.fromRGB(70, 200, 80) } }) do
@@ -1536,10 +1544,23 @@ function M.init(X)
 			end)
 		end
 
+		RunService.RenderStepped:Connect(function()
+			if not sf.Visible then
+				return
+			end
+			local t = os.clock()
+			for _, s2 in ipairs(shimmers) do
+				local p = (t * 0.4 + s2.ph) % 1.8
+				s2.g.Offset = Vector2.new(p * 1.6 - 1.2, 0)
+				if s2.sc then
+					s2.sc.Scale = 1 + 0.012 * math.sin(t * 2.2 + s2.ph * 5)
+				end
+			end
+		end)
 		local function refreshStore()
 			for _, pc in ipairs(passCards) do
 				local own = hasPass(pc.p.key)
-				pc.b.label.Text = own and "OWNED" or tostring(pc.p.robux)
+				pc.b.label.Text = own and "OWNED" or (RBX .. " " .. tostring(pc.p.robux))
 				pc.b.grad.Color = own and ColorSequence.new(Color3.fromRGB(170, 170, 180), Color3.fromRGB(110, 110, 120)) or ColorSequence.new(Color3.fromRGB(120, 245, 90), Color3.fromRGB(40, 175, 50))
 			end
 			local income = attr("Income", 0)
