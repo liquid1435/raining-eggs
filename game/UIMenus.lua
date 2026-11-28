@@ -426,445 +426,196 @@ function M.init(X)
 		return pick
 	end
 
-	-- ============================================================ PETS v254 (user reference "Neon Equip Pets"): dark navy panel
-	-- with a neon rim in the selected pet's rarity colour, "Equip Pets" tab top-left, red X; left = big detail card of the
-	-- selected pet (rarity banner, 3D pet, name, green Equip / Unequip, purple delete); right = filter chips, 4-column grid of
-	-- slots (empty slots show "+"), "Equipped: x / y" pill at the bottom (+ small EQUIP BEST).
+	-- ============================================================ PETS v290 (user: "rebuild it with the PET INDEX design, keep only the
+	-- mechanics"): same panel, layout and pieces as PET INDEX: equipped counter + bar on top, EQUIP BEST pill (like the
+	-- bonus pill), filter tabs on the left (like the zone tabs), filter title, rarity-coloured cards, info line at the bottom.
 	do
-		-- v282 (user): keep this layout, but the PET INDEX look: purple panel, rarity cards with light rays, pill chips
-		local NAVY1, NAVY2, SLOT = Color3.fromRGB(82, 44, 170), Color3.fromRGB(34, 16, 84), Color3.fromRGB(74, 40, 150)
-		local DEF_ACC = Color3.fromRGB(180, 120, 255)
-		local RK = { "common", "uncommon", "rare", "epic", "legendary" }
-		local petsPanel = panel("MY PETS", "paw", Color3.fromRGB(255, 140, 40), 0.66, 2.05)
-		local pf = petsPanel.frame
-		for _, ch in ipairs(pf:GetChildren()) do -- keep the panel's open / close, hide its old cartoon skin (the X is rebuilt)
-			if ch:IsA("GuiObject") then
-				ch.Visible = false
-			end
-		end
-		local function rnd(o, s)
-			make("UICorner", { CornerRadius = UDim.new(s or 0.08, 0) }, o)
-		end
-		local function txt(parent, size, pos, maxSize, s, col, xa, font)
-			local t = make("TextLabel", {
-				BackgroundTransparency = 1, Size = size, Position = pos, Font = font or Enum.Font.FredokaOne, TextScaled = true,
-				Text = s or "", TextColor3 = col or WHITE, TextXAlignment = xa or Enum.TextXAlignment.Center, ZIndex = 12,
-			}, parent)
-			make("UIStroke", { Thickness = 2.5, Color = BLACK }, t)
-			make("UITextSizeConstraint", { MaxTextSize = maxSize }, t)
-			return t
-		end
-		local function grad(o, a, b, rot)
-			return make("UIGradient", { Rotation = rot or 90, Color = ColorSequence.new(a, b) }, o)
-		end
+		local petsPanel = panel("MY PETS", "paw", Color3.fromRGB(150, 100, 245), 0.8, 1.75)
+		local pi_ = petsPanel.inner
 		local function shade(c, k)
 			return Color3.new(c.R * k, c.G * k, c.B * k)
 		end
-		local root = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 10 }, pf)
-		-- neon glow + body
-		local glow = make("Frame", { Size = UDim2.new(1, 14, 0.9, 14), Position = UDim2.new(0, -7, 0.1, -7), BackgroundTransparency = 1, ZIndex = 10 }, root)
-		rnd(glow, 0.07)
-		local glowS = make("UIStroke", { Thickness = 9, Transparency = 0.55, Color = DEF_ACC }, glow)
-		local body = make("Frame", { Size = UDim2.fromScale(1, 0.9), Position = UDim2.fromScale(0, 0.1), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 10 }, root)
-		rnd(body, 0.06)
-		grad(body, NAVY1, NAVY2)
-		local bodyS = make("UIStroke", { Thickness = 4, Color = DEF_ACC, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, body)
-		local bodyArt = C.artImage(body, "index_panel", UDim2.fromScale(1, 1), nil, 10)
-		if bodyArt then
-			bodyArt.ScaleType = Enum.ScaleType.Stretch
-			body.BackgroundTransparency = 1
-			bodyS.Transparency = 1
-		end
-		-- title tab
-		local tab = make("Frame", { Size = UDim2.fromScale(0.36, 0.17), Position = UDim2.fromScale(0.025, 0), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 11 }, root)
-		rnd(tab, 0.3)
-		grad(tab, Color3.fromRGB(120, 70, 230), Color3.fromRGB(60, 26, 140))
-		local tabS = make("UIStroke", { Thickness = 3, Color = DEF_ACC, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, tab)
-		local tabIcon = icon(tab, "paw", UDim2.fromScale(0.2, 0.9), UDim2.fromScale(0.03, 0.5), Vector2.new(0, 0.5))
-		make("UIAspectRatioConstraint", { AspectRatio = 1 }, tabIcon)
-		tabIcon.ZIndex = 12
-		X.wobbly[tabIcon] = nil
-		txt(tab, UDim2.fromScale(0.72, 0.66), UDim2.fromScale(0.25, 0.17), 46, "Equip Pets", WHITE, Enum.TextXAlignment.Left)
-		local titleArt = C.artImage(root, "pets_index_title", UDim2.fromScale(0.44, 0.24), UDim2.fromScale(0.0, -0.045), 14) -- v286: PET INDEX plaque
-		if titleArt then
-			tab.Visible = false
-		end
-		-- red X
-		local xb = make("TextButton", { AutoButtonColor = false, Text = "", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.975, 0.115), Size = UDim2.fromScale(0.075, 0.15), ZIndex = 13 }, root)
-		make("UIAspectRatioConstraint", { AspectRatio = 1.05 }, xb)
-		xb.BackgroundColor3 = WHITE
-		rnd(xb, 0.25)
-		grad(xb, Color3.fromRGB(255, 90, 90), Color3.fromRGB(200, 20, 30))
-		make("UIStroke", { Thickness = 3, Color = WHITE, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, xb)
-		txt(xb, UDim2.fromScale(0.6, 0.6), UDim2.fromScale(0.2, 0.18), 40, "X").ZIndex = 14
-		local xArt = C.artImage(xb, "index_x", UDim2.fromScale(1.25, 1.25), UDim2.fromScale(-0.125, -0.125), 15)
-		if xArt then
-			xb.BackgroundTransparency = 1
-			for _, ch in ipairs(xb:GetChildren()) do
-				if ch:IsA("UIStroke") or ch:IsA("UIGradient") then
-					ch.Enabled = false
-				elseif ch:IsA("TextLabel") then
-					ch.Visible = false
-				end
-			end
-		end
-		pressable(xb)
-		xb.Activated:Connect(function()
-			petsPanel.close()
-		end)
-
-		-- ---------------------------------------------------------------- left: detail card
-		local det = make("Frame", { Size = UDim2.fromScale(0.3, 0.8), Position = UDim2.fromScale(0.025, 0.155), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 11 }, root)
-		local detBg = C.artImage(det, "pets_detail_bg", UDim2.fromScale(1, 1), nil, 11) -- v286: violet card with rays (empty state)
-		if detBg then
-			detBg.ScaleType = Enum.ScaleType.Stretch
-		end
-		rnd(det, 0.07)
-		local detG = grad(det, NAVY1, NAVY2)
-		local detS = make("UIStroke", { Thickness = 3, Color = DEF_ACC, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, det)
-		local banner = make("Frame", { Size = UDim2.fromScale(0.78, 0.11), Position = UDim2.fromScale(0.11, 0.035), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 12 }, det)
-		rnd(banner, 1)
-		local banG = grad(banner, Color3.fromRGB(70, 74, 110), Color3.fromRGB(30, 32, 58))
-		local banS = make("UIStroke", { Thickness = 2.5, Color = WHITE, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, banner)
-		local banT = txt(banner, UDim2.fromScale(0.86, 0.76), UDim2.fromScale(0.07, 0.12), 34, "")
-		banT.ZIndex = 13
-		local wings = {}
-		for sx = -1, 1, 2 do -- little wings on the banner
-			local w = txt(det, UDim2.fromScale(0.12, 0.11), UDim2.fromScale(sx < 0 and 0.01 or 0.87, 0.035), 34, sx < 0 and "»" or "«")
-			table.insert(wings, w)
-		end
-		local halo = make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.66), Size = UDim2.fromScale(0.78, 0.09), BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 12 }, det)
-		rnd(halo, 1)
-		local haloS = make("UIStroke", { Thickness = 3, Color = WHITE, Transparency = 0.1 }, halo)
-		local light = make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromScale(0.95, 0.6), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 11 }, det)
-		rnd(light, 1)
-		make("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.55), NumberSequenceKeypoint.new(1, 1) }) }, light)
-		local sparks = {}
-		for k, p in ipairs({ { 0.1, 0.3, 0.09 }, { 0.83, 0.26, 0.07 }, { 0.86, 0.55, 0.06 }, { 0.12, 0.6, 0.06 } }) do
-			local s = txt(det, UDim2.fromScale(p[3] * 1.6, p[3]), UDim2.fromScale(p[1], p[2]), 40, "✦")
-			s.TextColor3 = WHITE
-			sparks[k] = s
-		end
-		local viewHolder = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(0.9, 0.55), Position = UDim2.fromScale(0.05, 0.15), ZIndex = 13 }, det)
-		local nameT = txt(det, UDim2.fromScale(0.92, 0.09), UDim2.fromScale(0.04, 0.715), 36, "")
-		local subT = txt(det, UDim2.fromScale(0.92, 0.055), UDim2.fromScale(0.04, 0.8), 22, "", Color3.fromRGB(255, 222, 90))
-		local eqHolder = make("TextButton", { AutoButtonColor = false, Text = "", Size = UDim2.fromScale(0.66, 0.12), Position = UDim2.fromScale(0.05, 0.865), BackgroundColor3 = WHITE, ZIndex = 12 }, det)
-		rnd(eqHolder, 0.3)
-		local eqG = grad(eqHolder, Color3.fromRGB(120, 245, 90), Color3.fromRGB(40, 175, 50))
-		make("UIStroke", { Thickness = 2.5, Color = Color3.fromRGB(20, 60, 20), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, eqHolder)
-		local eqT = txt(eqHolder, UDim2.fromScale(0.84, 0.7), UDim2.fromScale(0.08, 0.15), 40, "Equip")
-		eqT.ZIndex = 13
-		pressable(eqHolder)
-		local del = make("TextButton", { AutoButtonColor = false, Text = "", Size = UDim2.fromScale(0.2, 0.12), Position = UDim2.fromScale(0.75, 0.865), BackgroundColor3 = WHITE, ZIndex = 12 }, det)
-		rnd(del, 0.3)
-		local delG = grad(del, Color3.fromRGB(170, 120, 255), Color3.fromRGB(100, 50, 210))
-		make("UIStroke", { Thickness = 2.5, Color = Color3.fromRGB(40, 20, 90), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, del)
-		local delT = txt(del, UDim2.fromScale(0.8, 0.7), UDim2.fromScale(0.1, 0.15), 34, "🗑")
-		delT.ZIndex = 13
-		pressable(del)
-		-- empty state
-		local empty = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 12 }, det)
-		local emptyIcon = icon(empty, "paw", UDim2.fromScale(0.4, 0.3), UDim2.fromScale(0.5, 0.36), Vector2.new(0.5, 0.5))
-		make("UIAspectRatioConstraint", { AspectRatio = 1 }, emptyIcon)
-		emptyIcon.ZIndex = 13
-		emptyIcon.ImageTransparency = 0.25
-		X.wobbly[emptyIcon] = nil
-		txt(empty, UDim2.fromScale(0.9, 0.09), UDim2.fromScale(0.05, 0.56), 34, "Select a pet")
-		txt(empty, UDim2.fromScale(0.9, 0.05), UDim2.fromScale(0.05, 0.66), 20, "to view details", Color3.fromRGB(170, 160, 230))
-		local detailParts = { banner, halo, light, viewHolder, nameT, subT, eqHolder, del, table.unpack(wings) }
-		for _, s in ipairs(sparks) do
-			table.insert(detailParts, s)
-		end
-
-		-- ---------------------------------------------------------------- right: chips, grid, footer
-		local FILTERS = {
-			{ "All", Color3.fromRGB(80, 150, 255) }, { "Equipped", Color3.fromRGB(70, 220, 100) }, { "Legendary", C.RARITY[5].color },
-			{ "Epic", C.RARITY[4].color }, { "Rare", C.RARITY[3].color }, { "Uncommon", C.RARITY[2].color }, { "Common", C.RARITY[1].color },
-			{ "Basket", Color3.fromRGB(255, 150, 50) },
-		}
-		local chipRow = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(0.64, 0.075), Position = UDim2.fromScale(0.345, 0.155), ZIndex = 11 }, root)
-		make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0.008, 0), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center }, chipRow)
-		local filter, chips = 1, {}
-		local grid = make("ScrollingFrame", {
-			BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromScale(0.635, 0.6), Position = UDim2.fromScale(0.345, 0.25),
-			ScrollBarThickness = 6, ScrollBarImageColor3 = Color3.fromRGB(120, 110, 220), CanvasSize = UDim2.new(),
-			AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 11,
-		}, root)
-		make("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 6) }, grid)
-		local gl = make("UIGridLayout", { CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder }, grid)
-		local function fit()
-			local w = grid.AbsoluteSize.X - 16
-			if w > 0 then
-				local cw = (w - 3 * 10) / 4
-				gl.CellSize = UDim2.fromOffset(cw, cw)
-			end
-		end
-		grid:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
-		fit()
-		local foot = make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromScale(0.27, 0.085), Position = UDim2.fromScale(0.6, 0.915), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 11 }, root)
-		rnd(foot, 1)
-		grad(foot, Color3.fromRGB(44, 46, 86), Color3.fromRGB(26, 28, 56))
-		make("UIStroke", { Thickness = 2, Color = Color3.fromRGB(90, 96, 160), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, foot)
-		local footIcon = icon(foot, "paw", UDim2.fromScale(0.16, 0.8), UDim2.fromScale(0.05, 0.5), Vector2.new(0, 0.5))
-		make("UIAspectRatioConstraint", { AspectRatio = 1 }, footIcon)
-		footIcon.ZIndex = 12
-		X.wobbly[footIcon] = nil
-		local footT = txt(foot, UDim2.fromScale(0.72, 0.62), UDim2.fromScale(0.23, 0.19), 30, "Equipped: 0/0", WHITE, Enum.TextXAlignment.Left)
-		local best = make("TextButton", { AutoButtonColor = false, Text = "", AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromScale(0.16, 0.085), Position = UDim2.fromScale(0.88, 0.915), BackgroundColor3 = WHITE, ZIndex = 11 }, root)
-		rnd(best, 1)
-		grad(best, Color3.fromRGB(120, 245, 90), Color3.fromRGB(40, 175, 50))
-		make("UIStroke", { Thickness = 2, Color = Color3.fromRGB(20, 60, 20), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, best)
-		txt(best, UDim2.fromScale(0.86, 0.6), UDim2.fromScale(0.07, 0.2), 26, "Equip Best")
-		pressable(best)
-		local incT = txt(root, UDim2.fromScale(0.16, 0.06), UDim2.fromScale(0.345, 0.885), 26, "", Color3.fromRGB(255, 222, 74), Enum.TextXAlignment.Left)
-
-		-- ---------------------------------------------------------------- state + drawing
-		local sel = nil -- { key, eq, basket } of the selected pet
-		local selPet = nil
-		local delArmed = 0
 		local function click()
 			if sfx then
 				pcall(sfx, "click", 0.4)
 			end
 		end
+		local eqLabel = ink(pi_, UDim2.fromScale(0.25, 0.09), UDim2.fromScale(0.03, 0.045), 60, "EQUIPPED 0 / 0", DARK, Enum.Font.LuckiestGuy)
+		local _, eqFill = bar(pi_, UDim2.fromScale(0.38, 0.05), UDim2.fromScale(0.3, 0.065), Color3.fromRGB(205, 165, 255), Color3.fromRGB(140, 80, 240))
+		local bestBtn = bigButton(pi_, GREEN, UDim2.fromScale(0.26, 0.095), UDim2.fromScale(0.71, 0.035))
+		bestBtn.label.Text = "EQUIP BEST"
+
+		-- filter tabs on the left (exactly like the zone tabs of PET INDEX)
+		local FILTERS = { "ALL", "EQUIPPED", "LEGENDARY", "EPIC", "RARE", "UNCOMMON", "COMMON", "BASKET" }
+		local RNAME = { LEGENDARY = 5, EPIC = 4, RARE = 3, UNCOMMON = 2, COMMON = 1 }
+		local TAB_COL, TAB_ON = Color3.fromRGB(70, 76, 200), Color3.fromRGB(60, 200, 80)
+		local filter = 1
+		local tabs = {}
+		local tabList = make("ScrollingFrame", {
+			BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromScale(0.26, 0.79), Position = UDim2.fromScale(0.025, 0.18),
+			ScrollBarThickness = 6, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 2,
+		}, pi_)
+		make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, tabList)
+		make("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 10) }, tabList)
+
+		local listTitle = ink(pi_, UDim2.fromScale(0.64, 0.08), UDim2.fromScale(0.32, 0.17), 44, "", DARK, Enum.Font.LuckiestGuy)
+		local grid = scroller(pi_, UDim2.fromScale(0.66, 0.56), UDim2.fromScale(0.31, 0.26), 5, 0.8)
+		local info = ink(pi_, UDim2.fromScale(0.42, 0.08), UDim2.fromScale(0.32, 0.86), 28, "Tap a pet to see it", SOFT, nil, Enum.TextXAlignment.Center)
+		local eqBtn = bigButton(pi_, GREEN, UDim2.fromScale(0.13, 0.1), UDim2.fromScale(0.75, 0.85))
+		eqBtn.label.Text = "EQUIP"
+		local delBtn = bigButton(pi_, RED, UDim2.fromScale(0.1, 0.1), UDim2.fromScale(0.885, 0.85))
+		delBtn.label.Text = "DELETE"
+
+		local sel, selPet, delArmed = nil, nil, 0
 		local function keyOf(p)
 			return p.z .. "_" .. p.i .. "_" .. p.t .. "_" .. (p.v or 1)
 		end
-		local function accent(col)
-			for _, s in ipairs({ glowS, bodyS, tabS, detS }) do
-				s.Color = col
-			end
-		end
-		local detArt = nil
-		local function showDetail(pet)
+		local function showSel(pet)
 			selPet = pet
-			empty.Visible = pet == nil
-			for _, o in ipairs(detailParts) do
-				o.Visible = pet ~= nil
-			end
-			for _, v in ipairs(viewHolder:GetChildren()) do
-				v:Destroy()
-			end
-			if detArt then
-				detArt.Visible = pet ~= nil
-			end
+			eqBtn.button.Visible = pet ~= nil and not pet.basket
+			delBtn.button.Visible = pet ~= nil and not pet.basket
+			delBtn.label.Text = "DELETE"
+			delArmed = 0
 			if not pet then
-				detG.Color = ColorSequence.new(NAVY1, NAVY2)
-				accent(DEF_ACC)
+				info.Text = "Tap a pet to see it"
 				return
 			end
-			local col = C.RARITY[pet.i].color
-			accent(col)
-			detG.Color = ColorSequence.new(col:Lerp(WHITE, 0.15), shade(col, 0.32))
-			if not detArt then
-				detArt = C.artImage(det, "rc_common", UDim2.fromScale(1, 1), nil, 11)
-				if detArt then
-					detArt.ScaleType = Enum.ScaleType.Stretch
+			local tr = C.petTrait(pet)
+			info.Text = C.petName(pet) .. "  -  " .. C.RARITY[pet.i].name .. "  -  $" .. C.fmt(C.petIncome(pet)) .. "/s  -  " .. tr.icon .. " " .. tr.label
+			if pet.basket then
+				info.Text = C.petName(pet) .. "  -  in your basket: bring it to your pen"
+			end
+			eqBtn.label.Text = pet.eq and "UNEQUIP" or "EQUIP"
+			eqBtn.color(pet.eq and Color3.fromRGB(255, 140, 40) or GREEN)
+		end
+
+		function M.refreshPets()
+			if not petsPanel.frame.Visible then
+				return
+			end
+			local owned = parsePets(attr("PetList", ""))
+			local basket = parsePets(attr("CarryList", ""))
+			local penMax = attr("PenMax", C.PEN_MAX)
+			local eqN = attr("Equipped", math.min(#owned, penMax))
+			for k, pet in ipairs(owned) do
+				pet.idx, pet.eq = k, k <= eqN
+			end
+			for _, pet in ipairs(basket) do
+				pet.basket = true
+			end
+			eqLabel.Text = "EQUIPPED " .. eqN .. " / " .. penMax
+			setBar(eqFill, eqN / math.max(penMax, 1))
+			-- tab counts
+			local counts = { #owned, eqN, 0, 0, 0, 0, 0, #basket }
+			for _, pet in ipairs(owned) do
+				local k = 8 - pet.i -- LEGENDARY=3 .. COMMON=7
+				counts[k] = counts[k] + 1
+			end
+			for i, t in ipairs(tabs) do
+				t.count.Text = tostring(counts[i])
+				local col = (i == filter) and TAB_ON or TAB_COL
+				X.tint(t.face, col)
+				t.lip.BackgroundColor3 = shade(col, 0.45)
+			end
+			-- the list of this filter
+			local f = FILTERS[filter]
+			local list = {}
+			for _, pet in ipairs(f == "BASKET" and basket or owned) do
+				if f == "ALL" or f == "BASKET" or (f == "EQUIPPED" and pet.eq) or (RNAME[f] == pet.i) then
+					table.insert(list, pet)
 				end
 			end
-			if detArt then
-				C.setArt(detArt, "rc_" .. RK[pet.i])
-			end
-			banG.Color = ColorSequence.new(shade(col, 0.8), shade(col, 0.35))
-			banS.Color = col:Lerp(WHITE, 0.5)
-			banT.Text = (pet.t == 2 and "GOLD " or pet.t == 3 and "RAINBOW " or "") .. C.RARITY[pet.i].name:upper()
-			halo.BackgroundColor3 = col
-			haloS.Color = col:Lerp(WHITE, 0.6)
-			for _, w in ipairs(wings) do
-				w.TextColor3 = col:Lerp(WHITE, 0.4)
-			end
-			local v = X.petView(viewHolder, pet, UDim2.fromScale(1, 1), UDim2.new())
-			v.ZIndex = 13
-			nameT.Text = C.petName(pet)
-			subT.Text = pet.basket and "In your basket - bring it to your pen" or ("+$" .. C.fmt(C.petIncome(pet)) .. "/s  ·  " .. C.traitText(pet))
-			if pet.basket then
-				eqT.Text = "In basket"
-				eqG.Color = ColorSequence.new(Color3.fromRGB(150, 150, 165), Color3.fromRGB(90, 90, 105))
-			elseif pet.eq then
-				eqT.Text = "Unequip"
-				eqG.Color = ColorSequence.new(Color3.fromRGB(255, 150, 80), Color3.fromRGB(220, 80, 30))
-			else
-				eqT.Text = "🐾 Equip"
-				eqG.Color = ColorSequence.new(Color3.fromRGB(120, 245, 90), Color3.fromRGB(40, 175, 50))
-			end
-			del.Visible = not pet.basket
-			delArmed = 0
-			delT.Text = "🗑"
-		end
-		local function slot(n)
-			local s = make("TextButton", { AutoButtonColor = false, Text = "", BackgroundColor3 = WHITE, LayoutOrder = n, ZIndex = 12 }, grid)
-			rnd(s, 0.14)
-			local g = grad(s, SLOT, Color3.fromRGB(30, 32, 64))
-			local st = make("UIStroke", { Thickness = 2, Color = Color3.fromRGB(70, 76, 130), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, s)
-			return s, st, g
-		end
-		function M.refreshPets()
-			if not pf.Visible then
-				return
-			end
+			table.sort(list, function(a, b)
+				if (a.eq or false) ~= (b.eq or false) then
+					return a.eq == true
+				end
+				return C.petIncome(a) > C.petIncome(b)
+			end)
+			listTitle.Text = f .. "  (" .. #list .. ")"
+			bestBtn.button.Visible = f ~= "BASKET"
 			for _, c in ipairs(grid:GetChildren()) do
 				if c:IsA("GuiObject") then
 					c:Destroy()
 				end
 			end
-			local owned = parsePets(attr("PetList", ""))
-			local eqN = attr("Equipped", math.min(#owned, attr("PenMax", C.PEN_MAX)))
-			for k, pet in ipairs(owned) do
-				pet.idx, pet.eq = k, k <= eqN
-			end
-			local list = owned
-			local f = FILTERS[filter][1]
-			if f == "Basket" then
-				list = parsePets(attr("CarryList", ""))
-				for _, pet in ipairs(list) do
-					pet.basket = true
-				end
-			elseif f == "Equipped" then
-				list = {}
-				for _, pet in ipairs(owned) do
-					if pet.eq then
-						table.insert(list, pet)
-					end
-				end
-			elseif f ~= "All" then
-				list = {}
-				for _, pet in ipairs(owned) do
-					if C.RARITY[pet.i].name == f then
-						table.insert(list, pet)
-					end
-				end
-			end
-			table.sort(list, function(a, b)
-				if a.eq ~= b.eq then
-					return a.eq == true
-				end
-				return C.petIncome(a) > C.petIncome(b)
-			end)
-			footT.Text = "Equipped: " .. eqN .. "/" .. attr("PenMax", C.PEN_MAX)
-			incT.Text = "+$" .. C.fmt(attr("Income", 0)) .. "/s"
-			best.Visible = f ~= "Basket"
-			-- keep the selection on the same pet (indices change after equip / unequip)
 			local found = nil
-			if sel then
-				for pass = 1, 2 do
-					for _, pet in ipairs(list) do
-						if keyOf(pet) == sel.key and (pet.basket or false) == sel.basket and (pass == 2 or pet.eq == sel.eq) then
-							found = pet
-							break
-						end
-					end
-					if found then
-						break
-					end
-				end
-			end
 			for n, pet in ipairs(list) do
-				local s, st, sg = slot(n)
 				local col = C.RARITY[pet.i].color
-				local sa = C.artImage(s, "rc_" .. RK[pet.i], UDim2.fromScale(1, 1), nil, 12)
-				if sa then
-					sa.ScaleType = Enum.ScaleType.Stretch
-					s.BackgroundTransparency = 1
-				end
-				local v = X.petView(s, pet, UDim2.fromScale(0.9, 0.74), UDim2.fromScale(0.05, 0.02))
-				v.ZIndex = 13
-				local rt = txt(s, UDim2.fromScale(0.9, 0.2), UDim2.fromScale(0.05, 0.76), 20, C.RARITY[pet.i].name:upper(), WHITE)
-				rt.ZIndex = 14
-				if (pet.t or 1) > 1 then
-					local tt = txt(s, UDim2.fromScale(0.6, 0.15), UDim2.fromScale(0.05, 0.04), 16, pet.t == 2 and "GOLD" or "RAINBOW", pet.t == 2 and Color3.fromRGB(255, 214, 70) or Color3.fromRGB(255, 140, 230), Enum.TextXAlignment.Left)
-					tt.ZIndex = 14
-				end
+				local card = make("TextButton", { AutoButtonColor = false, Text = "", LayoutOrder = n, ZIndex = 2 }, grid)
+				face(card, col, 0.14)
+				local nameL = title(card, UDim2.fromScale(0.9, 0.11), UDim2.fromScale(0.05, 0.04), 24, C.petName(pet))
+				nameL.ZIndex = 3
+				local v = X.petView(card, pet, UDim2.fromScale(1, 0.56), UDim2.fromScale(0, 0.14))
+				v.ZIndex = 3
+				local rarL = title(card, UDim2.fromScale(0.9, 0.12), UDim2.fromScale(0.05, 0.72), 26, C.RARITY[pet.i].name:upper())
+				rarL.ZIndex = 3
+				local incL = title(card, UDim2.fromScale(0.86, 0.09), UDim2.fromScale(0.07, 0.86), 20, "$" .. C.fmt(C.petIncome(pet)) .. "/s")
+				incL.Font = Enum.Font.FredokaOne
+				incL.ZIndex = 3
 				if pet.eq then
-					local tick = make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromScale(0.26, 0.26), Position = UDim2.fromScale(0.9, 0.1), BackgroundColor3 = WHITE, ZIndex = 15 }, s)
-					rnd(tick, 1)
-					grad(tick, Color3.fromRGB(130, 255, 140), Color3.fromRGB(30, 170, 70))
-					make("UIStroke", { Thickness = 2, Color = WHITE }, tick)
-					txt(tick, UDim2.fromScale(0.7, 0.7), UDim2.fromScale(0.15, 0.12), 24, "✓").ZIndex = 16
+					equippedMark(card)
 				end
-				if pet == found then
-					st.Color, st.Thickness = col, 3.5
-					sg.Color = ColorSequence.new(shade(col, 0.75), shade(col, 0.3))
+				if sel and keyOf(pet) == sel.key and (pet.basket or false) == sel.basket and (not found) then
+					found = pet
+					make("UIStroke", { Thickness = 4, Color = YELLOW, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, card)
 				end
-				s.Activated:Connect(function()
+				pressable(card)
+				card.Activated:Connect(function()
 					click()
-					sel = { key = keyOf(pet), eq = pet.eq, idx = pet.idx, basket = pet.basket or false }
+					sel = { key = keyOf(pet), basket = pet.basket or false }
 					M.refreshPets()
 				end)
 			end
-			local filled = #list
-			local total = math.max(8, math.ceil(filled / 4) * 4 + (filled % 4 == 0 and 4 or 0))
-			for n = filled + 1, total do
-				local s = slot(n)
-				local ea = C.artImage(s, "rc_empty", UDim2.fromScale(1, 1), nil, 12)
-				if ea then
-					ea.ScaleType = Enum.ScaleType.Stretch
-					s.BackgroundTransparency = 1
-				end
-				local p = txt(s, UDim2.fromScale(0.4, 0.4), UDim2.fromScale(0.3, 0.3), 60, ea and "" or "+", Color3.fromRGB(150, 150, 210))
-				p.ZIndex = 13
-				make("UIStroke", { Thickness = 0, Transparency = 1 }, p)
-				s.AutoButtonColor = false
+			if #list == 0 then
+				local e = ink(grid, UDim2.new(), UDim2.new(), 36, f == "BASKET" and "Your basket is empty" or "No pets here yet - catch eggs!", SOFT)
+				e.TextXAlignment = Enum.TextXAlignment.Center
 			end
-			if found then
-				sel.idx, sel.eq = found.idx, found.eq
-			end
-			showDetail(found)
+			showSel(found)
 		end
-		for i, fd in ipairs(FILTERS) do
-			local b = make("TextButton", { AutoButtonColor = false, Text = "", Size = UDim2.fromScale(1 / #FILTERS - 0.008, 1), BackgroundColor3 = WHITE, LayoutOrder = i, ZIndex = 12 }, chipRow)
-			rnd(b, 1)
-			local g = grad(b, Color3.fromRGB(46, 50, 92), Color3.fromRGB(30, 32, 62))
-			make("UIStroke", { Thickness = 2, Color = fd[2], ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
-			local t = txt(b, UDim2.fromScale(0.88, 0.62), UDim2.fromScale(0.06, 0.19), 20, fd[1])
-			t.ZIndex = 13
-			local pill = C.artImage(b, "tab_purple", UDim2.fromScale(1, 1), nil, 12)
-			if pill then
-				pill.ScaleType = Enum.ScaleType.Stretch
-				b.BackgroundTransparency = 1
-			end
-			chips[i] = { g = g, col = fd[2], pill = pill }
+
+		for i, name in ipairs(FILTERS) do
+			local b = make("TextButton", { BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Size = UDim2.new(1, 0, 0, 40), LayoutOrder = i, ZIndex = 2 }, tabList)
+			make("UIAspectRatioConstraint", { AspectRatio = 4.3, DominantAxis = Enum.DominantAxis.Width }, b)
+			local holder, faceF = lip(b, TAB_COL, UDim2.fromScale(1, 0.86), UDim2.fromScale(0, 0), nil, 0.35)
+			local nm = title(faceF, UDim2.fromScale(0.66, 0.62), UDim2.fromScale(0.07, 0.17), 30, name)
+			nm.TextXAlignment = Enum.TextXAlignment.Left
+			nm.ZIndex = 2
+			local count = title(faceF, UDim2.fromScale(0.24, 0.55), UDim2.fromScale(0.71, 0.2), 26, "0")
+			count.TextXAlignment = Enum.TextXAlignment.Right
+			count.ZIndex = 2
+			pressable(b)
+			tabs[i] = { face = faceF, lip = holder:FindFirstChild("Lip"), count = count }
 			b.Activated:Connect(function()
 				click()
 				filter = i
-				for j, c in ipairs(chips) do
-					C.setArt(c.pill, j == i and "tab_green" or "tab_purple")
-					c.g.Color = j == i and ColorSequence.new(c.col:Lerp(WHITE, 0.2), shade(c.col, 0.6)) or ColorSequence.new(Color3.fromRGB(46, 50, 92), Color3.fromRGB(30, 32, 62))
-				end
 				M.refreshPets()
 			end)
 		end
-		C.setArt(chips[1].pill, "tab_green")
-		chips[1].g.Color = ColorSequence.new(chips[1].col:Lerp(WHITE, 0.2), shade(chips[1].col, 0.6))
-		eqHolder.Activated:Connect(function()
+
+		bestBtn.button.Activated:Connect(function()
+			click()
+			Action:FireServer("equipbest")
+		end)
+		eqBtn.button.Activated:Connect(function()
 			if not selPet or selPet.basket then
 				return
 			end
 			click()
-			sel.eq = not selPet.eq
 			Action:FireServer("equip", selPet.idx)
 		end)
-		del.Activated:Connect(function()
+		delBtn.button.Activated:Connect(function()
 			if not selPet or selPet.basket then
 				return
 			end
 			click()
 			if os.clock() - delArmed > 2.5 then -- first tap asks, second tap deletes
 				delArmed = os.clock()
-				delT.Text = "Sure?"
-				task.delay(2.5, function()
-					if os.clock() - delArmed >= 2.4 then
-						delT.Text = "🗑"
-					end
-				end)
+				delBtn.label.Text = "SURE?"
 				return
 			end
 			delArmed = 0
 			Action:FireServer("deletepet", selPet.idx)
 			sel = nil
-		end)
-		best.Activated:Connect(function()
-			click()
-			Action:FireServer("equipbest")
 		end)
 		petsBtn.Activated:Connect(function()
 			petsPanel.toggle()
