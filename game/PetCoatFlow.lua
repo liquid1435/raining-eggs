@@ -29,7 +29,7 @@ local function channels(tier, phase)
 	return (c.R*value)^(1/2.2), (c.G*value)^(1/2.2), (c.B*value)^(1/2.2)
 end
 
-local GOLD = {{0, 96, 58, 8}, {.35, 196, 128, 20}, {.65, 255, 196, 46}, {.85, 255, 226, 110}, {1, 255, 246, 196}}
+local GOLD = {{0, 62, 34, 4}, {.35, 150, 92, 12}, {.65, 212, 146, 26}, {.85, 238, 184, 62}, {1, 252, 220, 130}} -- v282 (user): darker gold
 local function goldRamp(phase, lum)
 	local t = math.min(1, (lum/255)^0.75*1.08 + 0.12*math.max(0, math.cos(phase/256*2*math.pi))^8)
 	for i = 1, #GOLD - 1 do

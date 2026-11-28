@@ -157,7 +157,7 @@ function PA.build(pet, s, anchored, meshYaw, meshSize)
 			p.Name = "Part" .. j
 			p.Size = src.Size * k
 			p.TextureID = tex
-			p.Color = Color3.new(1, 1, 1)
+			p.Color = tier == 2 and Color3.fromRGB(222, 188, 140) or Color3.new(1, 1, 1) -- v282: darker gold
 			p.Material = Enum.Material.SmoothPlastic
 			p.Reflectance = tier == 2 and 0.12 or 0
 			p.CanCollide, p.CanTouch, p.CanQuery, p.Massless, p.CastShadow = false, false, false, true, false

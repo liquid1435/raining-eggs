@@ -431,8 +431,10 @@ function M.init(X)
 	-- selected pet (rarity banner, 3D pet, name, green Equip / Unequip, purple delete); right = filter chips, 4-column grid of
 	-- slots (empty slots show "+"), "Equipped: x / y" pill at the bottom (+ small EQUIP BEST).
 	do
-		local NAVY1, NAVY2, SLOT = Color3.fromRGB(38, 42, 84), Color3.fromRGB(20, 21, 44), Color3.fromRGB(46, 50, 96)
-		local DEF_ACC = Color3.fromRGB(150, 100, 255)
+		-- v282 (user): keep this layout, but the PET INDEX look: purple panel, rarity cards with light rays, pill chips
+		local NAVY1, NAVY2, SLOT = Color3.fromRGB(82, 44, 170), Color3.fromRGB(34, 16, 84), Color3.fromRGB(74, 40, 150)
+		local DEF_ACC = Color3.fromRGB(180, 120, 255)
+		local RK = { "common", "uncommon", "rare", "epic", "legendary" }
 		local petsPanel = panel("MY PETS", "paw", Color3.fromRGB(255, 140, 40), 0.66, 2.05)
 		local pf = petsPanel.frame
 		for _, ch in ipairs(pf:GetChildren()) do -- keep the panel's open / close, hide its old cartoon skin (the X is rebuilt)
@@ -467,10 +469,16 @@ function M.init(X)
 		rnd(body, 0.06)
 		grad(body, NAVY1, NAVY2)
 		local bodyS = make("UIStroke", { Thickness = 4, Color = DEF_ACC, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, body)
+		local bodyArt = C.artImage(body, "index_panel", UDim2.fromScale(1, 1), nil, 10)
+		if bodyArt then
+			bodyArt.ScaleType = Enum.ScaleType.Stretch
+			body.BackgroundTransparency = 1
+			bodyS.Transparency = 1
+		end
 		-- title tab
 		local tab = make("Frame", { Size = UDim2.fromScale(0.36, 0.17), Position = UDim2.fromScale(0.025, 0), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 11 }, root)
 		rnd(tab, 0.3)
-		grad(tab, NAVY1, Color3.fromRGB(28, 30, 62))
+		grad(tab, Color3.fromRGB(120, 70, 230), Color3.fromRGB(60, 26, 140))
 		local tabS = make("UIStroke", { Thickness = 3, Color = DEF_ACC, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, tab)
 		local tabIcon = icon(tab, "paw", UDim2.fromScale(0.2, 0.9), UDim2.fromScale(0.03, 0.5), Vector2.new(0, 0.5))
 		make("UIAspectRatioConstraint", { AspectRatio = 1 }, tabIcon)
@@ -608,6 +616,7 @@ function M.init(X)
 				s.Color = col
 			end
 		end
+		local detArt = nil
 		local function showDetail(pet)
 			selPet = pet
 			empty.Visible = pet == nil
@@ -617,6 +626,9 @@ function M.init(X)
 			for _, v in ipairs(viewHolder:GetChildren()) do
 				v:Destroy()
 			end
+			if detArt then
+				detArt.Visible = pet ~= nil
+			end
 			if not pet then
 				detG.Color = ColorSequence.new(NAVY1, NAVY2)
 				accent(DEF_ACC)
@@ -625,6 +637,15 @@ function M.init(X)
 			local col = C.RARITY[pet.i].color
 			accent(col)
 			detG.Color = ColorSequence.new(col:Lerp(WHITE, 0.15), shade(col, 0.32))
+			if not detArt then
+				detArt = C.artImage(det, "rc_common", UDim2.fromScale(1, 1), nil, 11)
+				if detArt then
+					detArt.ScaleType = Enum.ScaleType.Stretch
+				end
+			end
+			if detArt then
+				C.setArt(detArt, "rc_" .. RK[pet.i])
+			end
 			banG.Color = ColorSequence.new(shade(col, 0.8), shade(col, 0.35))
 			banS.Color = col:Lerp(WHITE, 0.5)
 			banT.Text = (pet.t == 2 and "GOLD " or pet.t == 3 and "RAINBOW " or "") .. C.RARITY[pet.i].name:upper()
@@ -721,6 +742,11 @@ function M.init(X)
 			for n, pet in ipairs(list) do
 				local s, st, sg = slot(n)
 				local col = C.RARITY[pet.i].color
+				local sa = C.artImage(s, "rc_" .. RK[pet.i], UDim2.fromScale(1, 1), nil, 12)
+				if sa then
+					sa.ScaleType = Enum.ScaleType.Stretch
+					s.BackgroundTransparency = 1
+				end
 				local v = X.petView(s, pet, UDim2.fromScale(0.9, 0.74), UDim2.fromScale(0.05, 0.02))
 				v.ZIndex = 13
 				local rt = txt(s, UDim2.fromScale(0.9, 0.2), UDim2.fromScale(0.05, 0.76), 20, C.RARITY[pet.i].name:upper(), WHITE)
@@ -767,16 +793,23 @@ function M.init(X)
 			make("UIStroke", { Thickness = 2, Color = fd[2], ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
 			local t = txt(b, UDim2.fromScale(0.88, 0.62), UDim2.fromScale(0.06, 0.19), 20, fd[1])
 			t.ZIndex = 13
-			chips[i] = { g = g, col = fd[2] }
+			local pill = C.artImage(b, "tab_purple", UDim2.fromScale(1, 1), nil, 12)
+			if pill then
+				pill.ScaleType = Enum.ScaleType.Stretch
+				b.BackgroundTransparency = 1
+			end
+			chips[i] = { g = g, col = fd[2], pill = pill }
 			b.Activated:Connect(function()
 				click()
 				filter = i
 				for j, c in ipairs(chips) do
+					C.setArt(c.pill, j == i and "tab_green" or "tab_purple")
 					c.g.Color = j == i and ColorSequence.new(c.col:Lerp(WHITE, 0.2), shade(c.col, 0.6)) or ColorSequence.new(Color3.fromRGB(46, 50, 92), Color3.fromRGB(30, 32, 62))
 				end
 				M.refreshPets()
 			end)
 		end
+		C.setArt(chips[1].pill, "tab_green")
 		chips[1].g.Color = ColorSequence.new(chips[1].col:Lerp(WHITE, 0.2), shade(chips[1].col, 0.6))
 		eqHolder.Activated:Connect(function()
 			if not selPet or selPet.basket then

@@ -655,7 +655,7 @@ function C.buildPet(pet, s, anchored)
 		part.CFrame = CFrame.new(0, -1.75 * s + h / 2, 0) * CFrame.Angles(0, C.MESH_YAW, 0) * rot
 		part.PivotOffset = part.CFrame:Inverse() -- the model pivot stays where the block pet had it (feet 1.75 * s below)
 		-- the mesh has its colours painted in; Color only tints it (white = as painted)
-		part.Color = (variant and Color3.new(1, 1, 1)) or (tier == 2 and Color3.fromRGB(255, 208, 70)) or (tier == 3 and Color3.fromRGB(255, 150, 235)) or Color3.new(1, 1, 1)
+		part.Color = (variant and (tier == 2 and Color3.fromRGB(222, 188, 140) or Color3.new(1, 1, 1))) or (tier == 2 and Color3.fromRGB(255, 208, 70)) or (tier == 3 and Color3.fromRGB(255, 150, 235)) or Color3.new(1, 1, 1)
 		part.Material = Enum.Material.SmoothPlastic
 		part.Reflectance = (tier == 2 and not variant) and 0.25 or (tier == 2 and 0.12 or 0)
 		part.CanCollide = false
