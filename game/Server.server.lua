@@ -1160,6 +1160,21 @@ Action.OnServerEvent:Connect(function(plr, what, kind)
 		end
 		return
 	end
+	if what == "deletepet" then
+		-- v254 PETS menu delete button (asks twice on the client): pet i of PetList is removed, no money
+		if typeof(kind) ~= "number" or kind ~= kind or kind % 1 ~= 0 then
+			return
+		end
+		local list, j = ownedAt(d, kind)
+		if not list or not list[j] then
+			return
+		end
+		local pet = table.remove(list, j)
+		renderPen(plr)
+		sync(plr)
+		say(plr, "Deleted " .. C.petName(pet), "sold")
+		return
+	end
 	if what == "sellpets" then
 		-- the SELL PETS menu: "c3,c1,p2" = pets 3 and 1 of the basket and pet 2 of the pen; only near the SELL shop
 		local pad = shopPads.sell
