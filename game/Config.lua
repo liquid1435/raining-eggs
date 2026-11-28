@@ -792,7 +792,7 @@ function C.treadMult(passes) -- best treadmill multiplier the player owns (speed
 	end
 	return m
 end -- v284: cash for finishing the introduction
-C.TUT_STEPS = 6
+C.TUT_STEPS = 5 -- v292: tap + place the pet = one step
 C.VIP_BASKET = 5
 -- v256 SHOP like Steal an Egg (user video): Robux products (developer products; id 0 = not created yet -> "coming soon").
 -- ROYAL EGG: hatches a pet of your best zone with big luck, always Gold or Rainbow (kind "royal", violet egg)

@@ -5722,29 +5722,37 @@ do
 		local map = workspace:FindFirstChild("Map")
 		return map and map:FindFirstChild("Base" .. attr("Base", 0))
 	end
-	-- v284 (user): a steps bar under the violet tutorial pill, filling one part per finished step
-	local stepBg = make("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 6), Size = UDim2.fromScale(0.8, 0.32),
-		BackgroundColor3 = Color3.fromRGB(30, 20, 60), BorderSizePixel = 0, Visible = false, ZIndex = 3 }, hintPill)
+	-- v292 (user): the bar is part of the violet pill itself (one piece, no dividers, no "STEP" word): the hint text on top,
+	-- under it a bar that fills, and "1/5" right of the bar. Visible steps: 1 open EGGS, 2 hatch, 3 pet into the pen
+	-- (tap + place = one step, the pet often goes straight to the pen), 4 treadmill, 5 catch an egg.
+	local VIS = { 1, 2, 3, 3, 4, 5 } -- server step (Tut 1..6) -> visible step
+	local stepBg = make("Frame", { Position = UDim2.fromScale(0.12, 0.7), Size = UDim2.fromScale(0.66, 0.16),
+		BackgroundColor3 = Color3.fromRGB(40, 20, 80), BorderSizePixel = 0, Visible = false, ZIndex = 3 }, hintPill)
 	make("UICorner", { CornerRadius = UDim.new(1, 0) }, stepBg)
-	make("UIStroke", { Thickness = 2.5, Color = WHITE, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, stepBg)
+	make("UIStroke", { Thickness = 2, Color = WHITE, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, stepBg)
 	local stepFill = make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 4 }, stepBg)
 	make("UICorner", { CornerRadius = UDim.new(1, 0) }, stepFill)
 	make("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(140, 255, 120), Color3.fromRGB(40, 190, 70)) }, stepFill)
-	for k = 1, C.TUT_STEPS - 1 do -- dividers between the steps
-		make("Frame", { Position = UDim2.fromScale(k / C.TUT_STEPS, 0.1), Size = UDim2.new(0, 2, 0.8, 0), BackgroundColor3 = WHITE, BackgroundTransparency = 0.4, BorderSizePixel = 0, ZIndex = 5 }, stepBg)
-	end
-	local stepT = make("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Font = Enum.Font.LuckiestGuy, TextScaled = true, TextColor3 = WHITE, Text = "", ZIndex = 6 }, stepBg)
+	local stepT = make("TextLabel", { BackgroundTransparency = 1, Position = UDim2.fromScale(0.8, 0.62), Size = UDim2.fromScale(0.16, 0.3),
+		Font = Enum.Font.LuckiestGuy, TextScaled = true, TextColor3 = WHITE, Text = "", Visible = false, ZIndex = 4 }, hintPill)
 	make("UIStroke", { Thickness = 2, Color = BLACK }, stepT)
-	local shownStep = -1
+	local pillSize, hintPos, hintSize = hintPill.Size, hint.Position, hint.Size
+	local shownStep, wasOn = -1, false
 	RunService.RenderStepped:Connect(function()
 		local T = attr("Tut", 99)
 		local on = T >= 1 and T < 99
-		stepBg.Visible = on
+		if on ~= wasOn then -- taller pill with the text up while the introduction runs
+			wasOn = on
+			hintPill.Size = on and UDim2.fromScale(pillSize.X.Scale, pillSize.Y.Scale * 1.5) or pillSize
+			hint.Position = on and UDim2.fromScale(hintPos.X.Scale, 0.08) or hintPos
+			hint.Size = on and UDim2.fromScale(hintSize.X.Scale, 0.5) or hintSize
+		end
+		stepBg.Visible, stepT.Visible = on, on
 		if on and T ~= shownStep then
 			shownStep = T
-			local done = math.clamp(T - 1, 0, C.TUT_STEPS)
-			TweenService:Create(stepFill, TweenInfo.new(0.5, Enum.EasingStyle.Back), { Size = UDim2.fromScale(done / C.TUT_STEPS, 1) }):Play()
-			stepT.Text = "STEP " .. math.min(T, C.TUT_STEPS) .. " / " .. C.TUT_STEPS
+			local v = VIS[math.clamp(T, 1, #VIS)]
+			TweenService:Create(stepFill, TweenInfo.new(0.5, Enum.EasingStyle.Back), { Size = UDim2.fromScale((v - 1) / C.TUT_STEPS, 1) }):Play()
+			stepT.Text = v .. "/" .. C.TUT_STEPS
 		end
 	end)
 	local sent, speed0, caught0 = 0, nil, nil

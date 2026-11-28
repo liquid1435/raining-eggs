@@ -2160,17 +2160,14 @@ grantProduct = function(plr, d, pk)
 			table.insert(d.bag, { z = math.max(1, d.unlocked or 1), kind = "royal", luck = C.luck(d.luck) * C.ROYAL_LUCK })
 		end
 		renderCarry(plr)
-		say(plr, pk.n .. (pk.n == 1 and " ROYAL EGG" or " ROYAL EGGS") .. " added to your EGGS! Thank you!", "legend")
 		Bought:FireClient(plr, pk.n .. (pk.n == 1 and " Royal Egg" or " Royal Eggs"))
 	elseif pk.kind == "speed" then
 		d.passes[pk.key] = true -- v286: owned forever, the treadmill gives x mult
-		say(plr, "Treadmill x" .. pk.mult .. " forever! Thank you!", "legend")
 		Bought:FireClient(plr, "Treadmill x" .. pk.mult)
 	elseif pk.kind == "cash" then
 		local income = tonumber(plr:GetAttribute("Income")) or 0
 		local gain = math.max(pk.min, math.floor(income * pk.secs))
 		d.cash = d.cash + gain
-		say(plr, "+$" .. C.fmt(gain) .. "! Thank you!", "legend")
 		Bought:FireClient(plr, "+$" .. C.fmt(gain))
 	end
 	sync(plr)
@@ -2193,7 +2190,6 @@ Action.OnServerEvent:Connect(function(plr, what, key)
 	for _, p in ipairs(C.PASSES) do
 		if p.key == key then
 			givePass(plr, p.key)
-			say(plr, p.name .. " unlocked! (Studio test)", "legend")
 			Bought:FireClient(plr, p.name)
 		end
 	end
@@ -2216,7 +2212,6 @@ MPS.PromptGamePassPurchaseFinished:Connect(function(plr, id, bought)
 	for _, p in ipairs(C.PASSES) do
 		if p.id == id then
 			givePass(plr, p.key)
-			say(plr, p.name .. " unlocked! Thank you!", "legend")
 			Bought:FireClient(plr, p.name)
 		end
 	end

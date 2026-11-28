@@ -114,9 +114,15 @@ function M.init(X)
 					Text = "You got " .. tostring(what or "it") .. "!", TextColor3 = WHITE, ZIndex = 41 }, holder)
 				make("UIStroke", { Thickness = 3.5, Color = BLACK }, t2)
 				tw(sc, 0.45, { Scale = 1 }, Enum.EasingStyle.Back)
-				confetti(90)
+				confetti(90) -- v292 (user): only fireworks + confetti sounds on a purchase
+				if sfx then
+					pcall(sfx, "egg_pop", 0.8)
+				end
 				task.delay(0.4, function()
 					confetti(60)
+					if sfx then
+						pcall(sfx, "egg_pop", 0.7, 1.2)
+					end
 				end)
 				if X.UI.fireworks then
 					pcall(X.UI.fireworks, 14)
