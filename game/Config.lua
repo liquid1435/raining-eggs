@@ -830,7 +830,7 @@ C.SHOP_RECTS = {
 	title_shop = { "B", 0, 752, 1024, 201 },
 }
 -- v264: Codex art for MY EGGS + PET INDEX (E:/rainingeggs/codex_shop/sheets ui_D/E/F.png). Put the uploaded image ids here.
-C.UI_ART = { D = "", E = "", F = "" }
+C.UI_ART = { D = "rbxassetid://96777079394959", E = "rbxassetid://72324647553144", F = "rbxassetid://88781833273745" }
 C.UI_RECTS = {
 	btn_green = { "F", 597, 97, 400, 95 },
 	btn_grey = { "E", 562, 914, 400, 96 },
