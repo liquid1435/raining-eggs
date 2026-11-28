@@ -1338,6 +1338,7 @@ function M.init(X)
 			b.label.RichText = true
 			royalBtns[k] = b
 		end
+		local featT = 2 -- v276 (user): the royal pets show their coats in turn: Gold -> Rainbow -> normal
 		local function refreshFeatured()
 			local z = math.clamp(attr("Unlocked", 1), 1, #C.ZONES)
 			fsub.Text = "EXCLUSIVE pets  ·  x" .. C.ROYAL_MULT .. " income  ·  always GOLD or RAINBOW"
@@ -1345,9 +1346,9 @@ function M.init(X)
 				local rp = C.ROYAL_PETS[i]
 				local p = rp.odds * 100
 				s.pct.Text = (p >= 10 and string.format("%.0f%%", p)) or string.format("%.1f%%", p)
-				local pet = { z = z, i = rp.i, t = 2, v = 100 + i }
+				local pet = { z = z, i = rp.i, t = featT, v = 100 + i }
 				s.inc.Text = "$" .. C.fmt(C.petIncome(pet)) .. "/s"
-				local key = z .. "_" .. i
+				local key = z .. "_" .. i .. "_" .. featT
 				if s.key ~= key then
 					s.key = key
 					for _, v in ipairs(s.holder:GetChildren()) do
@@ -1468,6 +1469,11 @@ function M.init(X)
 						st.Rotation = t * 60 + k * 40
 					end
 				else
+					local nt = ({ 2, 3, 1 })[math.floor(t / 1.8) % 3 + 1]
+					if nt ~= featT then
+						featT = nt
+						refreshFeatured()
+					end
 					e.g.Offset = Vector2.new(math.sin(t * 0.6) * 0.3, 0)
 					e.g.Rotation = 20 + math.sin(t * 0.4) * 15
 					e.s.Color = Color3.fromRGB(255, 200, 60):Lerp(WHITE, 0.5 + 0.5 * math.sin(t * 3))
