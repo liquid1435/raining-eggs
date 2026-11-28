@@ -930,35 +930,19 @@ function M.init(X)
 	end
 	M.refreshEggs()
 
-	-- v264 (user's ChatGPT MY EGGS picture): Codex painted look when the art sheets are uploaded (C.UI_ART)
+	-- v278 (user): MY EGGS keeps its old look; when the player has no eggs the painted empty state shows (Codex art)
 	do
-		if C.reskinPanel(eggsPanel, "eggs", 1.5, UDim2.fromScale(0.075, 0.215), UDim2.fromScale(0.85, 0.69)) then
-			local btnArt = C.artImage(hatchAll.button, "btn_grey", UDim2.fromScale(1, 1), nil, 2)
-			btnArt.ScaleType = Enum.ScaleType.Stretch
-			hatchAll.face.Parent.Visible = false
-			hatchAll.label.Parent = btnArt
-			hatchAll.label.ZIndex = 3
-			local emptyEgg = C.artImage(ei, "eggs_empty_egg", UDim2.fromScale(0.36, 0.6), UDim2.fromScale(0.58, 0.14), 3)
-			local emptyText = C.artImage(ei, "eggs_empty_text", UDim2.fromScale(0.46, 0.5), UDim2.fromScale(0.06, 0.18), 3)
+		local emptyEgg = C.artImage(ei, "eggs_empty_egg", UDim2.fromScale(0.36, 0.62), UDim2.fromScale(0.58, 0.14), 6)
+		local emptyText = C.artImage(ei, "eggs_empty_text", UDim2.fromScale(0.48, 0.52), UDim2.fromScale(0.05, 0.17), 6)
+		if emptyEgg and emptyText then
 			local base = M.refreshEggs
 			M.refreshEggs = function()
 				base()
-				local n = attr("Eggs", 0)
-				C.setArt(btnArt, n > 0 and "btn_green" or "btn_grey")
-				emptyEgg.Visible, emptyText.Visible = n == 0, n == 0
+				local none = attr("Eggs", 0) == 0
+				emptyEgg.Visible, emptyText.Visible = none, none
 				for _, c in ipairs(eggGrid:GetChildren()) do
 					if c:IsA("TextLabel") then
 						c.Visible = false -- the old "No eggs yet" line (the painted one shows instead)
-					elseif c:IsA("Frame") and not c:FindFirstChild("CardArt") then
-						local a = C.artImage(c, "egg_card", UDim2.fromScale(1, 1), nil, 2)
-						if a then
-							a.Name = "CardArt"
-							a.ScaleType = Enum.ScaleType.Stretch
-							local st = c:FindFirstChildOfClass("UIStroke")
-							if st then
-								st.Enabled = false
-							end
-						end
 					end
 				end
 			end
@@ -1117,12 +1101,7 @@ function M.init(X)
 	do
 		local BG1, BG2 = Color3.fromRGB(44, 44, 52), Color3.fromRGB(28, 28, 34)
 		local storePanel = panel("STORE", "gem", Color3.fromRGB(40, 170, 255), 0.6, 1.72)
-		local sf = storePanel.frame
-		for _, ch in ipairs(sf:GetChildren()) do
-			if ch:IsA("GuiObject") then
-				ch.Visible = false
-			end
-		end
+		local sf = storePanel.frame -- v278 (user): same panel look as DAILY; the list lives in the cream inside
 		local function rnd(o, s)
 			make("UICorner", { CornerRadius = UDim.new(s or 0.08, 0) }, o)
 		end
@@ -1157,7 +1136,7 @@ function M.init(X)
 				pcall(sfx, "click", 0.4)
 			end
 		end
-		local root = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 10 }, sf)
+		local root = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 10 }, storePanel.inner)
 		-- body + green title bar + X
 		local body = frame(root, UDim2.fromScale(1, 1), nil, BG1, BG2, BLACK, 10, 0.03)
 		local bar = frame(root, UDim2.fromScale(1, 0.1), nil, Color3.fromRGB(130, 245, 70), Color3.fromRGB(60, 190, 40), BLACK, 11, 0.25)
@@ -1172,8 +1151,9 @@ function M.init(X)
 		xb.Activated:Connect(function()
 			storePanel.close()
 		end)
+		body.Visible, bar.Visible, xb.Visible = false, false, false -- the panel has its own title ribbon and X
 		local list = make("ScrollingFrame", {
-			BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromScale(0.96, 0.87), Position = UDim2.fromScale(0.02, 0.115),
+			BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromScale(0.98, 0.97), Position = UDim2.fromScale(0.01, 0.015),
 			ScrollBarThickness = 8, ScrollBarImageColor3 = Color3.fromRGB(150, 150, 160), CanvasSize = UDim2.new(),
 			AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 11,
 		}, root)
@@ -1431,7 +1411,7 @@ function M.init(X)
 		end
 
 		-- ---------------------------------------------------------------- right side: jump to a section
-		local side = make("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(1, 10, 0.12, 0), Size = UDim2.fromScale(0.13, 0.6), ZIndex = 12 }, root)
+		local side = make("Frame", { Visible = false, BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(1, 10, 0.12, 0), Size = UDim2.fromScale(0.13, 0.6), ZIndex = 12 }, root)
 		make("UIListLayout", { Padding = UDim.new(0.03, 0), SortOrder = Enum.SortOrder.LayoutOrder }, side)
 		for k, it in ipairs({ { "FEATURED", "Featured", "gem", Color3.fromRGB(255, 80, 120) }, { "PASSES", "Passes", "star", Color3.fromRGB(255, 190, 40) },
 			{ "SPEED", "Speed", "bolt", Color3.fromRGB(60, 190, 255) }, { "MONEY", "Money", "coin", Color3.fromRGB(70, 200, 80) } }) do
