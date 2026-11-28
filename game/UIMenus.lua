@@ -930,41 +930,6 @@ function M.init(X)
 	end
 	M.refreshEggs()
 
-	-- v264 (user's ChatGPT MY EGGS picture): Codex painted look when the art sheets are uploaded (C.UI_ART)
-	do
-		if C.reskinPanel(eggsPanel, "eggs", 1.5, UDim2.fromScale(0.075, 0.215), UDim2.fromScale(0.85, 0.69)) then
-			local btnArt = C.artImage(hatchAll.button, "btn_grey", UDim2.fromScale(1, 1), nil, 2)
-			btnArt.ScaleType = Enum.ScaleType.Stretch
-			hatchAll.face.Parent.Visible = false
-			hatchAll.label.Parent = btnArt
-			hatchAll.label.ZIndex = 3
-			local emptyEgg = C.artImage(ei, "eggs_empty_egg", UDim2.fromScale(0.36, 0.6), UDim2.fromScale(0.58, 0.14), 3)
-			local emptyText = C.artImage(ei, "eggs_empty_text", UDim2.fromScale(0.46, 0.5), UDim2.fromScale(0.06, 0.18), 3)
-			local base = M.refreshEggs
-			M.refreshEggs = function()
-				base()
-				local n = attr("Eggs", 0)
-				C.setArt(btnArt, n > 0 and "btn_green" or "btn_grey")
-				emptyEgg.Visible, emptyText.Visible = n == 0, n == 0
-				for _, c in ipairs(eggGrid:GetChildren()) do
-					if c:IsA("TextLabel") then
-						c.Visible = false -- the old "No eggs yet" line (the painted one shows instead)
-					elseif c:IsA("Frame") and not c:FindFirstChild("CardArt") then
-						local a = C.artImage(c, "egg_card", UDim2.fromScale(1, 1), nil, 2)
-						if a then
-							a.Name = "CardArt"
-							a.ScaleType = Enum.ScaleType.Stretch
-							local st = c:FindFirstChildOfClass("UIStroke")
-							if st then
-								st.Enabled = false
-							end
-						end
-					end
-				end
-			end
-		end
-	end
-
 	-- ============================================================ SELL (v104, user: "select the pets, with their picture, professional")
 	-- opens while standing on the SELL shop zone: tabs BASKET / PEN, cards like MY PETS (3D pet, name, rarity, price),
 	-- tap cards to select (green frame + tick), SELECT ALL, SELL SELECTED ($total)
@@ -1150,77 +1115,33 @@ function M.init(X)
 		local function shade(c, k)
 			return Color3.new(c.R * k, c.G * k, c.B * k)
 		end
-		-- v262: Codex's painted shop art (C.SHOP_ART sheet ids, C.SHOP_RECTS pieces). Empty id = drawn fallback.
-		local ART = C.SHOP_ART or {}
-		local function art(parent, name, size, pos, z, anchor)
-			local r = C.SHOP_RECTS and C.SHOP_RECTS[name]
-			local id = r and ART[r[1]]
-			if not id or id == "" then
-				return nil
-			end
-			return make("ImageLabel", {
-				BackgroundTransparency = 1, Image = id, ImageRectOffset = Vector2.new(r[2], r[3]), ImageRectSize = Vector2.new(r[4], r[5]),
-				Size = size, Position = pos or UDim2.new(), AnchorPoint = anchor or Vector2.zero, ScaleType = Enum.ScaleType.Fit, ZIndex = z or 13,
-			}, parent)
-		end
-		local HAS_ART = (ART.A or "") ~= ""
-		local RBX = utf8.char(0xE002) -- the Robux icon inside Roblox text
-		local shimmers = {} -- v268: animated light that sweeps over every card
 		local function click()
 			if sfx then
 				pcall(sfx, "click", 0.4)
 			end
 		end
 		local root = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 10 }, sf)
-		-- v260 (user: "make it beautiful like the ChatGPT design"): neon blue body, gold-rimmed SHOP plaque on the top edge
-		local NEON, GOLDC = Color3.fromRGB(90, 205, 255), Color3.fromRGB(255, 210, 70)
-		local glowF = make("Frame", { Size = UDim2.new(1, 18, 1, 18), Position = UDim2.new(0, -9, 0, -9), BackgroundTransparency = 1, ZIndex = 9 }, root)
-		rnd(glowF, 0.05)
-		make("UIStroke", { Thickness = 10, Transparency = 0.55, Color = NEON }, glowF)
-		local body = frame(root, UDim2.fromScale(1, 1), nil, Color3.fromRGB(34, 56, 160), Color3.fromRGB(14, 22, 84), NEON, 10, 0.04)
-		body:FindFirstChildOfClass("UIStroke").Thickness = 5
-		local bar = frame(root, UDim2.fromScale(0.36, 0.15), UDim2.fromScale(0.32, -0.095), Color3.fromRGB(56, 110, 230), Color3.fromRGB(20, 52, 160), GOLDC, 13, 0.3)
-		bar:FindFirstChildOfClass("UIStroke").Thickness = 4
-		local gemIc = icon(bar, "gem", UDim2.fromScale(0.26, 1.15), UDim2.fromScale(0.13, 0.5), Vector2.new(0.5, 0.5))
-		make("UIAspectRatioConstraint", { AspectRatio = 1 }, gemIc)
-		gemIc.ZIndex = 15
-		X.wobbly[gemIc] = nil
-		for sx = -1, 1, 2 do
-			local st = icon(root, "star", UDim2.fromScale(0.06, 0.1), UDim2.fromScale(0.5 + sx * 0.215, -0.02), Vector2.new(0.5, 0.5))
-			make("UIAspectRatioConstraint", { AspectRatio = 1 }, st)
-			st.ZIndex = 14
-			X.wobbly[st] = nil
-		end
-		local shopT = txt(bar, UDim2.fromScale(0.68, 0.8), UDim2.fromScale(0.27, 0.1), 70, "SHOP", WHITE, nil, Enum.Font.LuckiestGuy, 15)
-		shopT:FindFirstChildOfClass("UIStroke").Color = Color3.fromRGB(10, 24, 90)
-		shopT:FindFirstChildOfClass("UIStroke").Thickness = 3.5
-		grad(shopT, WHITE, Color3.fromRGB(140, 215, 255))
-		local titleArt = art(root, "title_shop", UDim2.fromScale(0.5, 0.24), UDim2.fromScale(0.5, -0.03), 16, Vector2.new(0.5, 0.5))
-		if titleArt then
-			bar.Visible = false
-			for _, ch in ipairs(root:GetChildren()) do
-				if ch:IsA("ImageLabel") and ch ~= titleArt and ch.Position.Y.Scale < 0 then
-					ch.Visible = false -- the drawn stars
-				end
-			end
-		end
-		local xb = make("TextButton", { AutoButtonColor = false, Text = "", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.985, 0.0), Size = UDim2.fromScale(0.075, 0.13), BackgroundColor3 = WHITE, ZIndex = 14 }, root)
+		-- body + green title bar + X
+		local body = frame(root, UDim2.fromScale(1, 1), nil, BG1, BG2, BLACK, 10, 0.03)
+		local bar = frame(root, UDim2.fromScale(1, 0.1), nil, Color3.fromRGB(130, 245, 70), Color3.fromRGB(60, 190, 40), BLACK, 11, 0.25)
+		txt(bar, UDim2.fromScale(0.5, 0.72), UDim2.fromScale(0.025, 0.14), 48, "Shop", WHITE, Enum.TextXAlignment.Left, Enum.Font.LuckiestGuy)
+		local xb = make("TextButton", { AutoButtonColor = false, Text = "", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.fromScale(0.99, 0.05), Size = UDim2.fromScale(0.07, 0.085), BackgroundColor3 = WHITE, ZIndex = 13 }, root)
 		make("UIAspectRatioConstraint", { AspectRatio = 1 }, xb)
 		rnd(xb, 0.2)
 		grad(xb, Color3.fromRGB(255, 80, 80), Color3.fromRGB(200, 20, 30))
-		make("UIStroke", { Thickness = 3, Color = WHITE, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, xb)
-		txt(xb, UDim2.fromScale(0.62, 0.62), UDim2.fromScale(0.19, 0.17), 40, "X", WHITE, nil, Enum.Font.LuckiestGuy, 15)
+		make("UIStroke", { Thickness = 2.5, Color = BLACK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, xb)
+		txt(xb, UDim2.fromScale(0.62, 0.62), UDim2.fromScale(0.19, 0.17), 40, "X", WHITE, nil, Enum.Font.LuckiestGuy, 14)
 		pressable(xb)
 		xb.Activated:Connect(function()
 			storePanel.close()
 		end)
 		local list = make("ScrollingFrame", {
-			BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromScale(0.96, 0.89), Position = UDim2.fromScale(0.02, 0.085),
-			ScrollBarThickness = 8, ScrollBarImageColor3 = NEON, CanvasSize = UDim2.new(),
+			BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromScale(0.96, 0.87), Position = UDim2.fromScale(0.02, 0.115),
+			ScrollBarThickness = 8, ScrollBarImageColor3 = Color3.fromRGB(150, 150, 160), CanvasSize = UDim2.new(),
 			AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 11,
 		}, root)
 		make("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }, list)
-		make("UIPadding", { PaddingTop = UDim.new(0, 16), PaddingRight = UDim.new(0, 14), PaddingBottom = UDim.new(0, 12) }, list)
+		make("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingRight = UDim.new(0, 14), PaddingBottom = UDim.new(0, 12) }, list)
 		local order = 0
 		local function nextOrder()
 			order += 1
@@ -1243,31 +1164,18 @@ function M.init(X)
 		end
 		local sections = {}
 		local function header(name)
-			local h = block(13)
-			local rib = art(h, "ribbon_" .. string.lower(name), UDim2.fromScale(0.5, 1), UDim2.fromScale(0.25, 0), 12)
-			if rib then
-				sections[name] = h
-				return h
-			end
-			local pill = frame(h, UDim2.fromScale(0.32, 0.9), UDim2.fromScale(0.34, 0.05), Color3.fromRGB(255, 232, 130), Color3.fromRGB(255, 176, 30), Color3.fromRGB(255, 246, 190), 12, 1)
-			pill:FindFirstChildOfClass("UIStroke").Thickness = 3
-			local ht = txt(pill, UDim2.fromScale(0.86, 0.7), UDim2.fromScale(0.07, 0.15), 34, name, Color3.fromRGB(80, 40, 0), nil, Enum.Font.FredokaOne, 13)
-			ht:FindFirstChildOfClass("UIStroke").Enabled = false
+			local h = block(16)
+			txt(h, UDim2.fromScale(1, 0.9), UDim2.fromScale(0, 0.05), 34, "-- " .. name .. " --", Color3.fromRGB(255, 226, 90), nil, Enum.Font.LuckiestGuy, 12)
 			sections[name] = h
 			return h
 		end
-
 		-- green Robux price button
 		local function priceBtn(parent, size, pos, onBuy)
 			local b = make("TextButton", { AutoButtonColor = false, Text = "", Size = size, Position = pos, BackgroundColor3 = WHITE, ZIndex = 14 }, parent)
 			rnd(b, 0.3)
-			local g = grad(b, Color3.fromRGB(110, 240, 80), Color3.fromRGB(28, 150, 40))
-			make("UIStroke", { Thickness = 3, Color = Color3.fromRGB(10, 50, 15), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
-			-- v268 (user: the green Robux icon could not be seen): Roblox's own Robux sign as text, white, right before the price
-			local t = txt(b, UDim2.fromScale(0.86, 0.72), UDim2.fromScale(0.07, 0.14), 42, "", WHITE, nil, Enum.Font.GothamBlack, 15)
-			t.RichText = true
-			t:FindFirstChildOfClass("UIStroke").Thickness = 3
-			t:FindFirstChildOfClass("UIStroke").Color = Color3.fromRGB(10, 50, 15)
+			local g = grad(b, Color3.fromRGB(120, 245, 90), Color3.fromRGB(40, 175, 50))
+			make("UIStroke", { Thickness = 2.5, Color = Color3.fromRGB(15, 60, 20), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
+			local t = txt(b, UDim2.fromScale(0.86, 0.7), UDim2.fromScale(0.07, 0.15), 40, "", WHITE, nil, nil, 15)
 			pressable(b)
 			b.Activated:Connect(function()
 				click()
@@ -1284,12 +1192,11 @@ function M.init(X)
 		end
 		-- a coloured card with rays of light
 		local function card(parent, col, size, pos)
-			local c = frame(parent, size, pos, col:Lerp(WHITE, 0.3), shade(col, 0.55), col:Lerp(WHITE, 0.55), 12, 0.1)
-			c:FindFirstChildOfClass("UIStroke").Thickness = 4
+			local c = frame(parent, size, pos, col:Lerp(WHITE, 0.25), shade(col, 0.55), shade(col, 0.4), 12, 0.1)
 			local rays = make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.35), Size = UDim2.fromScale(0.9, 0.9), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 12 }, c)
 			make("UIAspectRatioConstraint", { AspectRatio = 1 }, rays)
 			rnd(rays, 1)
-			make("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.45), NumberSequenceKeypoint.new(1, 1) }) }, rays)
+			make("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.7), NumberSequenceKeypoint.new(1, 1) }) }, rays)
 			return c
 		end
 		local function bigIcon(parent, name, size, pos)
@@ -1303,27 +1210,16 @@ function M.init(X)
 		-- ---------------------------------------------------------------- FEATURED: Royal Egg
 		header("FEATURED")
 		local feat = block(2.45)
-		local fc = frame(feat, UDim2.fromScale(1, 1), nil, Color3.fromRGB(150, 45, 235), Color3.fromRGB(46, 10, 118), Color3.fromRGB(255, 120, 245), 12, 0.06)
-		fc:FindFirstChildOfClass("UIStroke").Thickness = 4
+		local fc = frame(feat, UDim2.fromScale(1, 1), nil, Color3.fromRGB(210, 40, 80), Color3.fromRGB(90, 10, 60), Color3.fromRGB(255, 200, 60), 12, 0.06)
 		local newTag = frame(fc, UDim2.fromScale(0.09, 0.11), UDim2.fromScale(0.02, 0.04), Color3.fromRGB(255, 90, 90), Color3.fromRGB(190, 10, 30), WHITE, 15, 0.3)
 		txt(newTag, UDim2.fromScale(0.84, 0.76), UDim2.fromScale(0.08, 0.12), 26, "New!", WHITE, nil, nil, 16)
-		local royT = txt(fc, UDim2.fromScale(0.45, 0.17), UDim2.fromScale(0.13, 0.03), 54, "ROYAL EGG", WHITE, Enum.TextXAlignment.Left, Enum.Font.LuckiestGuy)
-		grad(royT, Color3.fromRGB(255, 248, 170), Color3.fromRGB(255, 170, 0))
-		royT:FindFirstChildOfClass("UIStroke").Color = Color3.fromRGB(90, 40, 0)
+		txt(fc, UDim2.fromScale(0.45, 0.17), UDim2.fromScale(0.13, 0.03), 54, "ROYAL EGG", Color3.fromRGB(255, 222, 70), Enum.TextXAlignment.Left, Enum.Font.LuckiestGuy)
 		local fsub = txt(fc, UDim2.fromScale(0.6, 0.08), UDim2.fromScale(0.13, 0.19), 26, "", Color3.fromRGB(255, 220, 245), Enum.TextXAlignment.Left)
 		-- the egg (violet SECRET egg mesh), turning
 		local eggVp = make("ViewportFrame", { Size = UDim2.fromScale(0.22, 0.6), Position = UDim2.fromScale(0.0, 0.18), BackgroundTransparency = 1, Ambient = Color3.fromRGB(210, 200, 220), LightColor = WHITE, LightDirection = Vector3.new(0.5, -1, 0.8), ZIndex = 13 }, fc)
 		local eggCam = make("Camera", { FieldOfView = 34 }, eggVp)
 		eggVp.CurrentCamera = eggCam
-		local eggArt = nil and art(fc, "royal_egg", UDim2.fromScale(0.24, 0.82), UDim2.fromScale(0.005, 0.12), 14)
-		local royArt = art(fc, "royal_title", UDim2.fromScale(0.5, 0.22), UDim2.fromScale(0.27, 0.0), 14)
-		if royArt then
-			royT.Visible = false
-			fsub.Position = UDim2.fromScale(0.77, 0.1)
-			fsub.Size = UDim2.fromScale(0.22, 0.12)
-			fsub.TextXAlignment = Enum.TextXAlignment.Right
-		end
-		local eggSrc = (not eggArt) and (C.meshOf("Egg_Secret") or C.meshOf("Egg_Gold")) or nil
+		local eggSrc = C.meshOf("Egg_Secret") or C.meshOf("Egg_Gold")
 		local eggPart, eggRot
 		if eggSrc then
 			eggPart = eggSrc:Clone()
@@ -1343,10 +1239,8 @@ function M.init(X)
 		-- the 5 pets it can give (your best zone) with their chances
 		local petRow = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(0.75, 0.5), Position = UDim2.fromScale(0.235, 0.28), ZIndex = 12 }, fc)
 		local petSlots = {}
-		for i = 1, #C.ROYAL_PETS do -- v262: the 6 royal pets of the egg
-			local best = i == #C.ROYAL_PETS
-			local s = frame(petRow, UDim2.fromScale(0.158, 1), UDim2.fromScale((i - 1) * 0.1685, 0), best and Color3.fromRGB(255, 160, 40) or Color3.fromRGB(72, 32, 140),
-				best and Color3.fromRGB(200, 30, 100) or Color3.fromRGB(34, 14, 80), best and Color3.fromRGB(255, 220, 80) or Color3.fromRGB(150, 100, 255), 13, 0.1)
+		for i = 1, #C.ROYAL_PETS do -- v272: the 6 royal pets of the egg
+			local s = frame(petRow, UDim2.fromScale(0.158, 1), UDim2.fromScale((i - 1) * 0.1685, 0), Color3.fromRGB(70, 20, 60), Color3.fromRGB(35, 8, 35), C.RARITY[C.ROYAL_PETS[i].i].color, 13, 0.1)
 			local pct = txt(s, UDim2.fromScale(0.9, 0.2), UDim2.fromScale(0.05, 0.02), 28, "", WHITE, nil, nil, 16)
 			local inc = txt(s, UDim2.fromScale(0.9, 0.16), UDim2.fromScale(0.05, 0.82), 22, "", Color3.fromRGB(255, 222, 70), nil, nil, 16)
 			local holder = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 0.62), Position = UDim2.fromScale(0, 0.2), ZIndex = 14 }, s)
@@ -1359,7 +1253,7 @@ function M.init(X)
 			local b = priceBtn(fc, UDim2.fromScale(0.17, 0.12), UDim2.fromScale(x, 0.865), function()
 				buyProduct(pk, "Royal Egg")
 			end)
-			b.label.Text = RBX .. " " .. C.comma(pk.robux) .. (pk.old and ("  <font color='#ff6b6b'><s>" .. C.comma(pk.old) .. "</s></font>") or "")
+			b.label.Text = "R$ " .. C.comma(pk.robux) .. (pk.old and ("  <font color='#ff6b6b'><s>" .. C.comma(pk.old) .. "</s></font>") or "")
 			b.label.RichText = true
 			royalBtns[k] = b
 		end
@@ -1369,7 +1263,7 @@ function M.init(X)
 			for i, s in ipairs(petSlots) do
 				local rp = C.ROYAL_PETS[i]
 				local p = rp.odds * 100
-				s.pct.Text = (p >= 10 and string.format("%.0f%%", p)) or (p >= 1 and string.format("%.1f%%", p)) or string.format("%.1f%%", p)
+				s.pct.Text = (p >= 10 and string.format("%.0f%%", p)) or string.format("%.1f%%", p)
 				local pet = { z = z, i = rp.i, t = 2, v = 100 + i }
 				s.inc.Text = "$" .. C.fmt(C.petIncome(pet)) .. "/s"
 				local key = z .. "_" .. i
@@ -1378,11 +1272,7 @@ function M.init(X)
 					for _, v in ipairs(s.holder:GetChildren()) do
 						v:Destroy()
 					end
-					local pa = art(s.holder, "pet_" .. (360 + i), UDim2.fromScale(1, 1), nil, 15)
-					local ok, v = pa ~= nil, pa
-					if not pa then
-						ok, v = pcall(X.petView, s.holder, pet, UDim2.fromScale(1, 1), UDim2.new())
-					end
+					local ok, v = pcall(X.petView, s.holder, pet, UDim2.fromScale(1, 1), UDim2.new())
 					if ok and v then
 						v.ZIndex = 15
 					end
@@ -1390,75 +1280,10 @@ function M.init(X)
 			end
 		end
 
-		local function artCard(row, name, k, n, onBuy)
-			local x = (1 - n * 0.32 - (n - 1) * 0.02) / 2 + (k - 1) * 0.34
-			local holder = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(0.32, 1), Position = UDim2.fromScale(x, 0), ZIndex = 12 }, row)
-			local im = art(holder, name, UDim2.fromScale(1, 1), nil, 12)
-			local sh = make("Frame", { BackgroundColor3 = WHITE, BorderSizePixel = 0, Size = UDim2.fromScale(0.88, 0.7), Position = UDim2.fromScale(0.06, 0.05), ZIndex = 13 }, holder)
-			rnd(sh, 0.12)
-			local sg = make("UIGradient", { Rotation = 25, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.42, 1),
-				NumberSequenceKeypoint.new(0.5, 0.6), NumberSequenceKeypoint.new(0.58, 1), NumberSequenceKeypoint.new(1, 1) }) }, sh)
-			table.insert(shimmers, { g = sg, sc = im and make("UIScale", {}, im), ph = #shimmers * 0.37 })
-			local b = priceBtn(holder, UDim2.fromScale(0.7, 0.14), UDim2.fromScale(0.15, 0.8), onBuy)
-			return holder, b
-		end
-		local ART_ROW = 1 / (0.32 / 0.95) -- block aspect of a row of 3 painted cards
-		-- v270 (user: money / speed must look like in the game): blank Codex card + the game's own icon + live text in fixed rows
-		local function gameCard(row, blank, iconName, iconN, title, sub, k, n, onBuy)
-			local x = (1 - n * 0.32 - (n - 1) * 0.02) / 2 + (k - 1) * 0.34
-			local holder = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(0.32, 1), Position = UDim2.fromScale(x, 0), ZIndex = 12 }, row)
-			local im = C.artImage(holder, blank, UDim2.fromScale(1, 1), nil, 12)
-			if not im then
-				holder:Destroy()
-				return nil
-			end
-			for j = 1, iconN do -- 1, 2 or 3 icons in a small fan
-				local off = (j - (iconN + 1) / 2) * 0.16
-				local ic = icon(holder, iconName, UDim2.fromScale(0.46, 0.4), UDim2.fromScale(0.5 + off, 0.27 - math.abs(off) * 0.25), Vector2.new(0.5, 0.5))
-				make("UIAspectRatioConstraint", { AspectRatio = 1 }, ic)
-				ic.ZIndex = 14
-				ic.Rotation = off * 60
-				X.wobbly[ic] = nil
-			end
-			txt(holder, UDim2.fromScale(0.86, 0.1), UDim2.fromScale(0.07, 0.5), 34, title, WHITE, nil, Enum.Font.LuckiestGuy, 15)
-			local amt = txt(holder, UDim2.fromScale(0.86, 0.085), UDim2.fromScale(0.07, 0.605), 34, "", Color3.fromRGB(170, 255, 120), nil, Enum.Font.LuckiestGuy, 15)
-			txt(holder, UDim2.fromScale(0.86, 0.055), UDim2.fromScale(0.07, 0.7), 20, sub, WHITE, nil, nil, 15)
-			local b = priceBtn(holder, UDim2.fromScale(0.7, 0.13), UDim2.fromScale(0.15, 0.805), onBuy)
-			local sh = make("Frame", { BackgroundColor3 = WHITE, BorderSizePixel = 0, Size = UDim2.fromScale(0.88, 0.7), Position = UDim2.fromScale(0.06, 0.05), ZIndex = 13 }, holder)
-			rnd(sh, 0.12)
-			local sg = make("UIGradient", { Rotation = 25, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.42, 1),
-				NumberSequenceKeypoint.new(0.5, 0.6), NumberSequenceKeypoint.new(0.58, 1), NumberSequenceKeypoint.new(1, 1) }) }, sh)
-			table.insert(shimmers, { g = sg, sc = make("UIScale", {}, im), ph = #shimmers * 0.37 })
-			return holder, b, amt
-		end
-		local HAS_BLANK = C.artImage(Instance.new("Frame"), "blank_gold") ~= nil
 		-- ---------------------------------------------------------------- PASSES (2 per row)
-		header("GAMEPASSES")
+		header("PASSES")
 		local passCards = {}
-		local PASS_ART = { cash2 = "pass_cash", luck2 = "pass_luck", vip = "pass_vip", fast = "pass_fast", slots3 = "pass_slots", autohatch = "pass_auto" }
-		local function buyPass(p)
-			if hasPass(p.key) then
-				toast("You already own " .. p.name, "info")
-			elseif p.id == 0 then
-				toast(p.name .. " - coming soon!", "info")
-			else
-				MPS:PromptGamePassPurchase(plr, p.id)
-			end
-		end
-		if HAS_ART then
-			for n = 1, #C.PASSES, 3 do
-				local row = block(ART_ROW)
-				local cnt = math.min(3, #C.PASSES - n + 1)
-				for k = 1, cnt do
-					local p = C.PASSES[n + k - 1]
-					local _, b = artCard(row, PASS_ART[p.key] or "pass_cash", k, cnt, function()
-						buyPass(p)
-					end)
-					table.insert(passCards, { b = b, p = p })
-				end
-			end
-		end
-		for n = 1, HAS_ART and 0 or #C.PASSES, 2 do
+		for n = 1, #C.PASSES, 2 do
 			local row = block(4.6)
 			for k = 0, 1 do
 				local p = C.PASSES[n + k]
@@ -1484,105 +1309,54 @@ function M.init(X)
 
 		-- ---------------------------------------------------------------- SPEED (3 per row)
 		header("SPEED")
-		local srow = block(HAS_ART and ART_ROW or 3.3)
-		for k, pk in ipairs(HAS_ART and C.SPEED_PACKS or {}) do
-			local h, b, amt = nil, nil, nil
-			if HAS_BLANK then
-				h, b, amt = gameCard(srow, "blank_cyan", "bolt", k, "x" .. pk.mult .. " SPEED", "Your speed x" .. pk.mult .. " forever", k, #C.SPEED_PACKS, function()
-					buyProduct(pk, "Speed pack")
-				end)
-				if amt then
-					amt.Visible = false
-				end
-			end
-			if not h then
-				_, b = artCard(srow, "speed_" .. pk.mult, k, #C.SPEED_PACKS, function()
-					buyProduct(pk, "Speed pack")
-				end)
-			end
-			b.label.Text = RBX .. " " .. tostring(pk.robux)
-		end
-		for k, pk in ipairs(HAS_ART and {} or C.SPEED_PACKS) do
+		local srow = block(3.3)
+		for k, pk in ipairs(C.SPEED_PACKS) do
 			local c = card(srow, Color3.fromRGB(60, 190, 255), UDim2.fromScale(0.32, 1), UDim2.fromScale((k - 1) * 0.34, 0))
 			bigIcon(c, "bolt", UDim2.fromScale(0.5, 0.45), UDim2.fromScale(0.5, 0.3))
 			txt(c, UDim2.fromScale(0.9, 0.18), UDim2.fromScale(0.05, 0.53), 36, "x" .. pk.mult .. " SPEED", WHITE, nil, Enum.Font.LuckiestGuy)
 			local b = priceBtn(c, UDim2.fromScale(0.8, 0.2), UDim2.fromScale(0.1, 0.75), function()
 				buyProduct(pk, "Speed pack")
 			end)
-			b.label.Text = pk.robux
+			b.label.Text = "R$ " .. pk.robux
 		end
 
 		-- ---------------------------------------------------------------- MONEY (3 small + 2 wide)
-		header("CASH")
+		header("MONEY")
 		local cashLabels = {}
 		local function cashCard(parent, pk, size, pos)
-			local c = card(parent, Color3.fromRGB(255, 190, 30), size, pos)
+			local c = card(parent, Color3.fromRGB(70, 200, 80), size, pos)
 			bigIcon(c, "coin", UDim2.fromScale(0.45, 0.4), UDim2.fromScale(0.5, 0.26))
-			local amt = txt(c, UDim2.fromScale(0.9, 0.17), UDim2.fromScale(0.05, 0.46), 40, "", Color3.fromRGB(170, 255, 120), nil, Enum.Font.LuckiestGuy)
+			local amt = txt(c, UDim2.fromScale(0.9, 0.17), UDim2.fromScale(0.05, 0.46), 40, "", Color3.fromRGB(255, 240, 120), nil, Enum.Font.LuckiestGuy)
 			local secs = pk.secs >= 3600 and (pk.secs / 3600 .. (pk.secs == 3600 and " hour" or " hours")) or (pk.secs / 60 .. " min")
 			txt(c, UDim2.fromScale(0.9, 0.09), UDim2.fromScale(0.05, 0.63), 20, pk.name .. "  ·  " .. secs .. " of income", WHITE)
 			local b = priceBtn(c, UDim2.fromScale(0.8, 0.2), UDim2.fromScale(0.1, 0.76), function()
 				buyProduct(pk, pk.name)
 			end)
-			b.label.Text = pk.robux
+			b.label.Text = "R$ " .. pk.robux
 			if pk.tag then
 				local tg = frame(c, UDim2.fromScale(0.42, 0.11), UDim2.fromScale(0.56, 0.03), Color3.fromRGB(255, 90, 90), Color3.fromRGB(190, 10, 30), WHITE, 15, 0.3)
 				txt(tg, UDim2.fromScale(0.9, 0.7), UDim2.fromScale(0.05, 0.15), 20, pk.tag, WHITE, nil, nil, 16)
 			end
 			table.insert(cashLabels, { t = amt, pk = pk })
 		end
-		local function cashArt(row, k, idx, n)
-			local pk = C.CASH_PACKS[idx]
-			if HAS_BLANK then -- the game's own green cash icon, more bills for the bigger packs
-				local secs = pk.secs >= 3600 and (pk.secs / 3600 .. (pk.secs == 3600 and " hour" or " hours")) or (pk.secs / 60 .. " min")
-				local h, b, amt = gameCard(row, "blank_gold", "coin", math.min(3, math.ceil(idx / 2)), pk.name:upper(), secs .. " of your income", k, n, function()
-					buyProduct(pk, pk.name)
-				end)
-				if h then
-					b.label.Text = RBX .. " " .. tostring(pk.robux)
-					table.insert(cashLabels, { t = amt, pk = pk })
-					if pk.tag then
-						local tg = frame(h, UDim2.fromScale(0.5, 0.08), UDim2.fromScale(0.46, 0.035), Color3.fromRGB(255, 90, 90), Color3.fromRGB(190, 10, 30), WHITE, 16, 0.3)
-						txt(tg, UDim2.fromScale(0.9, 0.7), UDim2.fromScale(0.05, 0.15), 18, pk.tag, WHITE, nil, nil, 17)
-					end
-					return
-				end
-			end
-			local holder, b = artCard(row, "cash_" .. idx, k, n, function()
-				buyProduct(pk, pk.name)
-			end)
-			b.label.Text = RBX .. " " .. tostring(pk.robux)
-			local amt = txt(holder, UDim2.fromScale(0.8, 0.075), UDim2.fromScale(0.1, 0.705), 34, "", Color3.fromRGB(170, 255, 120), nil, Enum.Font.LuckiestGuy, 14)
-			table.insert(cashLabels, { t = amt, pk = pk })
-		end
-		if HAS_ART then
-			local r1 = block(ART_ROW)
-			for k = 1, 3 do
-				cashArt(r1, k, k, 3)
-			end
-			local r2 = block(ART_ROW)
-			for k = 1, 2 do
-				cashArt(r2, k, k + 3, 2)
-			end
-		end
-		local mrow1 = HAS_ART and Instance.new("Frame") or block(3.3)
+		local mrow1 = block(3.3)
 		for k = 1, 3 do
 			cashCard(mrow1, C.CASH_PACKS[k], UDim2.fromScale(0.32, 1), UDim2.fromScale((k - 1) * 0.34, 0))
 		end
-		local mrow2 = HAS_ART and Instance.new("Frame") or block(3.3)
+		local mrow2 = block(3.3)
 		for k = 4, 5 do
 			cashCard(mrow2, C.CASH_PACKS[k], UDim2.fromScale(0.49, 1), UDim2.fromScale((k - 4) * 0.51, 0))
 		end
 
 		-- ---------------------------------------------------------------- right side: jump to a section
-		local side = make("Frame", { Visible = false, BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(1, 10, 0.12, 0), Size = UDim2.fromScale(0.13, 0.6), ZIndex = 12 }, root)
+		local side = make("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(1, 10, 0.12, 0), Size = UDim2.fromScale(0.13, 0.6), ZIndex = 12 }, root)
 		make("UIListLayout", { Padding = UDim.new(0.03, 0), SortOrder = Enum.SortOrder.LayoutOrder }, side)
-		for k, it in ipairs({ { "FEATURED", "Featured", "gem", Color3.fromRGB(255, 80, 120) }, { "GAMEPASSES", "Passes", "star", Color3.fromRGB(255, 190, 40) },
-			{ "SPEED", "Speed", "bolt", Color3.fromRGB(60, 190, 255) }, { "CASH", "Cash", "coin", Color3.fromRGB(70, 200, 80) } }) do
+		for k, it in ipairs({ { "FEATURED", "Featured", "gem", Color3.fromRGB(255, 80, 120) }, { "PASSES", "Passes", "star", Color3.fromRGB(255, 190, 40) },
+			{ "SPEED", "Speed", "bolt", Color3.fromRGB(60, 190, 255) }, { "MONEY", "Money", "coin", Color3.fromRGB(70, 200, 80) } }) do
 			local b = make("TextButton", { AutoButtonColor = false, Text = "", Size = UDim2.fromScale(1, 0.22), BackgroundColor3 = WHITE, LayoutOrder = k, ZIndex = 13 }, side)
 			rnd(b, 0.2)
 			grad(b, it[4]:Lerp(WHITE, 0.2), shade(it[4], 0.6))
-			make("UIStroke", { Thickness = 3, Color = it[4]:Lerp(WHITE, 0.55), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
+			make("UIStroke", { Thickness = 2.5, Color = BLACK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
 			local ic = icon(b, it[3], UDim2.fromScale(0.6, 0.6), UDim2.fromScale(0.5, 0.38), Vector2.new(0.5, 0.5))
 			make("UIAspectRatioConstraint", { AspectRatio = 1 }, ic)
 			ic.ZIndex = 14
@@ -1599,23 +1373,10 @@ function M.init(X)
 			end)
 		end
 
-		RunService.RenderStepped:Connect(function()
-			if not sf.Visible then
-				return
-			end
-			local t = os.clock()
-			for _, s2 in ipairs(shimmers) do
-				local p = (t * 0.4 + s2.ph) % 1.8
-				s2.g.Offset = Vector2.new(p * 1.6 - 1.2, 0)
-				if s2.sc then
-					s2.sc.Scale = 1 + 0.012 * math.sin(t * 2.2 + s2.ph * 5)
-				end
-			end
-		end)
 		local function refreshStore()
 			for _, pc in ipairs(passCards) do
 				local own = hasPass(pc.p.key)
-				pc.b.label.Text = own and "OWNED" or (RBX .. " " .. tostring(pc.p.robux))
+				pc.b.label.Text = own and "OWNED" or ("R$ " .. pc.p.robux)
 				pc.b.grad.Color = own and ColorSequence.new(Color3.fromRGB(170, 170, 180), Color3.fromRGB(110, 110, 120)) or ColorSequence.new(Color3.fromRGB(120, 245, 90), Color3.fromRGB(40, 175, 50))
 			end
 			local income = attr("Income", 0)
@@ -1832,43 +1593,6 @@ function M.init(X)
 			refreshTop()
 		end
 	end)
-
-	-- v270 (user: every menu like MY EGGS): painted panels for SELL, DAILY, LEADERBOARD + painted day cards
-	do
-		local IN_P, IN_S = UDim2.fromScale(0.06, 0.17), UDim2.fromScale(0.88, 0.76)
-		C.reskinPanel(sellPanel, "sell", nil, IN_P, IN_S)
-		C.reskinPanel(topPanel, "top", nil, IN_P, IN_S)
-		if C.reskinPanel(dailyPanel, "daily", nil, IN_P, IN_S) then
-			local arts = {}
-			for n, d in ipairs(days) do
-				local a = C.artImage(d.card, "day_card", UDim2.fromScale(1, 1), nil, 2)
-				if a then
-					a.ScaleType = Enum.ScaleType.Stretch
-					local st = d.card:FindFirstChildOfClass("UIStroke")
-					if st then
-						st.Enabled = false
-					end
-					arts[n] = a
-				end
-			end
-			task.spawn(function()
-				while true do
-					task.wait(0.3)
-					if dailyPanel.frame.Visible then
-						local last, day = attr("DailyLast", 0), attr("DailyDay", 0)
-						local now = workspace:GetServerTimeNow()
-						local ready = last == 0 or now - last >= C.DAILY_COOLDOWN
-						local nextDay = (last == 0 or now - last > C.DAILY_RESET) and 1 or (day % #C.DAILY + 1)
-						for n, a in pairs(arts) do
-							local done = days[n].check.Visible
-							C.setArt(a, done and "day_card_done" or ((ready and n == nextDay) and "day_card_today" or "day_card"))
-							days[n].check.ImageTransparency = done and 1 or 0 -- the painted card has its own check mark
-						end
-					end
-				end
-			end)
-		end
-	end
 
 	-- live refresh of the open menus
 	plr.AttributeChanged:Connect(function(a)
