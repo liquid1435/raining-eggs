@@ -784,8 +784,8 @@ C.PASSES = {
 C.SLOTS_PASS = 3
 C.TUT_REWARD = 5000
 -- v296 (user picked): golden egg sinking into the earth (sink J) + golden portal appearing (portal A). Upload the mp3s, ids here.
-C.SFX_GOLD_SINK = ""
-C.SFX_GOLD_PORTAL = ""
+C.SFX_GOLD_SINK = "rbxassetid://94795963872286"
+C.SFX_GOLD_PORTAL = "rbxassetid://128499669709165"
 function C.treadMult(passes) -- best treadmill multiplier the player owns (speed packs)
 	local m = 1
 	for _, pk in ipairs(C.SPEED_PACKS) do
