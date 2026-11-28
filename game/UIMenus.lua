@@ -930,6 +930,41 @@ function M.init(X)
 	end
 	M.refreshEggs()
 
+	-- v264 (user's ChatGPT MY EGGS picture): Codex painted look when the art sheets are uploaded (C.UI_ART)
+	do
+		if C.reskinPanel(eggsPanel, "eggs", 1.5, UDim2.fromScale(0.075, 0.215), UDim2.fromScale(0.85, 0.69)) then
+			local btnArt = C.artImage(hatchAll.button, "btn_grey", UDim2.fromScale(1, 1), nil, 2)
+			btnArt.ScaleType = Enum.ScaleType.Stretch
+			hatchAll.face.Parent.Visible = false
+			hatchAll.label.Parent = btnArt
+			hatchAll.label.ZIndex = 3
+			local emptyEgg = C.artImage(ei, "eggs_empty_egg", UDim2.fromScale(0.36, 0.6), UDim2.fromScale(0.58, 0.14), 3)
+			local emptyText = C.artImage(ei, "eggs_empty_text", UDim2.fromScale(0.46, 0.5), UDim2.fromScale(0.06, 0.18), 3)
+			local base = M.refreshEggs
+			M.refreshEggs = function()
+				base()
+				local n = attr("Eggs", 0)
+				C.setArt(btnArt, n > 0 and "btn_green" or "btn_grey")
+				emptyEgg.Visible, emptyText.Visible = n == 0, n == 0
+				for _, c in ipairs(eggGrid:GetChildren()) do
+					if c:IsA("TextLabel") then
+						c.Visible = false -- the old "No eggs yet" line (the painted one shows instead)
+					elseif c:IsA("Frame") and not c:FindFirstChild("CardArt") then
+						local a = C.artImage(c, "egg_card", UDim2.fromScale(1, 1), nil, 2)
+						if a then
+							a.Name = "CardArt"
+							a.ScaleType = Enum.ScaleType.Stretch
+							local st = c:FindFirstChildOfClass("UIStroke")
+							if st then
+								st.Enabled = false
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
 	-- ============================================================ SELL (v104, user: "select the pets, with their picture, professional")
 	-- opens while standing on the SELL shop zone: tabs BASKET / PEN, cards like MY PETS (3D pet, name, rarity, price),
 	-- tap cards to select (green frame + tick), SELECT ALL, SELL SELECTED ($total)
@@ -1115,6 +1150,8 @@ function M.init(X)
 		local function shade(c, k)
 			return Color3.new(c.R * k, c.G * k, c.B * k)
 		end
+		local RBX = utf8.char(0xE002) -- v274 (user): Roblox's own Robux sign (white) instead of "R$"
+		local fx = {} -- v274: animated decorations (sweeps, sparkles, royal banner)
 		local function click()
 			if sfx then
 				pcall(sfx, "click", 0.4)
@@ -1175,7 +1212,8 @@ function M.init(X)
 			rnd(b, 0.3)
 			local g = grad(b, Color3.fromRGB(120, 245, 90), Color3.fromRGB(40, 175, 50))
 			make("UIStroke", { Thickness = 2.5, Color = Color3.fromRGB(15, 60, 20), ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
-			local t = txt(b, UDim2.fromScale(0.86, 0.7), UDim2.fromScale(0.07, 0.15), 40, "", WHITE, nil, nil, 15)
+			local t = txt(b, UDim2.fromScale(0.86, 0.72), UDim2.fromScale(0.07, 0.14), 40, "", WHITE, nil, Enum.Font.GothamBlack, 15)
+			t:FindFirstChildOfClass("UIStroke").Color = Color3.fromRGB(10, 50, 15)
 			pressable(b)
 			b.Activated:Connect(function()
 				click()
@@ -1192,7 +1230,23 @@ function M.init(X)
 		end
 		-- a coloured card with rays of light
 		local function card(parent, col, size, pos)
-			local c = frame(parent, size, pos, col:Lerp(WHITE, 0.25), shade(col, 0.55), shade(col, 0.4), 12, 0.1)
+			local c = frame(parent, size, pos, col:Lerp(WHITE, 0.35), shade(col, 0.5), col:Lerp(WHITE, 0.6), 12, 0.1)
+			c:FindFirstChildOfClass("UIStroke").Thickness = 4
+			c.ClipsDescendants = true
+			local glowB = make("Frame", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.5, 1), Size = UDim2.fromScale(1, 0.45), BackgroundColor3 = shade(col, 0.3), BorderSizePixel = 0, ZIndex = 12 }, c)
+			make("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(1, 0.35) }, glowB)
+			local sw = make("Frame", { BackgroundColor3 = WHITE, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), ZIndex = 13 }, c)
+			local sg = make("UIGradient", { Rotation = 25, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.43, 1),
+				NumberSequenceKeypoint.new(0.5, 0.62), NumberSequenceKeypoint.new(0.57, 1), NumberSequenceKeypoint.new(1, 1) }) }, sw)
+			local sp = {}
+			for k = 1, 4 do
+				local st = icon(c, "sparkle", UDim2.fromScale(0.09, 0.2), UDim2.fromScale(0.1 + (k * 0.23) % 0.85, 0.12 + (k * 0.31) % 0.6), Vector2.new(0.5, 0.5))
+				make("UIAspectRatioConstraint", { AspectRatio = 1 }, st)
+				st.ZIndex = 13
+				X.wobbly[st] = nil
+				sp[k] = st
+			end
+			table.insert(fx, { kind = "card", g = sg, sp = sp, ph = #fx * 0.53 })
 			local rays = make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.35), Size = UDim2.fromScale(0.9, 0.9), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 12 }, c)
 			make("UIAspectRatioConstraint", { AspectRatio = 1 }, rays)
 			rnd(rays, 1)
@@ -1211,6 +1265,33 @@ function M.init(X)
 		header("FEATURED")
 		local feat = block(2.45)
 		local fc = frame(feat, UDim2.fromScale(1, 1), nil, Color3.fromRGB(210, 40, 80), Color3.fromRGB(90, 10, 60), Color3.fromRGB(255, 200, 60), 12, 0.06)
+		fc.ClipsDescendants = true
+		local fcG = fc:FindFirstChildOfClass("UIGradient")
+		fcG.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(120, 20, 170)), ColorSequenceKeypoint.new(0.35, Color3.fromRGB(220, 40, 120)),
+			ColorSequenceKeypoint.new(0.7, Color3.fromRGB(90, 20, 160)), ColorSequenceKeypoint.new(1, Color3.fromRGB(230, 60, 140)) })
+		local fcS = fc:FindFirstChildOfClass("UIStroke")
+		fcS.Thickness = 5
+		-- rays: thin light bars turning around the egg
+		local rayHub = make("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.11, 0.5), Size = UDim2.fromScale(0.3, 0.9), ZIndex = 12 }, fc)
+		make("UIAspectRatioConstraint", { AspectRatio = 1 }, rayHub)
+		for k = 0, 9 do
+			local bar = make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.07, 1), Rotation = k * 18,
+				BackgroundColor3 = Color3.fromRGB(255, 235, 170), BorderSizePixel = 0, ZIndex = 12 }, rayHub)
+			make("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.55), NumberSequenceKeypoint.new(1, 1) }) }, bar)
+		end
+		local halo = make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.11, 0.5), Size = UDim2.fromScale(0.22, 0.62), BackgroundColor3 = Color3.fromRGB(255, 190, 255), BorderSizePixel = 0, ZIndex = 12 }, fc)
+		make("UIAspectRatioConstraint", { AspectRatio = 1 }, halo)
+		rnd(halo, 1)
+		make("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(0.7, 0.85), NumberSequenceKeypoint.new(1, 1) }) }, halo)
+		local rise = {}
+		for k = 1, 12 do
+			local st = icon(fc, "sparkle", UDim2.fromScale(0.035, 0.09), UDim2.fromScale(0, 0), Vector2.new(0.5, 0.5))
+			make("UIAspectRatioConstraint", { AspectRatio = 1 }, st)
+			st.ZIndex = 13
+			X.wobbly[st] = nil
+			rise[k] = { im = st, x = math.random(), sp = 0.12 + math.random() * 0.18, ph = math.random() }
+		end
+		table.insert(fx, { kind = "royal", g = fcG, s = fcS, hub = rayHub, halo = halo, rise = rise })
 		local newTag = frame(fc, UDim2.fromScale(0.09, 0.11), UDim2.fromScale(0.02, 0.04), Color3.fromRGB(255, 90, 90), Color3.fromRGB(190, 10, 30), WHITE, 15, 0.3)
 		txt(newTag, UDim2.fromScale(0.84, 0.76), UDim2.fromScale(0.08, 0.12), 26, "New!", WHITE, nil, nil, 16)
 		txt(fc, UDim2.fromScale(0.45, 0.17), UDim2.fromScale(0.13, 0.03), 54, "ROYAL EGG", Color3.fromRGB(255, 222, 70), Enum.TextXAlignment.Left, Enum.Font.LuckiestGuy)
@@ -1253,7 +1334,7 @@ function M.init(X)
 			local b = priceBtn(fc, UDim2.fromScale(0.17, 0.12), UDim2.fromScale(x, 0.865), function()
 				buyProduct(pk, "Royal Egg")
 			end)
-			b.label.Text = "R$ " .. C.comma(pk.robux) .. (pk.old and ("  <font color='#ff6b6b'><s>" .. C.comma(pk.old) .. "</s></font>") or "")
+			b.label.Text = RBX .. " " .. C.comma(pk.robux) .. (pk.old and ("  <font color='#ff6b6b'><s>" .. C.comma(pk.old) .. "</s></font>") or "")
 			b.label.RichText = true
 			royalBtns[k] = b
 		end
@@ -1317,7 +1398,7 @@ function M.init(X)
 			local b = priceBtn(c, UDim2.fromScale(0.8, 0.2), UDim2.fromScale(0.1, 0.75), function()
 				buyProduct(pk, "Speed pack")
 			end)
-			b.label.Text = "R$ " .. pk.robux
+			b.label.Text = RBX .. " " .. pk.robux
 		end
 
 		-- ---------------------------------------------------------------- MONEY (3 small + 2 wide)
@@ -1332,7 +1413,7 @@ function M.init(X)
 			local b = priceBtn(c, UDim2.fromScale(0.8, 0.2), UDim2.fromScale(0.1, 0.76), function()
 				buyProduct(pk, pk.name)
 			end)
-			b.label.Text = "R$ " .. pk.robux
+			b.label.Text = RBX .. " " .. pk.robux
 			if pk.tag then
 				local tg = frame(c, UDim2.fromScale(0.42, 0.11), UDim2.fromScale(0.56, 0.03), Color3.fromRGB(255, 90, 90), Color3.fromRGB(190, 10, 30), WHITE, 15, 0.3)
 				txt(tg, UDim2.fromScale(0.9, 0.7), UDim2.fromScale(0.05, 0.15), 20, pk.tag, WHITE, nil, nil, 16)
@@ -1373,10 +1454,39 @@ function M.init(X)
 			end)
 		end
 
+		RunService.RenderStepped:Connect(function()
+			if not sf.Visible then
+				return
+			end
+			local t = os.clock()
+			for _, e in ipairs(fx) do
+				if e.kind == "card" then
+					e.g.Offset = Vector2.new(((t * 0.45 + e.ph) % 1.8) * 1.6 - 1.2, 0)
+					for k, st in ipairs(e.sp) do
+						local w = 0.5 + 0.5 * math.sin(t * 3 + k * 1.7 + e.ph * 4)
+						st.ImageTransparency = 1 - w * 0.9
+						st.Rotation = t * 60 + k * 40
+					end
+				else
+					e.g.Offset = Vector2.new(math.sin(t * 0.6) * 0.3, 0)
+					e.g.Rotation = 20 + math.sin(t * 0.4) * 15
+					e.s.Color = Color3.fromRGB(255, 200, 60):Lerp(WHITE, 0.5 + 0.5 * math.sin(t * 3))
+					e.hub.Rotation = t * 25
+					local pulse = 1 + 0.08 * math.sin(t * 2.5)
+					e.halo.Size = UDim2.fromScale(0.22 * pulse, 0.62 * pulse)
+					for _, r_ in ipairs(e.rise) do
+						local y = 1.05 - ((t * r_.sp + r_.ph) % 1.2)
+						r_.im.Position = UDim2.fromScale(r_.x, y)
+						r_.im.ImageTransparency = math.clamp(math.abs(y - 0.5) * 1.6, 0, 1)
+						r_.im.Rotation = t * 90 + r_.ph * 360
+					end
+				end
+			end
+		end)
 		local function refreshStore()
 			for _, pc in ipairs(passCards) do
 				local own = hasPass(pc.p.key)
-				pc.b.label.Text = own and "OWNED" or ("R$ " .. pc.p.robux)
+				pc.b.label.Text = own and "OWNED" or (RBX .. " " .. pc.p.robux)
 				pc.b.grad.Color = own and ColorSequence.new(Color3.fromRGB(170, 170, 180), Color3.fromRGB(110, 110, 120)) or ColorSequence.new(Color3.fromRGB(120, 245, 90), Color3.fromRGB(40, 175, 50))
 			end
 			local income = attr("Income", 0)
