@@ -3392,8 +3392,11 @@ RunService.RenderStepped:Connect(function()
 	local cam = workspace.CurrentCamera
 	local camPos = cam and cam.CFrame.Position
 	if camPos then
+		local penFrame = math.floor(now * 60) -- (no new main-chunk local: the chunk is near the 200-local limit)
 		for model, info in pairs(penPets) do
-			if (info.cf.Position - camPos).Magnitude < 160 then
+			-- v252 (user: lag near pets): animate pets up to 120 studs away; past 45 studs only every 3rd frame
+			local dist = ((info.pos or info.cf.Position) - camPos).Magnitude
+			if dist < 120 and (dist < 45 or (penFrame + math.floor(info.phase * 10)) % 3 == 0) then
 				-- lively idle: bouncy hop that leans into the jump, a little wiggle, looks around, and a happy spin-jump now and then
 				local t = now * 2.4 + info.phase
 				local s = math.sin(t)
@@ -5222,7 +5225,7 @@ task.spawn(function()
 			while host.Parent and m.Parent do
 				local c2 = m:GetBoundingBox()
 				host.CFrame = c2
-				task.wait(0.1)
+				task.wait(0.2)
 			end
 		end)
 	end
@@ -5839,7 +5842,7 @@ task.spawn(function()
 			e.Parent = host
 			while host.Parent and m.Parent do -- follows the pet when it walks
 				host.CFrame = (m:GetBoundingBox())
-				task.wait(0.1)
+				task.wait(0.2)
 			end
 		end)
 	end

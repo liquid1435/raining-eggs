@@ -7,10 +7,12 @@ local Coat = {}
 -- cheap) and then drawn x4 bigger with Pixelated sampling into the image the pet wears, so every voxel stays one crisp
 -- colour (the 256 px image used to be smoothed by Roblox into blurry smears). Falls back to x2 / x1 if memory is short.
 Coat.LIVE = true
-local UPSCALE = { 4, 2, 1 }
+local UPSCALE = { 2, 1 } -- v252 (user: lag near pets): x2 is still crisp and a quarter of the work of x4
 local models, groups, palettes = {}, {}, {}
 local heartbeat
 local period = 1 / 12
+-- v252 (user: lag near pets): at most 12 coat repaints per second in total, not one every frame
+local BUDGET, lastPaint = 1 / 12, 0
 local white = Color3.new(1, 1, 1)
 
 local function channels(tier, phase)
@@ -206,7 +208,7 @@ end
 local function visible(state, camera)
 	if not state.model:IsDescendantOf(workspace) then return false end
 	local pos = state.model:GetPivot().Position
-	if (pos-camera.CFrame.Position).Magnitude > 100 + state.extent then return false end
+	if (pos-camera.CFrame.Position).Magnitude > 70 + state.extent then return false end
 	local point = camera.CFrame:PointToObjectSpace(pos)
 	local depth, margin = -point.Z, state.extent
 	local halfH = math.tan(math.rad(camera.FieldOfView)*.5)
@@ -219,6 +221,8 @@ local function tickCoats()
 	local camera = workspace.CurrentCamera
 	if not camera then return end
 	local now = os.clock()
+	if now - lastPaint < BUDGET then return end
+	lastPaint = now
 	local chosen
 	for _,g in groups do
 		if now >= g.nextUpdate then
