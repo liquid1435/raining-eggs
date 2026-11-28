@@ -49,6 +49,8 @@ C.STORM_EGG_LINGER = 5  -- seconds the storm egg waits on the ground
 
 C.INDEX_BONUS = 0.1     -- cash per completed zone
 C.REBIRTH_BONUS = 0.5   -- cash and training per rebirth
+-- v286 (user): every rebirth costs SPEED (like the zones: small first, then more and more); x4 each step
+C.REBIRTH_SPEED = { 1e4, 4e4, 1.6e5, 6.4e5, 2.6e6, 1e7, 4e7, 1.6e8, 6.5e8, 2.6e9, 1e10, 4e10, 1.7e11, 6.7e11, 2.7e12, 1e13, 4.3e13, 1.7e14, 7e14, 2.8e15 }
 C.REBIRTH_PRICE = { 1e13, 6e13, 3.8e14, 2.6e15, 1.8e16, 1.4e17, 1.1e18, 9.5e18, 8.6e19, 8.2e20, 8.3e21, 8.9e22, 1e24, 1.2e25, 1.6e26, 2.1e27, 1e28, 4e28, 1.5e29, 6e29 } -- v244 (user): 20 rebirths, cash price from small to big, each takes longer (tools/sim_economy.py)
 C.REBIRTH_SPEED_SCALE = 1e13 -- v148 balance: first rebirth after ~3 h of play (the faster early treadmill needed a bigger scale; was 1e6)
 
@@ -350,7 +352,7 @@ C.ROYAL_PETS = {
 	{ name = "King Lion", i = 5, odds = 0.005, key = "R_5_2", secret = true },
 }
 C.ROYAL_MULT = 2      -- a royal pet earns 2x the pet of the same rarity in that zone
-C.ROYAL_SCALE = 1.35  -- and is bigger
+C.ROYAL_SCALE = 0.7   -- v286 (user): half of the old 1.35
 function C.royalOf(pet)
 	local v = pet and pet.v or 0
 	return v > 100 and C.ROYAL_PETS[v - 100] or nil
@@ -544,6 +546,9 @@ function C.rebirthMult(n)
 	return 1 + C.REBIRTH_BONUS * n
 end
 function C.rebirthNeed(n) -- v244 (user): CASH price of rebirth number n + 1 (math.huge after the last one)
+	if C.REBIRTH_SPEED then -- v286: speed, not cash
+		return C.REBIRTH_SPEED[n + 1] or math.huge
+	end
 	if C.REBIRTH_PRICE then
 		return C.REBIRTH_PRICE[n + 1] or math.huge
 	end
@@ -551,7 +556,7 @@ function C.rebirthNeed(n) -- v244 (user): CASH price of rebirth number n + 1 (ma
 	return C.ZONES[zi].req * 10 ^ math.max(0, 3 + n - C.NZ) * C.REBIRTH_SPEED_SCALE
 end
 
-local SUF = { "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc" }
+local SUF = { "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "Ud", "Dd", "Td", "Qad", "Qid", "Sxd", "Spd", "Ocd", "Nod", "Vg" }
 function C.fmt(n)
 	n = math.floor(n)
 	if n < 1000 then
@@ -566,7 +571,10 @@ function C.fmt(n)
 	return s .. SUF[i]
 end
 function C.comma(n)
-	local s = tostring(math.floor(n))
+	if n >= 1e15 then -- v286 (user: "$5.3e+21"): big prices in the short form ($5.3Sx)
+		return C.fmt(n)
+	end
+	local s = string.format("%d", math.floor(n))
 	local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
 	return (out:gsub("^,", ""))
 end
@@ -774,7 +782,16 @@ C.PASSES = {
 	{ key = "autohatch", id = 0, name = "Auto Hatch", desc = "Hatch eggs automatically", robux = 99, icon = "bolt", col = Color3.fromRGB(255, 70, 150) },
 }
 C.SLOTS_PASS = 3
-C.TUT_REWARD = 5000 -- v284: cash for finishing the introduction
+C.TUT_REWARD = 5000
+function C.treadMult(passes) -- best treadmill multiplier the player owns (speed packs)
+	local m = 1
+	for _, pk in ipairs(C.SPEED_PACKS) do
+		if passes and passes[pk.key] then
+			m = math.max(m, pk.mult)
+		end
+	end
+	return m
+end -- v284: cash for finishing the introduction
 C.TUT_STEPS = 6
 C.VIP_BASKET = 5
 -- v256 SHOP like Steal an Egg (user video): Robux products (developer products; id 0 = not created yet -> "coming soon").
@@ -788,6 +805,7 @@ C.ROYAL_PACKS = {
 }
 -- SPEED packs: your speed x N (speed is on a log scale, so x10 is a big but fair jump)
 C.SPEED_PACKS = {
+	-- v286 (user): bought ONCE each, they multiply what the TREADMILL gives (best one counts), shown as a badge on the right
 	{ key = "speed2", id = 0, mult = 2, robux = 19 },
 	{ key = "speed5", id = 0, mult = 5, robux = 49 },
 	{ key = "speed10", id = 0, mult = 10, robux = 99 },
@@ -832,8 +850,11 @@ C.SHOP_RECTS = {
 	title_shop = { "B", 0, 752, 1024, 201 },
 }
 -- v264: Codex art for MY EGGS + PET INDEX (E:/rainingeggs/codex_shop/sheets ui_D/E/F.png). Put the uploaded image ids here.
-C.UI_ART = { D = "rbxassetid://96777079394959", E = "rbxassetid://72324647553144", F = "rbxassetid://88781833273745", G = "rbxassetid://134207539023218", H = "rbxassetid://130019533024146" } -- v270: G/H = other menus + blank cards
+C.UI_ART = { D = "rbxassetid://96777079394959", E = "rbxassetid://72324647553144", F = "rbxassetid://88781833273745", G = "rbxassetid://134207539023218", H = "rbxassetid://130019533024146", I = "" } -- v270: G/H = other menus + blank cards
 C.UI_RECTS = {
+	pets_detail_bg = { "I", 0, 262, 423, 569 },
+	pets_index_title = { "I", 0, 0, 762, 186 },
+	rc_empty = { "I", 500, 262, 283, 283 },
 	basket_panel = { "G", 481, 322, 479, 320 },
 	basket_title = { "H", 606, 448, 400, 95 },
 	blank_blue = { "H", 0, 254, 240, 252 },

@@ -485,6 +485,10 @@ function M.init(X)
 		tabIcon.ZIndex = 12
 		X.wobbly[tabIcon] = nil
 		txt(tab, UDim2.fromScale(0.72, 0.66), UDim2.fromScale(0.25, 0.17), 46, "Equip Pets", WHITE, Enum.TextXAlignment.Left)
+		local titleArt = C.artImage(root, "pets_index_title", UDim2.fromScale(0.44, 0.24), UDim2.fromScale(0.0, -0.045), 14) -- v286: PET INDEX plaque
+		if titleArt then
+			tab.Visible = false
+		end
 		-- red X
 		local xb = make("TextButton", { AutoButtonColor = false, Text = "", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.975, 0.115), Size = UDim2.fromScale(0.075, 0.15), ZIndex = 13 }, root)
 		make("UIAspectRatioConstraint", { AspectRatio = 1.05 }, xb)
@@ -493,6 +497,17 @@ function M.init(X)
 		grad(xb, Color3.fromRGB(255, 90, 90), Color3.fromRGB(200, 20, 30))
 		make("UIStroke", { Thickness = 3, Color = WHITE, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, xb)
 		txt(xb, UDim2.fromScale(0.6, 0.6), UDim2.fromScale(0.2, 0.18), 40, "X").ZIndex = 14
+		local xArt = C.artImage(xb, "index_x", UDim2.fromScale(1.25, 1.25), UDim2.fromScale(-0.125, -0.125), 15)
+		if xArt then
+			xb.BackgroundTransparency = 1
+			for _, ch in ipairs(xb:GetChildren()) do
+				if ch:IsA("UIStroke") or ch:IsA("UIGradient") then
+					ch.Enabled = false
+				elseif ch:IsA("TextLabel") then
+					ch.Visible = false
+				end
+			end
+		end
 		pressable(xb)
 		xb.Activated:Connect(function()
 			petsPanel.close()
@@ -500,6 +515,10 @@ function M.init(X)
 
 		-- ---------------------------------------------------------------- left: detail card
 		local det = make("Frame", { Size = UDim2.fromScale(0.3, 0.8), Position = UDim2.fromScale(0.025, 0.155), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 11 }, root)
+		local detBg = C.artImage(det, "pets_detail_bg", UDim2.fromScale(1, 1), nil, 11) -- v286: violet card with rays (empty state)
+		if detBg then
+			detBg.ScaleType = Enum.ScaleType.Stretch
+		end
 		rnd(det, 0.07)
 		local detG = grad(det, NAVY1, NAVY2)
 		local detS = make("UIStroke", { Thickness = 3, Color = DEF_ACC, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, det)
@@ -776,7 +795,12 @@ function M.init(X)
 			local total = math.max(8, math.ceil(filled / 4) * 4 + (filled % 4 == 0 and 4 or 0))
 			for n = filled + 1, total do
 				local s = slot(n)
-				local p = txt(s, UDim2.fromScale(0.4, 0.4), UDim2.fromScale(0.3, 0.3), 60, "+", Color3.fromRGB(150, 150, 210))
+				local ea = C.artImage(s, "rc_empty", UDim2.fromScale(1, 1), nil, 12)
+				if ea then
+					ea.ScaleType = Enum.ScaleType.Stretch
+					s.BackgroundTransparency = 1
+				end
+				local p = txt(s, UDim2.fromScale(0.4, 0.4), UDim2.fromScale(0.3, 0.3), 60, ea and "" or "+", Color3.fromRGB(150, 150, 210))
 				p.ZIndex = 13
 				make("UIStroke", { Thickness = 0, Transparency = 1 }, p)
 				s.AutoButtonColor = false
@@ -1443,11 +1467,17 @@ function M.init(X)
 		for k, pk in ipairs(C.SPEED_PACKS) do
 			local c = card(srow, Color3.fromRGB(60, 190, 255), UDim2.fromScale(0.32, 1), UDim2.fromScale((k - 1) * 0.34, 0))
 			bigIcon(c, "bolt", UDim2.fromScale(0.5, 0.45), UDim2.fromScale(0.5, 0.3))
-			txt(c, UDim2.fromScale(0.9, 0.18), UDim2.fromScale(0.05, 0.53), 36, "x" .. pk.mult .. " SPEED", WHITE, nil, Enum.Font.LuckiestGuy)
+			txt(c, UDim2.fromScale(0.9, 0.16), UDim2.fromScale(0.05, 0.5), 36, "x" .. pk.mult .. " TREADMILL", WHITE, nil, Enum.Font.LuckiestGuy)
+			txt(c, UDim2.fromScale(0.9, 0.08), UDim2.fromScale(0.05, 0.655), 20, "forever - buy once", WHITE)
 			local b = priceBtn(c, UDim2.fromScale(0.8, 0.2), UDim2.fromScale(0.1, 0.75), function()
-				buyProduct(pk, "Speed pack")
+				if hasPass(pk.key) then
+					toast("You already own Treadmill x" .. pk.mult, "info")
+				else
+					buyProduct(pk, "Treadmill x" .. pk.mult)
+				end
 			end)
 			b.label.Text = RBX .. " " .. pk.robux
+			table.insert(passCards, { b = b, p = pk })
 		end
 
 		-- ---------------------------------------------------------------- MONEY (3 small + 2 wide)
@@ -1537,6 +1567,16 @@ function M.init(X)
 				end
 			end
 		end)
+		do
+			local Bought = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Bought", 10)
+			if Bought then
+				Bought.OnClientEvent:Connect(function()
+					if sf.Visible then
+						storePanel.close()
+					end
+				end)
+			end
+		end
 		local function refreshStore()
 			for _, pc in ipairs(passCards) do
 				local own = hasPass(pc.p.key)

@@ -566,6 +566,32 @@ stormBanner:GetPropertyChangedSignal("Visible"):Connect(function()
 	TweenService:Create(barBg, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = stormBanner.Visible and BAR_LOW or BAR_HIGH }):Play()
 end)
 
+-- v286 (user): owned treadmill multiplier as a round badge at the bottom right, above the weekly event button
+do
+	local hold = make("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1 - 24 / 1920, 1 - 120 / 1080),
+		Size = UDim2.fromScale(58 / 1920, 72 / 1080), Visible = false }, gui)
+	make("UIAspectRatioConstraint", { AspectRatio = 0.82 }, hold)
+	local b = make("Frame", { BackgroundColor3 = Color3.fromRGB(60, 190, 255), Size = UDim2.fromScale(1, 0.82) }, hold)
+	make("UICorner", { CornerRadius = UDim.new(1, 0) }, b)
+	make("UIStroke", { Thickness = 3, Color = BLACK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, b)
+	local ic = icon(b, "bolt", UDim2.fromScale(0.72, 0.72), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5))
+	ic.ZIndex = 3
+	local t = make("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1.5, 0.22), Position = UDim2.fromScale(-0.25, 0.8),
+		Font = Enum.Font.FredokaOne, TextScaled = true, TextColor3 = WHITE, Text = "" }, hold)
+	make("UIStroke", { Thickness = 2, Color = BLACK }, t)
+	local function upd()
+		local owned = {}
+		for _, k in ipairs(string.split(attr("Passes", ""), ",")) do
+			owned[k] = true
+		end
+		local m = C.treadMult(owned)
+		hold.Visible = m > 1
+		t.Text = "x" .. m .. " TREAD"
+	end
+	plr:GetAttributeChangedSignal("Passes"):Connect(upd)
+	upd()
+end
+
 -- v167 (user): the weekly event is a small round button at the bottom left (clover for LUCKY WEEK, other icons for the
 -- other weeks) with the time left under it; tap it -> a bubble "WEEKLY LUCK 2x" (+ what it does). Friends chip above it.
 do
@@ -1743,15 +1769,15 @@ rbGo.label.Text = "REBIRTH"
 refreshRebirth = function()
 	local n = attr("Rebirth", 0)
 	local need = C.rebirthNeed(n)
-	local speed = attr("Cash", 0) -- v244: rebirths cost cash now (C.REBIRTH_PRICE)
+	local speed = attr("Speed", 0) -- v286 (user): rebirths need SPEED (C.REBIRTH_SPEED)
 	local maxed = need == math.huge
 	local ready = not maxed and speed >= need
 	rbNow.Text, rbNext.Text = tostring(n), tostring(n + 1)
 	local m0, m1 = "x" .. C.rebirthMult(n), "x" .. C.rebirthMult(n + 1)
 	rbCash.Text = m0 .. " > " .. m1
 	rbTrain.Text = m0 .. " > " .. m1
-	rbNeed.Text = maxed and "MAX REBIRTH" or ("REBIRTH " .. (n + 1) .. "/" .. #C.REBIRTH_PRICE .. "  costs $" .. C.fmt(need))
-	rbProg.Text = maxed and "" or ("$" .. C.fmt(speed) .. " / $" .. C.fmt(need))
+	rbNeed.Text = maxed and "MAX REBIRTH" or ("REBIRTH " .. (n + 1) .. "/" .. #C.REBIRTH_SPEED .. "  needs " .. C.fmt(need) .. " speed")
+	rbProg.Text = maxed and "" or (C.fmt(speed) .. " / " .. C.fmt(need) .. " speed")
 	rbProg.TextColor3 = ready and Color3.fromRGB(40, 170, 60) or RED
 	setBar(rbFill, maxed and 1 or speed / math.max(need, 1))
 	rbGo.color(ready and GREEN or GREY)
@@ -1765,11 +1791,11 @@ UI.openRebirth = function()
 	rebirthPanel.toggle()
 end
 rbGo.button.Activated:Connect(function()
-	if attr("Cash", 0) >= C.rebirthNeed(attr("Rebirth", 0)) then
+	if attr("Speed", 0) >= C.rebirthNeed(attr("Rebirth", 0)) then
 		Action:FireServer("rebirth")
 		rebirthPanel.close()
 	else
-		showNote("You need more cash for the next rebirth", "bad")
+		showNote("You need more speed for the next rebirth - run on the treadmill!", "bad")
 	end
 end)
 

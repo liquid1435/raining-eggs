@@ -7,7 +7,8 @@ local Coat = {}
 -- cheap) and then drawn x4 bigger with Pixelated sampling into the image the pet wears, so every voxel stays one crisp
 -- colour (the 256 px image used to be smoothed by Roblox into blurry smears). Falls back to x2 / x1 if memory is short.
 Coat.LIVE = true
-local UPSCALE = { 2, 1 } -- v252 (user: lag near pets): x2 is still crisp and a quarter of the work of x4
+local UPSCALE = { 4, 2, 1 } -- v286 (user: blurry rainbow): back to x4, the repaint budget keeps the lag low
+local _old_upscale = { 2, 1 } -- v252 (user: lag near pets): x2 is still crisp and a quarter of the work of x4
 local models, groups, palettes = {}, {}, {}
 local heartbeat
 local period = 1 / 12

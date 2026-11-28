@@ -1285,8 +1285,8 @@ Action.OnServerEvent:Connect(function(plr, what, kind)
 	if need == math.huge then
 		say(plr, "You reached the MAX rebirth!", "info")
 		return
-	elseif d.cash < need then -- v244 (user): every rebirth has its own cash price (small to big)
-		say(plr, "Rebirth costs $" .. C.fmt(need), "bad")
+	elseif d.speed < need then -- v286 (user): every rebirth needs SPEED (small to big)
+		say(plr, "Rebirth needs " .. C.fmt(need) .. " speed", "bad")
 		return
 	end
 	d.rebirth = d.rebirth + 1
@@ -1937,7 +1937,7 @@ task.spawn(function()
 					if base.tread then
 						local c = base.tread.Position
 						if math.abs(p.X - c.X) < 3.5 and math.abs(p.Z - c.Z) < 7 and p.Y < c.Y + 9 then
-							d.speed = d.speed + math.floor(C.trainPower(d.train) * C.rebirthMult(d.rebirth))
+							d.speed = d.speed + math.floor(C.trainPower(d.train) * C.rebirthMult(d.rebirth) * C.treadMult(d.passes))
 							sync(plr)
 						end
 					end
@@ -2163,9 +2163,9 @@ grantProduct = function(plr, d, pk)
 		say(plr, pk.n .. (pk.n == 1 and " ROYAL EGG" or " ROYAL EGGS") .. " added to your EGGS! Thank you!", "legend")
 		Bought:FireClient(plr, pk.n .. (pk.n == 1 and " Royal Egg" or " Royal Eggs"))
 	elseif pk.kind == "speed" then
-		d.speed = math.max(d.speed, 100) * pk.mult
-		say(plr, "Speed x" .. pk.mult .. "! Thank you!", "legend")
-		Bought:FireClient(plr, "Speed x" .. pk.mult)
+		d.passes[pk.key] = true -- v286: owned forever, the treadmill gives x mult
+		say(plr, "Treadmill x" .. pk.mult .. " forever! Thank you!", "legend")
+		Bought:FireClient(plr, "Treadmill x" .. pk.mult)
 	elseif pk.kind == "cash" then
 		local income = tonumber(plr:GetAttribute("Income")) or 0
 		local gain = math.max(pk.min, math.floor(income * pk.secs))
