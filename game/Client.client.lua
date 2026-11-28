@@ -4605,9 +4605,29 @@ task.spawn(function()
 		end
 	end
 	local portal
+	local function goldSound(id, at, vol)
+		if not id or id == "" then
+			return
+		end
+		local holder = Instance.new("Part")
+		holder.Anchored, holder.CanCollide, holder.CanQuery, holder.CanTouch, holder.Transparency = true, false, false, false, 1
+		holder.Size, holder.CFrame = Vector3.new(1, 1, 1), CFrame.new(at)
+		holder.Parent = workspace
+		local s = Instance.new("Sound")
+		s.SoundId = string.find(id, "rbxassetid://", 1, true) and id or ("rbxassetid://" .. id)
+		s.Volume, s.RollOffMaxDistance, s.RollOffMinDistance = vol or 1, 400, 40
+		s.Parent = holder
+		s:Play()
+		task.delay(8, function()
+			holder:Destroy()
+		end)
+	end
 	local function openPortal(animate)
 		if not egg or portal then
 			return
+		end
+		if animate then -- v296: the earth gives way under the golden egg
+			goldSound(C.SFX_GOLD_SINK, egg.Position, 1)
 		end
 		local at = egg.Position
 		local ground = (block and block.Position.Y - block.Size.Y / 2) or (at.Y - egg.Size.Y / 2)
@@ -4615,6 +4635,9 @@ task.spawn(function()
 			block.CanCollide = false
 		end
 		local function show()
+			if animate then -- v296: whoosh + rising chord when the portal appears
+				goldSound(C.SFX_GOLD_PORTAL, Vector3.new(at.X, ground + 10, at.Z), 1)
+			end
 			if V then
 				local ok, p = pcall(V.ShowPortal, Vector3.new(at.X, ground, at.Z), 30) -- Codex: position = ground point under the opening
 				portal = ok and p or true
