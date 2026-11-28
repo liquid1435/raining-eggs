@@ -99,6 +99,37 @@ function M.init(X)
 		end
 	end
 	M.confetti = confetti
+	-- v280 (user): after a Robux purchase: big CONGRATULATIONS!, what you got, fireworks and confetti
+	do
+		local Bought = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Bought", 10)
+		if Bought then
+			Bought.OnClientEvent:Connect(function(what)
+				local holder = make("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.36), Size = UDim2.fromScale(0.7, 0.2), ZIndex = 40 }, fxLayer)
+				local sc = make("UIScale", { Scale = 0.2 }, holder)
+				local t1 = make("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 0.62), Font = Enum.Font.LuckiestGuy, TextScaled = true,
+					Text = "CONGRATULATIONS!", TextColor3 = WHITE, ZIndex = 41 }, holder)
+				make("UIStroke", { Thickness = 5, Color = Color3.fromRGB(60, 20, 90) }, t1)
+				make("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(255, 250, 160), Color3.fromRGB(255, 170, 30)) }, t1)
+				local t2 = make("TextLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 0.34), Position = UDim2.fromScale(0, 0.64), Font = Enum.Font.FredokaOne, TextScaled = true,
+					Text = "You got " .. tostring(what or "it") .. "!", TextColor3 = WHITE, ZIndex = 41 }, holder)
+				make("UIStroke", { Thickness = 3.5, Color = BLACK }, t2)
+				tw(sc, 0.45, { Scale = 1 }, Enum.EasingStyle.Back)
+				confetti(90)
+				task.delay(0.4, function()
+					confetti(60)
+				end)
+				if X.UI.fireworks then
+					pcall(X.UI.fireworks, 14)
+				end
+				task.delay(3.2, function()
+					tw(sc, 0.3, { Scale = 0 })
+					task.delay(0.35, function()
+						holder:Destroy()
+					end)
+				end)
+			end)
+		end
+	end
 	local function coinFly(n, target)
 		for i = 1, n do
 			local c = icon(fxLayer, "coin", UDim2.fromScale(0.045, 0.045), UDim2.fromScale(0.5 + (math.random() - 0.5) * 0.2, 0.5 + (math.random() - 0.5) * 0.15), Vector2.new(0.5, 0.5))

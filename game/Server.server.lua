@@ -22,6 +22,7 @@ local EggGone = remote("EggGone") -- server -> all: id, userId of the catcher, k
 local Catch = remote("Catch") -- client -> server: id
 local Hatch = remote("Hatch") -- server -> catcher: pet, egg kind, new in index, combo
 local Notice = remote("Notice") -- server -> client: text, kind
+local Bought = remote("Bought") -- v280 server -> buyer: what was bought (CONGRATULATIONS + fireworks + confetti)
 local Action = remote("Action") -- client -> server: "rebirth"
 Remotes.Parent = RS
 
@@ -2148,14 +2149,17 @@ MPS.ProcessReceipt = function(info)
 		end
 		renderCarry(plr)
 		say(plr, pk.n .. (pk.n == 1 and " ROYAL EGG" or " ROYAL EGGS") .. " added to your EGGS! Thank you!", "legend")
+		Bought:FireClient(plr, pk.n .. (pk.n == 1 and " Royal Egg" or " Royal Eggs"))
 	elseif pk.kind == "speed" then
 		d.speed = math.max(d.speed, 100) * pk.mult
 		say(plr, "Speed x" .. pk.mult .. "! Thank you!", "legend")
+		Bought:FireClient(plr, "Speed x" .. pk.mult)
 	elseif pk.kind == "cash" then
 		local income = tonumber(plr:GetAttribute("Income")) or 0
 		local gain = math.max(pk.min, math.floor(income * pk.secs))
 		d.cash = d.cash + gain
 		say(plr, "+$" .. C.fmt(gain) .. "! Thank you!", "legend")
+		Bought:FireClient(plr, "+$" .. C.fmt(gain))
 	end
 	granted[info.PurchaseId] = true
 	sync(plr)
@@ -2180,6 +2184,7 @@ MPS.PromptGamePassPurchaseFinished:Connect(function(plr, id, bought)
 		if p.id == id then
 			givePass(plr, p.key)
 			say(plr, p.name .. " unlocked! Thank you!", "legend")
+			Bought:FireClient(plr, p.name)
 		end
 	end
 end)
