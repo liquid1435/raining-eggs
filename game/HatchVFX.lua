@@ -102,8 +102,8 @@ function M.play(job, d)
 	local k = (job.fast and 0.6 or 1) * (d.fastPass and 0.5 or 1)
 	local speed = 1
 	local tapConn = UIS.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			speed = 3
+		if false and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+			speed = 3 -- v298 (user): no tap to speed up (FAST HATCH pass)
 		end
 	end)
 
@@ -292,7 +292,7 @@ function M.play(job, d)
 	local nameL, nameSt, nameSc = label(0.78, 0.1)
 	local oddsL, oddsSt = label(0.87, 0.05, Enum.Font.GothamBold)
 	local hint = new("TextLabel", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -12), Size = UDim2.fromOffset(220, 26),
-		Font = Enum.Font.GothamBold, TextScaled = true, TextColor3 = WHITE, TextTransparency = 0.5, Text = "TAP TO SPEED UP", ZIndex = 6, TextXAlignment = Enum.TextXAlignment.Right }, gui)
+		Font = Enum.Font.GothamBold, TextScaled = true, TextColor3 = WHITE, TextTransparency = 0.5, Text = "TAP TO SPEED UP", ZIndex = 6, TextXAlignment = Enum.TextXAlignment.Right, Visible = false }, gui)
 	local function txt(l, st, s, a)
 		l.Text = s
 		l.TextTransparency = 1 - clamp(a)

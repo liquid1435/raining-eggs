@@ -574,13 +574,15 @@ do
 		{ id = "cash2", icon = "coin", col = Color3.fromRGB(60, 200, 90), text = "x2 CASH" },
 		{ id = "luck2", icon = "clover", col = Color3.fromRGB(40, 170, 255), text = "x2 LUCK" },
 	}
-	local col = make("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1 - 24 / 1920, 1 - 112 / 1080),
-		Size = UDim2.fromScale(58 / 1920, 300 / 1080), ZIndex = 5 }, gui)
-	make("UIAspectRatioConstraint", { AspectRatio = 58 / 300 }, col)
-	make("UIListLayout", { Padding = UDim.new(0.02, 0), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Bottom }, col)
+	-- v298 (user): side by side, going to the LEFT of the weekly event button (same row)
+	local col = make("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1 - 96 / 1920, 1 - 30 / 1080),
+		Size = UDim2.fromScale(260 / 1920, 72 / 1080), ZIndex = 5 }, gui)
+	make("UIAspectRatioConstraint", { AspectRatio = 260 / 72 }, col)
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0.04, 0), SortOrder = Enum.SortOrder.LayoutOrder,
+		HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Bottom }, col)
 	local items = {}
 	for k, b in ipairs(BOOSTS) do
-		local hold = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 72 / 300), LayoutOrder = -k, Visible = false, ZIndex = 5 }, col)
+		local hold = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(58 / 260, 1), LayoutOrder = -k, Visible = false, ZIndex = 5 }, col)
 		local ball = make("Frame", { BackgroundColor3 = b.col, Size = UDim2.fromScale(1, 0.8), ZIndex = 5 }, hold)
 		make("UICorner", { CornerRadius = UDim.new(1, 0) }, ball)
 		make("UIStroke", { Thickness = 3, Color = BLACK, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, ball)
@@ -611,6 +613,32 @@ do
 			task.wait(1)
 			upd()
 		end
+	end)
+end
+
+-- v298 (user): the Golden Portal teleports at once - checked every frame here (the server loop is slower)
+do
+	local CO = C.COSMIC
+	local lastZ = nil
+	RunService.Heartbeat:Connect(function()
+		local ch = plr.Character
+		local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+		if not hrp then
+			lastZ = nil
+			return
+		end
+		local p = hrp.Position
+		local filled = #string.split(attr("Altar", ""), ",")
+		if attr("Altar", "") ~= "" and filled >= C.NZ and p.Y < CO.portal[2] + 26 and math.abs(p.X - CO.portal[1]) < CO.portal[4] then
+			local crossed = lastZ and ((lastZ - CO.portal[3]) * (p.Z - CO.portal[3]) <= 0)
+			if crossed or math.abs(p.Z - CO.portal[3]) < 4 then
+				hrp.CFrame = CFrame.new(CO.spawn[1], CO.spawn[2], CO.spawn[3])
+				hrp.AssemblyLinearVelocity = Vector3.zero
+				lastZ = nil
+				return
+			end
+		end
+		lastZ = p.Z
 	end)
 end
 
@@ -2619,6 +2647,7 @@ make("UIGradient", { Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(255
 local skipHint = make("TextLabel", {
 	BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -12), Size = UDim2.fromOffset(220, 26),
 	Font = Enum.Font.GothamBold, TextScaled = true, TextColor3 = WHITE, TextTransparency = 0.5, Text = "TAP TO SPEED UP", ZIndex = 6, TextXAlignment = Enum.TextXAlignment.Right,
+	Visible = false, -- v298 (user): no tap to speed up any more (FAST HATCH pass)
 }, showGui)
 local function setText(t, txt, alpha)
 	t.Text = txt
@@ -3274,8 +3303,8 @@ RunService:BindToRenderStep("HatchShow", Enum.RenderPriority.Camera.Value + 1, f
 end)
 -- tap / click during a show: the rest plays 3x faster
 game:GetService("UserInputService").InputBegan:Connect(function(input)
-	if running and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-		speedUp = 3
+	if false and running and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+		speedUp = 3 -- v298: off (FAST HATCH pass)
 	end
 end)
 
@@ -4696,6 +4725,30 @@ task.spawn(function()
 		fromSave()
 	else
 		LP:GetAttributeChangedSignal("Altar"):Once(fromSave)
+	end
+	-- v298 (user: let me see the big egg animation with its sounds): in Studio, G replays the sink + portal on your screen
+	if RunService:IsStudio() and egg then
+		local eggCF = egg.CFrame
+		game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
+			if gp or input.KeyCode ~= Enum.KeyCode.G then
+				return
+			end
+			if typeof(portal) == "Instance" then
+				portal:Destroy()
+			end
+			for _, o in ipairs(workspace:GetChildren()) do
+				if o.Name == "GoldenPortal" or o.Name == "GoldenNest_ClientFX" then
+					o:Destroy()
+				end
+			end
+			portal = nil
+			egg.CFrame = eggCF
+			egg.LocalTransparencyModifier = 0
+			if beam then
+				beam.LocalTransparencyModifier = 0
+			end
+			openPortal(true)
+		end)
 	end
 	GoldenAltar.OnClientEvent:Connect(function(cue, n)
 		if cue == "place" then
