@@ -722,34 +722,34 @@ end
 -- Game passes. Make them on create.roblox.com (your game > Monetization > Passes) and paste each id here.
 -- While an id is 0 the store shows the pass but says "Coming soon" when you press BUY.
 C.PASSES = {
-	{ key = "cash2", id = 0, name = "2x Cash", desc = "All your pets earn double cash", robux = 199, icon = "coin", col = Color3.fromRGB(60, 200, 90) },
-	{ key = "luck2", id = 0, name = "2x Luck", desc = "Rare pets hatch twice as often", robux = 249, icon = "clover", col = Color3.fromRGB(40, 170, 255) },
-	{ key = "vip", id = 0, name = "VIP Basket", desc = "+5 basket space for every run", robux = 149, icon = "basket", col = Color3.fromRGB(255, 150, 30) },
-	{ key = "fast", id = 0, name = "Fast Hatch", desc = "Egg opening plays 2x faster", robux = 79, icon = "egg", col = Color3.fromRGB(190, 90, 255) },
+	{ key = "cash2", id = 0, name = "2x Cash", desc = "All your pets earn double cash", robux = 149, icon = "coin", col = Color3.fromRGB(60, 200, 90) },
+	{ key = "luck2", id = 0, name = "2x Luck", desc = "Rare pets hatch twice as often", robux = 179, icon = "clover", col = Color3.fromRGB(40, 170, 255) },
+	{ key = "vip", id = 0, name = "VIP Basket", desc = "+5 basket space for every run", robux = 99, icon = "basket", col = Color3.fromRGB(255, 150, 30) },
+	{ key = "fast", id = 0, name = "Fast Hatch", desc = "Egg opening plays 2x faster", robux = 49, icon = "egg", col = Color3.fromRGB(190, 90, 255) },
 }
 C.VIP_BASKET = 5
 -- v256 SHOP like Steal an Egg (user video): Robux products (developer products; id 0 = not created yet -> "coming soon").
 -- ROYAL EGG: hatches a pet of your best zone with big luck, always Gold or Rainbow (kind "royal", violet egg)
 C.ROYAL_LUCK = 10
 C.ROYAL_PACKS = {
-	{ key = "royal1", id = 0, n = 1, robux = 99 },
-	{ key = "royal3", id = 0, n = 3, robux = 249 },
-	{ key = "royal10", id = 0, n = 10, robux = 799 },
-	{ key = "royal50", id = 0, n = 50, robux = 3499, old = 4950 },
+	{ key = "royal1", id = 0, n = 1, robux = 49 },
+	{ key = "royal3", id = 0, n = 3, robux = 129 },
+	{ key = "royal10", id = 0, n = 10, robux = 399 },
+	{ key = "royal50", id = 0, n = 50, robux = 1499, old = 2450 },
 }
 -- SPEED packs: your speed x N (speed is on a log scale, so x10 is a big but fair jump)
 C.SPEED_PACKS = {
-	{ key = "speed2", id = 0, mult = 2, robux = 35 },
-	{ key = "speed5", id = 0, mult = 5, robux = 99 },
-	{ key = "speed10", id = 0, mult = 10, robux = 229 },
+	{ key = "speed2", id = 0, mult = 2, robux = 19 },
+	{ key = "speed5", id = 0, mult = 5, robux = 49 },
+	{ key = "speed10", id = 0, mult = 10, robux = 99 },
 }
 -- MONEY packs: minutes / hours of YOUR current income (stay useful at every stage), never less than min
 C.CASH_PACKS = {
-	{ key = "cash10m", id = 0, secs = 600, robux = 19, name = "Handful of Cash", min = 5000 },
-	{ key = "cash30m", id = 0, secs = 1800, robux = 39, name = "Stack of Cash", min = 20000 },
-	{ key = "cash1h", id = 0, secs = 3600, robux = 79, name = "Bag of Cash", min = 50000 },
-	{ key = "cash4h", id = 0, secs = 4 * 3600, robux = 199, name = "Crate of Cash", min = 250000, tag = "POPULAR" },
-	{ key = "cash12h", id = 0, secs = 12 * 3600, robux = 399, name = "Vault of Cash", min = 1000000, tag = "BEST VALUE" },
+	{ key = "cash10m", id = 0, secs = 600, robux = 9, name = "Handful of Cash", min = 5000 },
+	{ key = "cash30m", id = 0, secs = 1800, robux = 19, name = "Stack of Cash", min = 20000 },
+	{ key = "cash1h", id = 0, secs = 3600, robux = 35, name = "Bag of Cash", min = 50000 },
+	{ key = "cash4h", id = 0, secs = 4 * 3600, robux = 99, name = "Crate of Cash", min = 250000, tag = "POPULAR" },
+	{ key = "cash12h", id = 0, secs = 12 * 3600, robux = 199, name = "Vault of Cash", min = 1000000, tag = "BEST VALUE" },
 }
 C.PRODUCTS = {} -- every product by key (server: by id)
 for _, list in ipairs({ C.ROYAL_PACKS, C.SPEED_PACKS, C.CASH_PACKS }) do
